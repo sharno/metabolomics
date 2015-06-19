@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="AQI" targetNamespace="http://nashua.case.edu/aqiquery" elementFormDefault="qualified" xmlns="http://nashua.case.edu/aqiquery" xmlns:mstns="http://nashua.case.edu/aqiquery" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:element name="node">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="field" minOccurs="0" maxOccurs="unbounded">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="valueset" minOccurs="0" maxOccurs="unbounded">
+								<xs:complexType>
+									<xs:sequence>
+										<xs:element name="value" minOccurs="1" maxOccurs="unbounded">
+											<xs:complexType>
+												<xs:sequence />
+												<xs:attribute name="name" type="xs:string" use="required" />
+												<xs:attribute name="value" type="xs:string" use="required" />
+											</xs:complexType>
+										</xs:element>
+									</xs:sequence>
+								</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+						<xs:attribute name="type" type="xs:string" use="required" />
+						<xs:attribute name="display" type="xs:boolean" use="optional" />
+						<xs:attribute name="negate" type="xs:boolean" use="required" />
+						<xs:attribute name="connector" type="xs:string" use="optional" />
+						<xs:attribute name="visible" type="xs:boolean" use="optional" />
+					</xs:complexType>
+				</xs:element>
+				<xs:element ref="node" minOccurs="0" maxOccurs="unbounded" />
+			</xs:sequence>
+			<xs:attribute name="type" type="xs:string" use="required" />
+			<xs:attribute name="negate" type="xs:boolean" use="required" />
+			<xs:attribute name="typeId" type="xs:integer" use="required" />
+			<xs:attribute name="editable" type="xs:boolean" use="optional" />
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

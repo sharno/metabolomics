@@ -1,0 +1,1 @@
+<%@ Page Language="c#" validateRequest="false" Inherits="PathwaysWeb.Web.AjaxHandler" CodeFile="AjaxHandler.aspx.cs"%>

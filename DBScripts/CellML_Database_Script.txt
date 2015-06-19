@@ -1,0 +1,94 @@
+CREATE TABLE [dbo].[Component](
+	[componentid] [uniqueidentifier] NOT NULL,
+	[modelId] [uniqueidentifier] NOT NULL,
+	[name] [varchar](100) NULL,
+	[maths] [text] NULL,
+	[RDF_alternative] [varchar](200) NULL,
+	[RDF_title] [varchar](100) NULL
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+CREATE TABLE [dbo].[componentref](
+	[componentrefId] [uniqueidentifier] NOT NULL,
+	[groupId] [uniqueidentifier] NOT NULL,
+	[componentrefname] [varchar](100) NOT NULL,
+	[parentcomponentrefId] [uniqueidentifier] NULL
+) ON [PRIMARY]
+
+CREATE TABLE [dbo].[map_components](
+	[componentid] [uniqueidentifier] NOT NULL,
+	[modelId] [uniqueidentifier] NOT NULL,
+	[connectionId] [uniqueidentifier] NOT NULL,
+	[component1] [varchar](100) NOT NULL,
+	[component2] [varchar](100) NOT NULL
+) ON [PRIMARY]
+
+CREATE TABLE [dbo].[map_variables](
+	[variableid] [uniqueidentifier] NOT NULL,
+	[modelId] [uniqueidentifier] NOT NULL,
+	[connectionId] [uniqueidentifier] NOT NULL,
+	[variable1] [varchar](100) NOT NULL,
+	[variable2] [varchar](100) NOT NULL
+) ON [PRIMARY]
+
+CREATE TABLE [dbo].[Model](
+	[modelid] [uniqueidentifier] NOT NULL,
+	[name] [varchar](100) NULL,
+	[title] [varchar](200) NULL,
+	[author] [varchar](100) NULL,
+	[RDF] [text] NULL
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+CREATE TABLE [dbo].[Reaction](
+	[reactionid] [uniqueidentifier] NOT NULL,
+	[componentid] [uniqueidentifier] NOT NULL,
+	[reversible] [varchar](50) NULL
+) ON [PRIMARY]
+
+CREATE TABLE [dbo].[relationshipref](
+	[groupId] [uniqueidentifier] NOT NULL,
+	[relationshiprefname] [varchar](50) NOT NULL
+) ON [PRIMARY]
+
+CREATE TABLE [dbo].[role](
+	[roleid] [uniqueidentifier] NOT NULL,
+	[reactionid] [uniqueidentifier] NOT NULL,
+	[variablerefid] [uniqueidentifier] NOT NULL,
+	[role] [varchar](50) NULL,
+	[direction] [varchar](50) NULL,
+	[delta_variable] [varchar](50) NULL,
+	[stoichiometry] [varchar](50) NULL,
+	[math] [text] NULL
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+CREATE TABLE [dbo].[unit](
+	[unitid] [uniqueidentifier] NOT NULL,
+	[unitsid] [uniqueidentifier] NOT NULL,
+	[units] [varchar](50) NOT NULL,
+	[offset] [real] NULL,
+	[prefix] [varchar](50) NULL,
+	[exponent] [int] NULL,
+	[multiplier] [real] NULL
+) ON [PRIMARY]
+
+CREATE TABLE [dbo].[units](
+	[unitsid] [uniqueidentifier] NOT NULL,
+	[modelid] [uniqueidentifier] NOT NULL,
+	[name] [varchar](100) NOT NULL,
+	[base_units] [varchar](50) NULL
+) ON [PRIMARY]
+
+CREATE TABLE [dbo].[Variable](
+	[variableid] [uniqueidentifier] NOT NULL,
+	[componentId] [uniqueidentifier] NOT NULL,
+	[name] [varchar](50) NOT NULL,
+	[units] [varchar](100) NOT NULL,
+	[initial_value] [varchar](50) NULL,
+	[public_interface] [varchar](50) NULL,
+	[private_interface] [varchar](50) NULL
+) ON [PRIMARY]
+
+CREATE TABLE [dbo].[variable_ref](
+	[reactionid] [uniqueidentifier] NOT NULL,
+	[variablerefid] [uniqueidentifier] NOT NULL,
+	[variable] [varchar](100) NOT NULL
+) ON [PRIMARY]

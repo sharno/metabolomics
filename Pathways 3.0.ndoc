@@ -1,0 +1,24 @@
+<project SchemaVersion="1.3">
+    <assemblies>
+        <assembly location=".\PathwaysLib\bin\Debug\PathwaysLib.dll" documentation=".\PathwaysLib\doc.xml" />
+    </assemblies>
+    <documenters>
+        <documenter name="JavaDoc">
+            <property name="OutputDirectory" value=".\doc\" />
+        </documenter>
+        <documenter name="MSDN">
+            <property name="OutputDirectory" value=".\doc\ndoc\" />
+            <property name="HtmlHelpName" value="PathCase 3.0 Documentation" />
+            <property name="Title" value="PathCase 3.0" />
+            <property name="ExtensibilityStylesheet" value=".\FormatDocumentComments.xslt" />
+        </documenter>
+        <documenter name="XML">
+            <property name="OutputFile" value=".\doc\doc.xml" />
+        </documenter>
+        <documenter name="MSDN 2003">
+            <property name="OutputDirectory" value=".\doc\" />
+            <property name="HtmlHelpName" value="Documentation" />
+            <property name="Title" value="An NDoc Documented Class Library" />
+        </documenter>
+    </documenters>
+</project>

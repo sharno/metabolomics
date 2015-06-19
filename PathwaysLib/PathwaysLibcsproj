@@ -1,0 +1,699 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
+  <PropertyGroup>
+    <ProjectType>Local</ProjectType>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{6D8FA5FC-7DFA-44DF-B6D8-D2558422D40E}</ProjectGuid>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ApplicationIcon>
+    </ApplicationIcon>
+    <AssemblyKeyContainerName>
+    </AssemblyKeyContainerName>
+    <AssemblyName>PathwaysLib</AssemblyName>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
+    <DefaultClientScript>JScript</DefaultClientScript>
+    <DefaultHTMLPageLayout>Grid</DefaultHTMLPageLayout>
+    <DefaultTargetSchema>IE50</DefaultTargetSchema>
+    <DelaySign>false</DelaySign>
+    <OutputType>Library</OutputType>
+    <RootNamespace>PathwaysLib</RootNamespace>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <StartupObject>
+    </StartupObject>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>2.0</OldToolsVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DocumentationFile>doc.xml</DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn>
+    </NoWarn>
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <DebugType>full</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>TRACE</DefineConstants>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugSymbols>false</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn>
+    </NoWarn>
+    <Optimize>true</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <DebugType>none</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Quick Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Quick Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <BaseAddress>285212672</BaseAddress>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <Optimize>false</Optimize>
+    <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <BaseAddress>285212672</BaseAddress>
+    <DocumentationFile>doc.xml</DocumentationFile>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <BaseAddress>285212672</BaseAddress>
+    <Optimize>true</Optimize>
+    <DebugType>
+    </DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Quick Debug|x86' ">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\Quick Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <BaseAddress>285212672</BaseAddress>
+    <DocumentationFile>doc.xml</DocumentationFile>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System">
+      <Name>System</Name>
+    </Reference>
+    <Reference Include="System.configuration" />
+    <Reference Include="System.Data">
+      <Name>System.Data</Name>
+    </Reference>
+    <Reference Include="System.Drawing">
+      <Name>System.Drawing</Name>
+    </Reference>
+    <Reference Include="System.Runtime.Remoting" />
+    <Reference Include="System.Web">
+      <Name>system.web</Name>
+    </Reference>
+    <Reference Include="System.Windows.Forms">
+      <Name>System.Windows.Forms</Name>
+    </Reference>
+    <Reference Include="System.Xml">
+      <Name>System.XML</Name>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AQI\Path\GuiPathQueryDataOut.cs" />
+    <Compile Include="AQI\PathwaysAQIUtil.cs" />
+    <Compile Include="AQI\GuiQueryData.cs" />
+    <Compile Include="AQI\Path\PathPWLinksQuerier.cs" />
+    <Compile Include="AQI\Path\PathQuerier.cs" />
+    <Compile Include="AQI\Path\PathMetabolicNWQuerier.cs" />
+    <Compile Include="AQI\Path\PathNeighborhoodMetabolicNWQuerier.cs" />
+    <Compile Include="AQI\Path\PathNeighborhoodPWLinksQuerier.cs" />
+    <Compile Include="AQI\Path\PathQuerierMetabolicNW.cs" />
+    <Compile Include="AQI\Path\PathQuerierPWLinks.cs" />
+    <Compile Include="AQI\Path\PathQuerierUtilities.cs" />
+    <Compile Include="AQI\Path\PathQuerierException.cs" />
+    <Compile Include="AQI\Path\PathQueryResults.cs" />
+    <Compile Include="AQI\Path\PathRenderer.cs" />
+    <Compile Include="AQI\Path\QInputPathFindType.cs" />
+    <Compile Include="AQI\Path\QInputPathSearchDirection.cs" />
+    <Compile Include="AQI\Path\QNodePathFromPathway.cs" />
+    <Compile Include="AQI\Path\QNodePathMetabolicNW.cs" />
+    <Compile Include="AQI\Path\QNodePathNeighborhoodPWLinks.cs" />
+    <Compile Include="AQI\Path\QNodePathPWLinks.cs" />
+    <Compile Include="AQI\Path\QNodePathRestrictionIncludingPathway.cs" />
+    <Compile Include="AQI\Path\QNodePathRestrictionNotIncludingPathway.cs" />
+    <Compile Include="AQI\Path\QNodePathRestrictionNotIncludingProcess.cs" />
+    <Compile Include="AQI\Path\QNodePathRestrictionIncludingProcess.cs" />
+    <Compile Include="AQI\Path\QNodePathRestrictionIncludingMolecule.cs" />
+    <Compile Include="AQI\Path\QNodePathRestrictionNotIncludingMolecule.cs" />
+    <Compile Include="AQI\Path\QInputPathMoleculeName.cs" />
+    <Compile Include="AQI\Path\QInputPathNeighborhoodGraphRestrictionCommonMolecules.cs" />
+    <Compile Include="AQI\Path\QInputPathOrganismName.cs" />
+    <Compile Include="AQI\Path\QInputPathPathwayName.cs" />
+    <Compile Include="AQI\Path\QInputPathProcessName.cs" />
+    <Compile Include="AQI\Path\QInputRestrictionLength.cs" />
+    <Compile Include="AQI\Path\QNodePathFromProcess.cs" />
+    <Compile Include="AQI\Path\QNodePathGraphRestrictionOrganism.cs" />
+    <Compile Include="AQI\Path\QNodePathGraphRestrictionPathway.cs" />
+    <Compile Include="AQI\Path\QNodePathNeighborhoodMetabolicNW.cs" />
+    <Compile Include="AQI\Path\QNodePathToMolecule.cs" />
+    <Compile Include="AQI\Path\QNodePathToPathway.cs" />
+    <Compile Include="AQI\Path\QNodePathToProcess.cs" />
+    <Compile Include="AQI\QInputMoleculeAmount.cs" />
+    <Compile Include="AQI\QInputMoleculeName.cs" />
+    <Compile Include="AQI\QInputMoleculeNameType.cs" />
+    <Compile Include="AQI\QInputMoleculeRole.cs" />
+    <Compile Include="AQI\QInputMoleculeType.cs" />
+    <Compile Include="AQI\QInputOrganismInGroup.cs" />
+    <Compile Include="AQI\QInputOrganismName.cs" />
+    <Compile Include="AQI\QInputPathwayName.cs" />
+    <Compile Include="AQI\QInputProcessName.cs" />
+    <Compile Include="AQI\QInputProcessReversible.cs" />
+    <Compile Include="AQI\QNodeMolecule.cs" />
+    <Compile Include="AQI\QNodeOrganism.cs" />
+    <Compile Include="AQI\Path\QNodePathFromMolecule.cs" />
+    <Compile Include="AQI\QNodePathway.cs" />
+    <Compile Include="AQI\QNodeProcess.cs" />
+    <Compile Include="AQI\QNodeRoot.cs" />
+    <Compile Include="AssemblyInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Exceptions\AjaxMethodException.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Exceptions\QueryException.cs" />
+    <Compile Include="Exceptions\DataModelException.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Exceptions\DBWrapperException.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Exceptions\GraphException.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Exceptions\InvalidColumnException.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Exceptions\LinkException.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Exceptions\PathwayException.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Exceptions\QueryTimeoutException.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GraphObjects\GraphObjectCache.cs" />
+    <Compile Include="GraphObjects\GraphServerObjectCache.cs" />
+    <Compile Include="GraphObjects\IGraphBasicMolecule.cs" />
+    <Compile Include="GraphObjects\IGraphCompartment.cs" />
+    <Compile Include="GraphObjects\IGraphGeneProduct.cs" />
+    <Compile Include="GraphObjects\IGraphModel.cs" />
+    <Compile Include="GraphObjects\IGraphMolecularEntity.cs" />
+    <Compile Include="GraphObjects\IGraphOrganismGroup.cs" />
+    <Compile Include="GraphObjects\IGraphPathway.cs" />
+    <Compile Include="GraphObjects\IGraphGenericProcess.cs" />
+    <Compile Include="GraphObjects\IGraphProcess.cs" />
+    <Compile Include="GraphObjects\IGraphProcessEntity.cs" />
+    <Compile Include="GraphObjects\IGraphReaction.cs" />
+    <Compile Include="GraphObjects\IGraphReactionSpecies.cs" />
+    <Compile Include="GraphObjects\IGraphSpecies.cs" />
+    <Compile Include="GraphObjects\IGraphSpecificProcess.cs" />
+    <Compile Include="GraphSources\GraphSourceCompartment.cs" />
+    <Compile Include="GraphSources\GraphSourceFullscreen.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GraphSources\GraphSourceModel.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GraphSources\GraphSourcePathway.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GraphSources\GraphSourceProcess.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GraphSources\GraphSourceRichContent.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GraphSources\IGraphSource.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Logging\DebugLogger.cs" />
+    <Compile Include="Logging\LogException.cs" />
+    <Compile Include="Logging\Logger.cs" />
+    <Compile Include="Logging\LogTarget.cs" />
+    <Compile Include="Logging\StringWriterLog.cs" />
+    <Compile Include="PathQuery\GraphSourceNeighborhoodMetabolicNW.cs" />
+    <Compile Include="PathQuery\GraphSourceNeighborhoodPWLinks.cs" />
+    <Compile Include="PathQuery\GraphLoader.cs" />
+    <Compile Include="PathQuery\GraphSourceNeighborhood.cs" />
+    <Compile Include="PathQuery\GraphSourcePath.cs" />
+    <Compile Include="PathQuery\GraphSourcePathMetabolicNW.cs" />
+    <Compile Include="PathQuery\GraphSourcePathPWLinks.cs" />
+    <Compile Include="PathQuery\GraphSourcePathQueries.cs" />
+    <Compile Include="Queries\ReactionQueries.cs" />
+    <Compile Include="Queries\ModelQueries.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Queries\MolecularEntityQueries.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Queries\PathwayQueries.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Queries\ProcessQueries.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <None Include="QueryObjects\QFieldOrganismInGroup.cs" />
+    <None Include="QueryObjects\QFieldOrganismCommonName.cs" />
+    <None Include="QueryObjects\QIdCounter.cs" />
+    <None Include="QueryObjects\QNodeAQIRoot.cs" />
+    <None Include="QueryObjects\QNodeAQIMolecule.cs" />
+    <None Include="QueryObjects\QNodeAQIOrganism.cs" />
+    <None Include="QueryObjects\QNodeAQIProcess.cs" />
+    <None Include="QueryObjects\QNodeAQIPathway.cs" />
+    <None Include="QueryObjects\QFieldOrganismGroup.cs" />
+    <None Include="QueryObjects\QFieldOrganismScientificName.cs" />
+    <None Include="QueryObjects\QFieldMoleculeAmount.cs" />
+    <None Include="QueryObjects\QFieldMoleculeType.cs" />
+    <None Include="QueryObjects\QFieldMoleculeRole.cs" />
+    <None Include="QueryObjects\QFieldMoleculeNameType.cs" />
+    <None Include="QueryObjects\QFieldOrganismName.cs" />
+    <None Include="QueryObjects\QFieldMoleculeName.cs" />
+    <None Include="QueryObjects\QFieldProcessReversible.cs" />
+    <None Include="QueryObjects\QFieldProcessName.cs" />
+    <None Include="QueryObjects\QField.cs" />
+    <None Include="QueryObjects\QFieldPathwayName.cs" />
+    <None Include="QueryObjects\QParam.cs" />
+    <Compile Include="ServerObjects\AnnotationQualifierManager.cs" />
+    <Compile Include="ServerObjects\AttributeManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ConnectedPathwayAndCommonProcesses.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\DBRow.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\DBWrapper.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\EntityNameManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\EntityRoleProcessAndPathway.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\Enums.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GraphObjects\IGraphCatalyze.cs" />
+    <Compile Include="ServerObjects\GraphNodeManager.cs" />
+    <Compile Include="ServerObjects\IOrganismEntity.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\IProcess.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\MolecularEntityTypeManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\NameIdManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\NameTypeManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\PathwaysTypeManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ProcessEntityRoleManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ReactionSpeciesRoleManager.cs" />
+    <Compile Include="ServerObjects\RnaTypeManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\RuleTypeManager.cs" />
+    <Compile Include="ServerObjects\ServerBasicMolecule.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerCatalyze.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerChromosome.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerCommonMolecule.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerCompartment.cs" />
+    <Compile Include="ServerObjects\ServerCompartmentType.cs" />
+    <Compile Include="ServerObjects\ServerConstraint.cs" />
+    <Compile Include="ServerObjects\ServerDataSource.cs" />
+    <Compile Include="ServerObjects\ServerECNodeCode.cs" />
+    <Compile Include="ServerObjects\ServerECNumber.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerECNumberName.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerEvent.cs" />
+    <Compile Include="ServerObjects\ServerEventAssignment.cs" />
+    <Compile Include="ServerObjects\ServerEventDelay.cs" />
+    <Compile Include="ServerObjects\ServerEventTrigger.cs" />
+    <Compile Include="ServerObjects\ServerExternalDatabase.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerExternalDbLink.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerExternalDbUrl.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerFunctionDefinition.cs" />
+    <Compile Include="ServerObjects\ServerGene.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerGeneProduct.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerGenericProcess.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerGONodeCode.cs" />
+    <Compile Include="ServerObjects\ServerGOTerm.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerGOTermProcess.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerInitialAssignment.cs" />
+    <Compile Include="ServerObjects\ServerKineticLaw.cs" />
+    <Compile Include="ServerObjects\ServerMapModelsPathways.cs" />
+    <Compile Include="ServerObjects\ServerMapReactionECNumber.cs" />
+    <Compile Include="ServerObjects\ServerMapReactionsProcessEntities.cs" />
+    <Compile Include="ServerObjects\ServerMapSbaseGO.cs" />
+    <Compile Include="ServerObjects\ServerMapSpeciesMolecularEntities.cs" />
+    <Compile Include="ServerObjects\ServerModel.cs" />
+    <Compile Include="ServerObjects\ServerModelOrganism.cs" />
+    <Compile Include="ServerObjects\ServerMolecularEntity.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerMolecularEntityName.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerNodeCode.cs" />
+    <Compile Include="ServerObjects\ServerObject.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerOrganism.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerOrganismGroup.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerParameter.cs" />
+    <Compile Include="ServerObjects\ServerPathway.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerPathwayGroup.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerProcess.cs" />
+    <Compile Include="ServerObjects\ServerProcessEntity.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerProtein.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerReaction.cs" />
+    <Compile Include="ServerObjects\ServerReactionSpecies.cs" />
+    <Compile Include="ServerObjects\ServerReactionSpeciesRole.cs" />
+    <Compile Include="ServerObjects\ServerRNA.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\ServerRule.cs" />
+    <Compile Include="ServerObjects\ServerRuleType.cs" />
+    <Compile Include="ServerObjects\ServerSbase.cs" />
+    <Compile Include="ServerObjects\ServerSpecies.cs" />
+    <Compile Include="ServerObjects\ServerSpeciesType.cs" />
+    <Compile Include="ServerObjects\ServerStoichiometryMath.cs" />
+    <Compile Include="ServerObjects\ServerUnit.cs" />
+    <Compile Include="ServerObjects\ServerUnitComposition.cs" />
+    <Compile Include="ServerObjects\ServerUnitDefinition.cs" />
+    <Compile Include="ServerObjects\ServerViewState.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServerObjects\UnitDefinitionManager.cs" />
+    <Compile Include="ServerObjects\ValueTypeWrappers.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\ReturnValue.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapBasicMolecule.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapCatalyze.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapChromosome.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapCommonMolecule.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapCompartment.cs" />
+    <Compile Include="SoapObjects\SoapCompartmentType.cs" />
+    <Compile Include="SoapObjects\SoapConstraint.cs" />
+    <Compile Include="SoapObjects\SoapDataSource.cs" />
+    <Compile Include="SoapObjects\SoapECNumber.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapECNumberName.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapEvent.cs" />
+    <Compile Include="SoapObjects\SoapEventAssignment.cs" />
+    <Compile Include="SoapObjects\SoapEventDelay.cs" />
+    <Compile Include="SoapObjects\SoapEventTrigger.cs" />
+    <Compile Include="SoapObjects\SoapExternalDatabase.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapExternalDbLink.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapExternalDbUrl.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapFunctionDefinition.cs" />
+    <Compile Include="SoapObjects\SoapGene.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapGeneProduct.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapGOTerm.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapInitialAssignment.cs" />
+    <Compile Include="SoapObjects\SoapKineticLaw.cs" />
+    <Compile Include="SoapObjects\SoapMapModelsPathways.cs" />
+    <Compile Include="SoapObjects\SoapMapReactionsProcessEntities..cs" />
+    <Compile Include="SoapObjects\SoapMapSbaseGO.cs" />
+    <Compile Include="SoapObjects\SoapMapSpeciesMolecularEntities.cs" />
+    <Compile Include="SoapObjects\SoapModel.cs" />
+    <Compile Include="SoapObjects\SoapModelOrganism.cs" />
+    <Compile Include="SoapObjects\SoapMolecularEntity.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapMolecularEntityName.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapObject.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapOrganism.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapOrganismGroup.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapParameter.cs" />
+    <Compile Include="SoapObjects\SoapPathway.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapPathwayGroup.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapProcess.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapProcessEntity.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapProtein.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapReaction.cs" />
+    <Compile Include="SoapObjects\SoapReactionSpecies.cs" />
+    <Compile Include="SoapObjects\SoapReactionSpeciesRole.cs" />
+    <Compile Include="SoapObjects\SoapRNA.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SoapObjects\SoapRule.cs" />
+    <Compile Include="SoapObjects\SoapRuleType.cs" />
+    <Compile Include="SoapObjects\SoapSbase.cs" />
+    <Compile Include="SoapObjects\SoapSpecies.cs" />
+    <Compile Include="SoapObjects\SoapSpeciesType.cs" />
+    <Compile Include="SoapObjects\SoapStoichiometryMath.cs" />
+    <Compile Include="SoapObjects\SoapUnit.cs" />
+    <Compile Include="SoapObjects\SoapUnitComposition.cs" />
+    <Compile Include="SoapObjects\SoapUnitDefinition.cs" />
+    <Compile Include="SoapObjects\SoapViewState.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="UserFeedback\ErrorDescription.cs" />
+    <Compile Include="UserFeedback\ErrorLogEntry.cs" />
+    <Compile Include="UserFeedback\ErrorType.cs" />
+    <Compile Include="UserFeedback\Module.cs" />
+    <Compile Include="Utilities\AjaxMethodAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Utilities\AjaxMethodInvoker.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Utilities\BiomodelAnnotation.cs" />
+    <Compile Include="Utilities\BigInteger.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Utilities\ChromosomeBandLoader.cs" />
+    <Compile Include="Utilities\EventLogger.cs" />
+    <Compile Include="Utilities\GeneAddressDecoder.cs" />
+    <Compile Include="Utilities\GraphCacheManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
+<<<<<<< PathwaysLib.csproj
+    <Compile Include="Utilities\HighlightKeywords.cs.cs" />
+=======
+    <Compile Include="Utilities\HighlightKeywords.cs" />
+>>>>>>> 1.20
+    <Compile Include="Utilities\HypergeometricDistribution.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Utilities\HyperGraph.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Utilities\HyperlinkBuilder.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Utilities\LinkHelper.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Utilities\MetabolicNetworkLoader.cs" />
+    <Compile Include="Utilities\OrganismMeta.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Utilities\PaginationHelper.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <None Include="QueryObjects\QueryBuilder.cs" />
+    <Compile Include="Utilities\QueryLogger.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Utilities\QuickSort.cs" />
+    <Compile Include="Utilities\SharedEnums.cs" />
+    <Compile Include="Utilities\SignificanceTestResultItem.cs" />
+    <Compile Include="Utilities\Tribool.cs" />
+    <Compile Include="Utilities\Util.cs" />
+    <None Include="QueryObjects\QNode.cs" />
+    <Compile Include="Utilities\XmlUtil.cs" />
+    <Compile Include="WebControls\CollapsiblePanel.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="WebControls\ContentBrowserItem.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="WebControls\ContentPanel.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="WebControls\ControlBuilder.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AQILib\AQILib.csproj">
+      <Project>{8B313230-E94D-42F0-ADB1-F3060E00B9D7}</Project>
+      <Name>AQILib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\PathQueryLib\PathQueryLib.csproj">
+      <Project>{C8633860-319B-4310-B72A-B3F18DDB0C98}</Project>
+      <Name>PathQueryLib</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.2.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 2.0 %28x86%29</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.0 %28x86%29</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 3.1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+</Project>

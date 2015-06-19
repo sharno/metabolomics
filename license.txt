@@ -1,0 +1,15 @@
+PathCase is an academic research tool, and we would be more
+than happy to share our knowledge with other researchers who
+could benefit from it.
+
+ * The PathCase source and database are provided freely for
+    academic use.
+ * If you are interested in using PathCase for commercial
+    purposes, please contact us at pathcase@eecs.case.edu
+    with your name, organization, and what you would like to
+    use PathCase for.
+
+Pathway visualization requires a layout generation license
+from Tom Sawyer Software (http://www.tomsawyer.com).  Please
+contact Tom Sawyer Software directly to obtain the required
+license.

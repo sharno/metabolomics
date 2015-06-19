@@ -1,0 +1,34 @@
+AJAX HANDLER: Two methods are needed for the Ajax calls.
+              The first generates the nodes and the second generates the results.
+
+Ajax_Generate_Nodes(string nodeId, string xml)
+{
+    XmlDocument xmlDoc = new DataHandler().ParseAndValidate(xml);
+    QNode rootNode = QNode.Parse(xmlDoc.DocumentElement, null);
+    
+    // Using an implementation of IRenderer, write project-specific code that returns either a new version of
+    //   the tree based off of the xml document, or the portion of the tree requested by nodeId.
+}
+
+Ajax_Generate_Results(string tree)
+{
+    // Call QNode.InitializeTypes on all of the assemblies that contain QNode implementations.
+    // For example: QNode.InitializeTypes(Assembly.GetAssembly(typeof(QNodePathway)));
+
+    // Using an implementation of IQueryRenderer, write project-specific code here to render your results.
+}
+
+
+
+
+
+AQI WEB CONTROL: For the AQI web control, split it into two separate sections: the query and the results.
+
+<%@ Register TagPrefix="myPrefix" Namespace="..." Assembly="..." %>
+<form action="#" method="post" onsubmit="return false">
+	<myPrefix:MyAQIQuery ID="AQIQuery" runat="server" />
+</form>
+<myPrefix:MyAQIResults ID="AQIResults" Runat="server" />
+
+On the page load, render the starting interface for the particular query.
+Or, you could optionally have an XML document load as a parameter and use that as the starting interface.
