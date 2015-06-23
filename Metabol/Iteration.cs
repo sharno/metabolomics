@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace Metabol
 {
@@ -19,19 +15,9 @@ namespace Metabol
 
         public Iteration(int iteration)
         {
-            this.Id = iteration;
+            Id = iteration;
         }
 
-        public static Iteration Empty
-        {
-            get
-            {
-                return empty ?? (empty = new Iteration(-1));
-            }
-            private set
-            {
-                empty = value;
-            }
-        }
+        public static Iteration Empty => empty ?? (empty = new Iteration(-1));
     }
 }

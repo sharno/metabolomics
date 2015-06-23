@@ -14,14 +14,17 @@ namespace Metabol
         //public bool AddPrevAsConstraint { get; set; }
         public string Label { get; set; }
         public double LastRuntime { get; set; }
-        public Dictionary<Guid, double> RemovedExchangeFlux { get; set; }
+        public Dictionary<Guid, double> RemovedConsumerExchange { get; set; }
+        public Dictionary<Guid, double> RemovedProducerExchange { get; set; }
         public Dictionary<Guid, double> Results { get; set; }
         public Dictionary<Guid, double> PrevResults { get; set; }
         public ConcurrentDictionary<Guid, HashSet<Guid>> UpdateExchangeConstraint { get; set; }
 
         public Fba()
         {
-            RemovedExchangeFlux = new Dictionary<Guid, double>();
+            Label = Util.FbaLabel();
+            RemovedConsumerExchange = new Dictionary<Guid, double>();
+            RemovedProducerExchange = new Dictionary<Guid, double>();
             Results = new Dictionary<Guid, double>();
             PrevResults = new Dictionary<Guid, double>();
             UpdateExchangeConstraint = new ConcurrentDictionary<Guid, HashSet<Guid>>();
@@ -45,7 +48,7 @@ namespace Metabol
             str.Clear();
 
             var solution = context.Solve(new SimplexDirective());
-            Results.ToList().ForEach(d => PrevResults[d.Key] = d.Value);
+            //Results.ToList().ForEach(d => PrevResults[d.Key] = d.Value);
             solution.Decisions.ToList().ForEach(d => Results[reactions.Find(r => r.Name == d.Name).Id] = d.ToDouble());
             var report = solution.GetReport();
             //report.WriteTo(new StringWriter(str));
@@ -72,16 +75,20 @@ namespace Metabol
             foreach (var metabolite in metabolites)
             {
                 var sv = new SumTermBuilder(reactions.Count);
-                var sv2 = new SumTermBuilder(reactions.Count);
+                //var svin = new SumTermBuilder(reactions.Count);
+                //var svout = new SumTermBuilder(reactions.Count);
 
                 for (var i = 0; i < reactions.Count; i++)
                 {
                     var coefficient = Coefficient(reactions[i], metabolite);
 
-                    if (coefficient == 0) continue;
+                    if (Math.Abs(coefficient) < double.Epsilon) continue; // coefficient==0
 
                     sv.Add(coefficient * decisions[i]);
-                    sv2.Add(coefficient * decisions[i]);
+                    //if (reactions[i].Reactants.ContainsKey(metabolite.Id))
+                    //    svin.Add(decisions[i]);
+                    //if (reactions[i].Products.ContainsKey(metabolite.Id))
+                    //    svout.Add(decisions[i]);
 
                     if (smz.ContainsKey(metabolite.Id))
                         fobj.Add(coefficient * smz[metabolite.Id] * decisions[i]);
@@ -90,10 +97,18 @@ namespace Metabol
                 //Add a constraint that total net flux of reactions of m’ should
                 //be equal to those of the removed flux exchange reaction.
 
-                if (RemovedExchangeFlux.ContainsKey(metabolite.Id))
-                    model.AddConstraint(metabolite.Name + "_1", sv2.ToTerm() == RemovedExchangeFlux[metabolite.Id]);
-                else
-                    model.AddConstraint(metabolite.Name, sv.ToTerm() == 0);
+                //if (RemovedConsumerExchange.ContainsKey(metabolite.Id))
+                //{
+                //    model.AddConstraint(metabolite.Name + "_1", svin.ToTerm() == RemovedConsumerExchange[metabolite.Id]);
+                //}
+
+                //if (RemovedProducerExchange.ContainsKey(metabolite.Id))
+                //{
+                //    model.AddConstraint(metabolite.Name + "_2", svout.ToTerm() == RemovedProducerExchange[metabolite.Id]);
+                //}
+
+                //if (!inx && !otx)
+                model.AddConstraint(metabolite.Name, sv.ToTerm() == 0);
             }
             return fobj;
         }
@@ -129,12 +144,16 @@ namespace Metabol
                     foreach (var guid in UpdateExchangeConstraint[reactions[i].Id])
                         sv.Add(coefficient * decisions.Find(d => d.Name == sm.Edges[guid].Label));
 
-                    model.AddConstraint("c" + i, sv.ToTerm() == Results[reactions[i].Id]);
+                    model.AddConstraint("uc" + i, sv.ToTerm() == Results[reactions[i].Id]);
+                    model.AddConstraint("ucc" + i, decisions[i] >= 1);
                 }
-                else if (Results.ContainsKey(reactions[i].Id)) // && !RemovedExchangeFlux.ContainsKey(reactions[i].Id)
-                    model.AddConstraint("c" + i, decisions[i] == Results[reactions[i].Id]);
+                else if (Results.ContainsKey(reactions[i].Id))
+                    model.AddConstraint("pc" + i, decisions[i] == Results[reactions[i].Id]);
+                else if (RemovedConsumerExchange.ContainsKey(reactions[i].Id) ||
+                         RemovedProducerExchange.ContainsKey(reactions[i].Id))
+                    ;
                 else
-                    model.AddConstraint("c" + i, 2 <= decisions[i]);
+                    model.AddConstraint("cc" + i, decisions[i] >= 1);
             }
 
             return decisions;
@@ -189,7 +208,7 @@ namespace Metabol
         {
             public string Compartment;
             //public string Formula;
-            public Guid Id;
+            public readonly Guid Id;
             public string Name;
             public double NormalConcentration;
 
@@ -303,7 +322,8 @@ namespace Metabol
 
         public void Dispose()
         {
-            RemovedExchangeFlux.Clear();
+            RemovedConsumerExchange.Clear();
+            RemovedProducerExchange.Clear();
             Results.Clear();
             PrevResults.Clear();
         }

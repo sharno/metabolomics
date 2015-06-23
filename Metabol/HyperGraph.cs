@@ -22,9 +22,9 @@ namespace Metabol
      */
     public class HGraph
     {
-        private int step = 0;
+        private int step;
         private readonly ConcurrentDictionary<Guid, int> idMap = new ConcurrentDictionary<Guid, int>();
-        private int idGen = 0;
+        private int idGen;
 
         public HGraph()
         {
@@ -147,12 +147,12 @@ namespace Metabol
                 return InputNodes.Values.Concat(OuputNodes.Values);
             }
 
-            internal string ToDgs(EdgeType type)
+            internal string ToDgs(EdgeType type, TheAlgorithm theAlgorithm)
             {
-                var d1 = Util.Fba.Results.ContainsKey(Id) ? Util.Fba.Results[Id] : -1.0;
-                var d2 = Util.Fba.PrevResults.ContainsKey(Id) ? Util.Fba.PrevResults[Id] : -1.0;
+                var d1 = theAlgorithm.Fba.Results.ContainsKey(Id) ? theAlgorithm.Fba.Results[Id] : -1.0;
+                //var d2 = Util.Fba.PrevResults.ContainsKey(Id) ? Util.Fba.PrevResults[Id] : -1.0;
 
-                var bu = new StringBuilder($"an \"{Id}\" ui.class:hedge label:\"{Label}({d1})({d2})\"\r\n");
+                var bu = new StringBuilder($"an \"{Id}\" ui.class:hedge label:\"{Label}({d1})\"\r\n"); //({d2})
                 var uiclass = "";
                 switch (type)
                 {
@@ -222,16 +222,16 @@ namespace Metabol
 
             internal bool IsLonely => !IsBorder && ((InputToEdge.Count == 0 && OutputFromEdge.Count != 0) || (InputToEdge.Count != 0 && OutputFromEdge.Count == 0));
 
-            internal bool IsBorder => IsInBorder && IsOutBorder;
+            internal bool IsBorder => IsConsumedBorder || IsProducedBorder;
 
-            internal bool IsInBorder
+            internal bool IsConsumedBorder
             {
-                get { return AllReactions.Item1 != InputToEdge.Count(e => !e.IsImaginary); }
+                get { return AllReactions.Item2 != InputToEdge.Count(e => !e.IsImaginary); }
             }
 
-            internal bool IsOutBorder
+            internal bool IsProducedBorder
             {
-                get { return AllReactions.Item2 != OutputFromEdge.Count(e => !e.IsImaginary); }
+                get { return AllReactions.Item1 != OutputFromEdge.Count(e => !e.IsImaginary); }
             }
 
             internal bool IsTempBorder

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using PathwaysLib.ServerObjects;
@@ -12,7 +11,7 @@ namespace Metabol
     {
         internal readonly HGraph Sm = new HGraph();
         //internal readonly Stopwatch Timer = new Stopwatch();
-
+        internal TheAlgorithm Algorithm = new TheAlgorithm();
         //internal string file1;
         //internal string file2;
         internal int Iteration = 1;
@@ -29,8 +28,8 @@ namespace Metabol
                 //Timer.Reset();
                 //Timer.Start();
 
-                //steps 4,5
-                var fba = Util.ApplyFba(Sm, Z, IterationId);
+                // steps 4, 5
+                var fba = Algorithm.ApplyFba(Sm, Z, IterationId);
                 //while (iteration.Fba == 0)
                 //Console.ReadKey();
 
@@ -45,19 +44,19 @@ namespace Metabol
 
 
                 //8. Let m’ be a border metabolite in S(m) involved in the smallest total number of reactions.
-                var borderm = Util.GetBorderMetabolites(Sm);
-                var m2 = Util.LonelyMetabolite(borderm);
-                Util.SaveAsDgs(m2, Sm, Util.Fba.Label);
+                var borderm = TheAlgorithm.GetBorderMetabolites(Sm);
+                var m2 = TheAlgorithm.LonelyMetabolite(borderm);
+                Algorithm.SaveAsDgs(m2, Sm, Algorithm.Fba.Label);
                 Sm.NextStep();
 
                 //Extend S(m) with m’ and its reactions from M.
-                var ex = Util.ExtendGraph(m2.ToSpecies, Sm);
+                var ex = Algorithm.ExtendGraph(m2.ToSpecies, Sm);
                 //ex.Wait(int.MaxValue);
 
                 //Remove the exchange reaction that was introduced for m’ in step 4.
                 //Add a constraint that total net flux of reactions of m’ should
                 //be equal to those of the removed flux exchange reaction.
-                Util.RemoveExchangeReaction(Sm, m2);
+                Algorithm.RemoveExchangeReaction(Sm, m2);
 
                 //Go to step 4 to add exchange fluxes for the new border metabolites. 
                 //If S(m) cannot be extended, then go to step 3.
@@ -65,7 +64,7 @@ namespace Metabol
             }
         }
 
-        public void Start2()
+        public void Start()
         {
             if (init) return;
 
@@ -82,7 +81,7 @@ namespace Metabol
             //HGraph.Step++;
             //3. Extend S(m) with a subset K of m’s consumers and producers such that K has not been used before to extend the current subnetwork. 
             //HashSet<ServerSpecies> K = new HashSet<ServerSpecies>();
-            var ex = Util.ExtendGraph(m, Sm);
+            var ex = Algorithm.ExtendGraph(m, Sm);
             //ex.Wait(int.MaxValue);
 
             ////If there is no such qualifying subset K, then record the current hypothesis and exit
@@ -94,7 +93,7 @@ namespace Metabol
             init = true;
         }
 
-        public void Start()
+        public void Start2()
         {
             if (init) return;
 
@@ -118,7 +117,7 @@ namespace Metabol
 
             //3. Extend S(m) with a subset K of m’s consumers and producers such that K has not been used before to extend the current subnetwork. 
             //HashSet<ServerSpecies> K = new HashSet<ServerSpecies>();
-            var ex = Util.ExtendGraph(m, Sm);
+            var ex = Algorithm.ExtendGraph(m, Sm);
             //ex.Wait(int.MaxValue);
             //Util.SaveAsDgs(sm.Nodes[m.ID], sm, "start");
 
