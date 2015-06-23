@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,12 +17,14 @@ namespace Metabol
         public Dictionary<Guid, double> RemovedExchangeFlux { get; set; }
         public Dictionary<Guid, double> Results { get; set; }
         public Dictionary<Guid, double> PrevResults { get; set; }
+        public ConcurrentDictionary<Guid, HashSet<Guid>> UpdateExchangeConstraint { get; set; }
 
         public Fba()
         {
             RemovedExchangeFlux = new Dictionary<Guid, double>();
             Results = new Dictionary<Guid, double>();
             PrevResults = new Dictionary<Guid, double>();
+            UpdateExchangeConstraint = new ConcurrentDictionary<Guid, HashSet<Guid>>();
         }
 
         public bool Solve(List<Reaction> reactions, Dictionary<Guid, int> smz, HGraph sm)
@@ -115,12 +118,16 @@ namespace Metabol
             // add constaint for each reaction
             for (var i = 0; i < reactions.Count; i++)
             {
-                if (Util.UpdateExchangeConstraint.ContainsKey(reactions[i].Id))
+                if (UpdateExchangeConstraint.ContainsKey(reactions[i].Id))
                 {
-                    var sv = new SumTermBuilder(Util.UpdateExchangeConstraint[reactions[i].Id].Count);
+                    var sv = new SumTermBuilder(UpdateExchangeConstraint[reactions[i].Id].Count);
                     sv.Add(reactions[i].Name);
-                    foreach (var guid in Util.UpdateExchangeConstraint[reactions[i].Id])
-                        sv.Add(Results[guid]);
+                    var meta = reactions[i].Products.Select(e => e.Value.Metabolite)
+                         .Concat(reactions[i].Reactants.Select(e => e.Value.Metabolite)).First();
+                    var coefficient = Coefficient(reactions[i], meta);
+
+                    foreach (var guid in UpdateExchangeConstraint[reactions[i].Id])
+                        sv.Add(coefficient * decisions.Find(d => d.Name == sm.Edges[guid].Label));
 
                     model.AddConstraint("c" + i, sv.ToTerm() == Results[reactions[i].Id]);
                 }

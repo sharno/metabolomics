@@ -32,7 +32,6 @@ namespace Metabol
         internal static readonly string AllReactionFile = ConfigurationManager.AppSettings["allReaction"];
         internal static readonly string SelectedMetaFile = ConfigurationManager.AppSettings["selection"];
 
-        internal static readonly ConcurrentDictionary<Guid, HashSet<Guid>> UpdateExchangeConstraint = new ConcurrentDictionary<Guid, HashSet<Guid>>();
         static Util()
         {
             Fba.Label = FbaLabel();
@@ -93,7 +92,7 @@ namespace Metabol
                 HGraph.Edge e;
                 sm.Edges.TryRemove(outex.Id, out e);
                 HashSet<Guid> v;
-                UpdateExchangeConstraint.TryRemove(outex.Id, out v);
+                Fba.UpdateExchangeConstraint.TryRemove(outex.Id, out v);
             }
 
             if (removeix)
@@ -104,8 +103,9 @@ namespace Metabol
                 HGraph.Edge e;
                 sm.Edges.TryRemove(inex.Id, out e);
                 HashSet<Guid> v;
-                UpdateExchangeConstraint.TryRemove(inex.Id, out v);
+                Fba.UpdateExchangeConstraint.TryRemove(inex.Id, out v);
             }
+
             if (removeix || removeox)
                 Fba.RemovedExchangeFlux[m2.Id] = totalFlux;
         }
@@ -122,21 +122,21 @@ namespace Metabol
 
             foreach (var s in m2.InputToEdge.Where(s => !s.IsImaginary && !removeix))
             {
-                if (UpdateExchangeConstraint.ContainsKey(s.Id))
-                    UpdateExchangeConstraint[inex.Id] = new HashSet<Guid>();
+                if (Fba.UpdateExchangeConstraint.ContainsKey(s.Id))
+                    Fba.UpdateExchangeConstraint[inex.Id] = new HashSet<Guid>();
 
-                UpdateExchangeConstraint[inex.Id].Add(s.Id);
+                Fba.UpdateExchangeConstraint[inex.Id].Add(s.Id);
             }
 
             foreach (var s in m2.OutputFromEdge.Where(s => !s.IsImaginary && !removeox))
             {
-                if (UpdateExchangeConstraint.ContainsKey(s.Id))
-                    UpdateExchangeConstraint[outex.Id] = new HashSet<Guid>();
+                if (Fba.UpdateExchangeConstraint.ContainsKey(s.Id))
+                    Fba.UpdateExchangeConstraint[outex.Id] = new HashSet<Guid>();
 
-                UpdateExchangeConstraint[outex.Id].Add(s.Id);
+                Fba.UpdateExchangeConstraint[outex.Id].Add(s.Id);
             }
 
-            var totalFlux = 0.0;
+            var totalFlux = Fba.RemovedExchangeFlux.ContainsKey(m2.Id) ? Fba.RemovedExchangeFlux[m2.Id] : 0;
             if (removeox)
             {
                 totalFlux += Fba.Results[inex.Id];
@@ -145,7 +145,7 @@ namespace Metabol
                 HGraph.Edge e;
                 sm.Edges.TryRemove(outex.Id, out e);
                 HashSet<Guid> v;
-                UpdateExchangeConstraint.TryRemove(outex.Id, out v);
+                Fba.UpdateExchangeConstraint.TryRemove(outex.Id, out v);
             }
 
             if (removeix)
@@ -156,8 +156,9 @@ namespace Metabol
                 HGraph.Edge e;
                 sm.Edges.TryRemove(inex.Id, out e);
                 HashSet<Guid> v;
-                UpdateExchangeConstraint.TryRemove(inex.Id, out v);
+                Fba.UpdateExchangeConstraint.TryRemove(inex.Id, out v);
             }
+
             if (removeix || removeox)
                 Fba.RemovedExchangeFlux[m2.Id] = totalFlux;
         }
