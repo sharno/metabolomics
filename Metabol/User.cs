@@ -8,7 +8,7 @@ namespace Metabol
     {
         public string Id;
 
-        public Program Worker;
+        public TheAlgorithm Worker;
 
         public User(string id)
         {
@@ -18,7 +18,7 @@ namespace Metabol
 
         public void Init()
         {
-            Worker = new Program();
+            Worker = new TheAlgorithm();
             string[] zn =
             {
                 "ADP", "ATP(4-)",

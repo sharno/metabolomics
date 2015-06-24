@@ -18,8 +18,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetabolApi", "MetabolApi\Me
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AQILib", "AQILib\AQILib.csproj", "{8B313230-E94D-42F0-ADB1-F3060E00B9D7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LPsolveSBML", "fba_service\LPsolveSBML\LPsolveSBML.csproj", "{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		ConsoleDebug|.NET = ConsoleDebug|.NET
@@ -256,38 +254,6 @@ Global
 		{8B313230-E94D-42F0-ADB1-F3060E00B9D7}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{8B313230-E94D-42F0-ADB1-F3060E00B9D7}.Release|x86.ActiveCfg = Release|Any CPU
 		{8B313230-E94D-42F0-ADB1-F3060E00B9D7}.Release|x86.Build.0 = Release|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.ConsoleDebug|.NET.ActiveCfg = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.ConsoleDebug|.NET.Build.0 = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.ConsoleDebug|Any CPU.ActiveCfg = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.ConsoleDebug|Any CPU.Build.0 = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.ConsoleDebug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.ConsoleDebug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.ConsoleDebug|x86.ActiveCfg = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.ConsoleDebug|x86.Build.0 = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Debug|.NET.ActiveCfg = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Debug|.NET.Build.0 = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Debug|x86.Build.0 = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Quick Debug|.NET.ActiveCfg = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Quick Debug|.NET.Build.0 = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Quick Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Quick Debug|Any CPU.Build.0 = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Quick Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Quick Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Quick Debug|x86.ActiveCfg = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Quick Debug|x86.Build.0 = Debug|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Release|.NET.ActiveCfg = Release|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Release|.NET.Build.0 = Release|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Release|Any CPU.Build.0 = Release|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Release|x86.ActiveCfg = Release|Any CPU
-		{47E3E0F3-F1D7-42AA-8F4F-F18CB3BFB351}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

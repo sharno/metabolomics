@@ -150,9 +150,9 @@ namespace Metabol
             internal string ToDgs(EdgeType type, TheAlgorithm theAlgorithm)
             {
                 var d1 = theAlgorithm.Fba.Results.ContainsKey(Id) ? theAlgorithm.Fba.Results[Id] : -1.0;
-                //var d2 = Util.Fba.PrevResults.ContainsKey(Id) ? Util.Fba.PrevResults[Id] : -1.0;
+                var d2 = theAlgorithm.Fba.PrevResults.ContainsKey(Id) ? theAlgorithm.Fba.PrevResults[Id] : -1.0;
 
-                var bu = new StringBuilder($"an \"{Id}\" ui.class:hedge label:\"{Label}({d1})\"\r\n"); //({d2})
+                var bu = new StringBuilder($"an \"{Id}\" ui.class:hedge label:\"{Label}({d1})({d2})\"\r\n"); //
                 var uiclass = "";
                 switch (type)
                 {
@@ -167,9 +167,6 @@ namespace Metabol
 
                 foreach (var node in InputNodes.Values)
                     bu.Append($"ae \"{node.Id}{Id}\" \"{node.Id}\" > \"{Id}\" {uiclass}\r\n");
-                //bu.Append(IsImaginary
-                //    ? $"ae \"{node.Id}{Id}\" \"{node.Id}\" > \"{Id}\" {uiclass}\r\n"
-                //    : $"ae \"{node.Id}{Id}\" \"{node.Id}\"   \"{Id}\" {uiclass}\r\n");
 
                 foreach (var node in OuputNodes.Values)
                     bu.Append($"ae \"{Id}{node.Id}\" \"{Id}\" > \"{node.Id}\" {uiclass}\r\n");
@@ -238,7 +235,7 @@ namespace Metabol
             {
                 get
                 {
-                    return !IsBorder && (OutputFromEdge.Any(s => s.IsImaginary)) && (InputToEdge.Any(s => s.IsImaginary));
+                    return !IsBorder && ((OutputFromEdge.Any(s => s.IsImaginary)) || (InputToEdge.Any(s => s.IsImaginary)));
                 }
             }
 
@@ -246,7 +243,12 @@ namespace Metabol
 
             internal IEnumerable<Node> AllNeighborNodes()
             {
-                return InputToEdge.SelectMany(e => e.AllNodes()).Concat(OutputFromEdge.SelectMany(e => e.AllNodes())).Where(n => n.Id != Id);
+                var r = new HashSet<Node>();
+                r.UnionWith(InputToEdge.SelectMany(e => e.AllNodes()));
+                r.UnionWith(OutputFromEdge.SelectMany(e => e.AllNodes()));
+                r.Remove(this);
+                //return InputToEdge.SelectMany(e => e.AllNodes()).Concat(OutputFromEdge.SelectMany(e => e.AllNodes())).Where(n => n.Id != Id);
+                return r;
             }
 
             public string ToDgs(NodeType type)

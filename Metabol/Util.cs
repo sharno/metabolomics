@@ -1,13 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.IO;
-using System.Linq;
-using System.Runtime.Caching;
-using PathwaysLib.ServerObjects;
-
-namespace Metabol
+﻿namespace Metabol
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Configuration;
+    using System.IO;
+    using System.Linq;
+    using System.Runtime.Caching;
+
+    using PathwaysLib.ServerObjects;
+
     class Util
     {
         private static readonly MemoryCache CacheSpecieses = new MemoryCache("species");
@@ -88,14 +89,50 @@ namespace Metabol
         internal static int TotalReactions(HGraph.Node k)
         {
             var sum = k.AllReactions.Item1 + k.AllReactions.Item2;
-            return sum == 0 ? int.MaxValue : sum;
+            return sum == 0 ? Int32.MaxValue : sum;
         }
 
         internal static int TotalReactions(Guid id)
         {
             var sum = AllReactionCache[id].Item1 + AllReactionCache[id].Item2;
             //if sum==0, k is probably Modifier
-            return sum == 0 ? int.MaxValue : sum;
+            return sum == 0 ? Int32.MaxValue : sum;
+        }
+
+        internal static void SaveAsDgs(HGraph.Node m2, HGraph sm, TheAlgorithm algo)
+        {
+            var file = Dir + sm.LastLevel + "graph.dgs";
+            var maxLevel = sm.LastLevel;// sm.Nodes.Max(n => n.Value.Level);//Math.Max(sm.Nodes.Max(n => n.Value.Level), sm.Edges.Max(e => e.Value.Level));
+
+            var lines = new List<string> { "DGS004", "\"Metabolic Network\" 0 0", "#Nodes", m2.ToDgs(NodeType.Selected) };
+
+            foreach (var node in sm.Nodes.Values)
+            {
+                if (node.Id == m2.Id)
+                    //type = NodeType.Selected;
+                    continue;
+
+                var type = NodeType.None;
+                if (node.Level == maxLevel && node.IsBorder)
+                    type = NodeType.NewBorder;
+                //else if (node.Level == maxLevel)
+                //    type = NodeType.New;
+                else if (node.IsBorder)
+                    type = NodeType.Border;
+
+                lines.Add(node.ToDgs(type));
+            }
+
+            lines.Add("#Hyperedges");
+            foreach (var edge in sm.Edges.Values)
+            {
+                var type = EdgeType.None;
+                if (edge.Level == maxLevel)
+                    type = EdgeType.New;
+
+                lines.Add(edge.ToDgs(type, algo));
+            }
+            File.AppendAllLines(file, lines);
         }
     }
 }

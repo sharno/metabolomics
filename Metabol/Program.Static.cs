@@ -5,9 +5,11 @@ using PathwaysLib.ServerObjects;
 
 namespace Metabol
 {
-    public partial class Program
+    public class Program
     {
-
+        /// <summary>
+        /// The selected meta.
+        /// </summary>
         private static void SelectedMeta()
         {
             //var rand = new Random((int)DateTime.UtcNow.ToBinary());
@@ -21,6 +23,10 @@ namespace Metabol
         }
 
         #region main
+
+        /// <summary>
+        /// The main.
+        /// </summary>
         internal static void Main()
         {
             var p = InitProgram();
@@ -28,14 +34,22 @@ namespace Metabol
             do
             {
                 var it = p.Step(1).First();
-                if (it.Fba == 0)
-                {
-                    Console.ReadKey();
-                }
-            } while (true); //count != sm.Edges.Count
+                //if (it.Id>=4)
+                //{
+                //    p.Fba.RemoveConstraints = true;
+                //    Console.ReadKey();
+                //}
+            }
+            while (true); //count != sm.Edges.Count
         }
 
-        private static Program InitProgram()
+        /// <summary>
+        /// The init program.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="Program"/>.
+        /// </returns>
+        private static TheAlgorithm InitProgram()
         {
             var user = new User(Guid.NewGuid().ToString());
             //var d = DateTime.Now.TimeOfDay.Ticks;
