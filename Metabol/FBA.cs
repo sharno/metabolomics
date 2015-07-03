@@ -4,13 +4,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Microsoft.SolverFoundation.Services;
+
 using PathwaysLib.ServerObjects;
 
 namespace Metabol
 {
-    using Microsoft.SolverFoundation.Common;
-
+    /*
     public class Fba : IDisposable
     {
         public bool RemoveConstraints = false;
@@ -21,6 +20,7 @@ namespace Metabol
         public Dictionary<Guid, double> Results { get; set; }
         public Dictionary<Guid, double> PrevResults { get; set; }
         public ConcurrentDictionary<Guid, HashSet<Guid>> UpdateExchangeConstraint { get; set; }
+        public HashSet<Guid> IgnoreSet { get; set; }
 
         private double varConst = 100000.0;
         public Fba()
@@ -31,6 +31,7 @@ namespace Metabol
             Results = new Dictionary<Guid, double>();
             PrevResults = new Dictionary<Guid, double>();
             UpdateExchangeConstraint = new ConcurrentDictionary<Guid, HashSet<Guid>>();
+            IgnoreSet = new HashSet<Guid>();
         }
 
         public bool Solve(Dictionary<Guid, Reaction> reactions, Dictionary<Guid, int> smz, HGraph sm)
@@ -47,21 +48,29 @@ namespace Metabol
 
             var str = new StringBuilder();
             context.SaveModel(FileFormat.OML, new StringWriter(str));
-            File.WriteAllText(Util.Dir + sm.LastLevel + "model.txt", str.ToString());
+            File.WriteAllText($"{Util.Dir}{sm.LastLevel}model.txt", str.ToString());
             str.Clear();
-            var sim = new SimplexDirective();
-            sim.Arithmetic = Arithmetic.Double;
+            var sim = new SimplexDirective { Arithmetic = Arithmetic.Double, GetSensitivity = false };
+
             var solution = context.Solve(sim);
+            var q = solution.Quality;
+
             Results.ToList().ForEach(d => PrevResults[d.Key] = d.Value);
-            solution.Decisions.ToList().ForEach(d => Results[reactions.Values.First(r => r.Name == d.Name).Id] = d.ToDouble());
-            var report = solution.GetReport();
 
-            report.WriteTo(new StringWriter(str));
-            File.WriteAllText(Util.Dir + sm.LastLevel + "result.txt", str.ToString());
+            if (q == SolverQuality.Feasible || q == SolverQuality.Optimal)
+                solution.Decisions.ToList().ForEach(d => Results[reactions.Values.First(r => r.Name == d.Name).Id] = d.ToDouble());
+            else
+                solution.Decisions.ToList().ForEach(d => Results[reactions.Values.First(r => r.Name == d.Name).Id] = 0);
 
+            var list = solution.Decisions.Select(decision => $"{decision.Name}:{Results[reactions.Values.First(r => r.Name == decision.Name).Id]}").ToList();
+            list.Sort((decision, decision1) => string.Compare(decision, decision1, StringComparison.Ordinal));
+            File.WriteAllLines($"{Util.Dir}{sm.LastLevel}result.txt", list);
+
+            //report.WriteTo(new StringWriter(str));
+            //File.WriteAllText(Util.Dir + sm.LastLevel + "result.txt", str.ToString());
+            var report = solution.GetReport(ReportVerbosity.Decisions);
             Console.WriteLine(report);
 
-            var q = solution.Quality;
             context.ClearModel();
             return q == SolverQuality.Feasible || q == SolverQuality.Optimal;
         }
@@ -82,7 +91,7 @@ namespace Metabol
                 var sv = new SumTermBuilder(reactions.Count);
                 var svin = new SumTermBuilder(reactions.Count);
                 var svout = new SumTermBuilder(reactions.Count);
-
+                double ind = 0, outd = 0;
                 foreach (var react in reactions)
                 {
                     var coefficient = Coefficient(react.Value, metabolite);
@@ -93,30 +102,39 @@ namespace Metabol
                     if (smz.ContainsKey(metabolite.Id))
                         fobj.Add(coefficient * smz[metabolite.Id] * decisions[react.Key]);
 
-                    if (RemoveConstraints) continue;
-
                     if (react.Value.Reactants.ContainsKey(metabolite.Id)
                         && RemovedConsumerExchange.ContainsKey(metabolite.Id)
                         && RemovedConsumerExchange[metabolite.Id].Level < react.Value.Level)
+                    {
                         svin.Add(Math.Abs(coefficient) * decisions[react.Key]);
+                        ind += Math.Abs(coefficient);
+                    }
 
                     if (react.Value.Products.ContainsKey(metabolite.Id)
                         && RemovedProducerExchange.ContainsKey(metabolite.Id)
                         && RemovedProducerExchange[metabolite.Id].Level < react.Value.Level)
+                    {
                         svout.Add(Math.Abs(coefficient) * decisions[react.Key]);
-
+                        outd += Math.Abs(coefficient);
+                    }
                 }
                 model.AddConstraint(metabolite.Name, sv.ToTerm() == 0);
 
-                if (RemoveConstraints) continue;
+                var con = RemovedConsumerExchange.ContainsKey(metabolite.Id) && ind < this.Results[this.RemovedConsumerExchange[metabolite.Id].Id];
+
+                var prod = this.RemovedProducerExchange.ContainsKey(metabolite.Id) && outd < Results[this.RemovedProducerExchange[metabolite.Id].Id];
+
+                if (RemoveConstraints || !con || !prod) continue;
+                //var cin = (int)Util.GetPrivate(typeof(SumTermBuilder), svin, "_count");
+                //var cout = (int)Util.GetPrivate(typeof(SumTermBuilder), svout, "_count");
 
                 //Add a constraint that total net flux of reactions of m’ should
                 //be equal to those of the removed flux exchange reaction.
-                if (RemovedConsumerExchange.ContainsKey(metabolite.Id))
-                    model.AddConstraint(metabolite.Name + "_consumer", svin.ToTerm() == Results[RemovedConsumerExchange[metabolite.Id].Id]);
+                //if (con && prod)
+                model.AddConstraint($"{metabolite.Name}_consumer", svin.ToTerm() == Results[RemovedConsumerExchange[metabolite.Id].Id]);
 
-                if (RemovedProducerExchange.ContainsKey(metabolite.Id))
-                    model.AddConstraint(metabolite.Name + "_producer", svout.ToTerm() == Results[RemovedProducerExchange[metabolite.Id].Id]);
+                //if (prod && con)
+                model.AddConstraint($"{metabolite.Name}_producer", svout.ToTerm() == Results[RemovedProducerExchange[metabolite.Id].Id]);
             }
             return fobj;
         }
@@ -136,34 +154,39 @@ namespace Metabol
         {
             var decisions = new Dictionary<Guid, Decision>(reactions.Count);
             foreach (var reaction in reactions)
-                decisions.Add(reaction.Key, new Decision(Domain.RealRange(1, Rational.PositiveInfinity), reaction.Value.Name));
+                decisions.Add(reaction.Key, new Decision(Domain.RealRange(1.0, Rational.PositiveInfinity), reaction.Value.Name));
 
             model.AddDecisions(decisions.Values.ToArray());
 
-            // add constaint for each reaction
-            //for (var i = 0; i < reactions.Count; i++)
+            // add constaint for reactions
             var i = 0;
             foreach (var reaction in reactions)
             {
-                if (RemoveConstraints) continue;
+                if (RemoveConstraints || IgnoreSet.Contains(reaction.Key)) continue;
+
                 var ctx = Results.ContainsKey(reaction.Key) ? Results[reaction.Key] : 0;
-                if (UpdateExchangeConstraint.ContainsKey(reaction.Key))
-                {
-                    var sv = new SumTermBuilder(UpdateExchangeConstraint[reaction.Key].Count);
-                    sv.Add(decisions[reaction.Key]);
-                    var meta = reaction.Value.Products.Select(e => e.Value.Metabolite)
-                         .Concat(reaction.Value.Reactants.Select(e => e.Value.Metabolite)).First();
+                //if (UpdateExchangeConstraint.ContainsKey(reaction.Key))
+                //{
+                //    var sv = new SumTermBuilder(UpdateExchangeConstraint[reaction.Key].Count);
+                //    sv.Add(decisions[reaction.Key]);
+                //    var meta = reaction.Value.Products.Select(e => e.Value.Metabolite)
+                //         .Concat(reaction.Value.Reactants.Select(e => e.Value.Metabolite)).First();
+                //    double d = 0;
+                //    foreach (var guid in UpdateExchangeConstraint[reaction.Key])
+                //    {
+                //        var coefficient = Math.Abs(Coefficient(reactions[guid], meta));
+                //        sv.Add(coefficient * decisions[guid]); //.Find(d => d.Name == sm.Edges[guid].Label)
+                //        d += coefficient;
+                //    }
+                //    //var cin = (int)Util.GetPrivate(typeof(SumTermBuilder), sv, "_count");
+                //    if (d < ctx)
+                //        model.AddConstraint($"update{i++}", sv.ToTerm() == ctx);
+                //}
+                //else 
 
-                    foreach (var guid in UpdateExchangeConstraint[reaction.Key])
-                    {
-                        var coefficient = Math.Abs(Coefficient(reactions[guid], meta));
-                        sv.Add(coefficient * decisions[guid]); //.Find(d => d.Name == sm.Edges[guid].Label)
-                    }
+                if (Results.ContainsKey(reaction.Key))
+                    model.AddConstraint($"prev{i++}", decisions[reaction.Key] == ctx);
 
-                    model.AddConstraint("update" + i++, sv.ToTerm() == ctx);
-                }
-                else if (Results.ContainsKey(reaction.Key))
-                    model.AddConstraint("prev" + i++, decisions[reaction.Key] == ctx);
                 //else if (RemovedConsumerExchange.ContainsKey(reactions[i].Id) ||
                 //         RemovedProducerExchange.ContainsKey(reactions[i].Id))
                 //    ;
@@ -290,4 +313,5 @@ namespace Metabol
             PrevResults.Clear();
         }
     }
+    */
 }

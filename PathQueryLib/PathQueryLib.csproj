@@ -54,11 +54,13 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="QueryFailureResult.cs" />
     <Compile Include="QueryNeighborhoodResultsSimple.cs" />
+    <None Include="packages.config" />
     <None Include="QueryNeighborhoodResultsExtended.cs" />
     <None Include="QueryNeighborhoodExtended.cs" />
     <Compile Include="EqualityComparerINode.cs" />

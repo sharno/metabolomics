@@ -69,9 +69,9 @@ namespace Metabol
             if (!exist) e.Level = step;
         }
 
-        internal void AddNode(Guid id, string label)
+        internal Node AddNode(Guid id, string label)
         {
-            Nodes.AddOrUpdate(id, Node.Create(id, label), (guid, node) => node);
+            return Nodes.AddOrUpdate(id, Node.Create(id, label), (guid, node) => node);
         }
 
         internal void AddOuputNode(Guid eid, string id, Guid nid, string sbmlId)
@@ -144,26 +144,29 @@ namespace Metabol
 
             internal IEnumerable<Node> AllNodes()
             {
-                return InputNodes.Values.Concat(OuputNodes.Values);
+                return new HashSet<Node>(InputNodes.Values.Concat(OuputNodes.Values));
             }
 
             internal string ToDgs(EdgeType type, TheAlgorithm theAlgorithm)
             {
-                var d1 = theAlgorithm.Fba.Results.ContainsKey(Id) ? theAlgorithm.Fba.Results[Id] : -1.0;
-                var d2 = theAlgorithm.Fba.PrevResults.ContainsKey(Id) ? theAlgorithm.Fba.PrevResults[Id] : -1.0;
+                var d1 = theAlgorithm.Fba.Results.ContainsKey(Label) ? theAlgorithm.Fba.Results[Label] : -1.0;
+                var d2 = theAlgorithm.Fba.PrevResults.ContainsKey(Label) ? theAlgorithm.Fba.PrevResults[Label] : -1.0;
 
-                var bu = new StringBuilder($"an \"{Id}\" ui.class:hedge label:\"{Label}({d1})({d2})\"\r\n"); //
                 var uiclass = "";
+                var hedgeclass = "";
                 switch (type)
                 {
                     case EdgeType.New:
                         uiclass = " ui.class:new ";
+                        hedgeclass = " ui.class:newhedge ";
                         break;
 
                     case EdgeType.None:
                         uiclass = " ";
+                        hedgeclass = " ui.class:hedge ";
                         break;
                 }
+                var bu = new StringBuilder($"an \"{Id}\" {hedgeclass} label:\"{Label}({d1})({d2})\"\r\n"); //
 
                 foreach (var node in InputNodes.Values)
                     bu.Append($"ae \"{node.Id}{Id}\" \"{node.Id}\" > \"{Id}\" {uiclass}\r\n");
@@ -188,12 +191,43 @@ namespace Metabol
             {
                 return Id.GetHashCode();
             }
+
+            public string ToDgs(EdgeType type, Dictionary<string, double> results, Dictionary<string, double> prevResults)
+            {
+                var d1 = results.ContainsKey(Label) ? results[Label] : -1.0;
+                var d2 = prevResults.ContainsKey(Label) ? prevResults[Label] : -1.0;
+
+                var uiclass = "";
+                var hedgeclass = "";
+                switch (type)
+                {
+                    case EdgeType.New:
+                        uiclass = " ui.class:new ";
+                        hedgeclass = " ui.class:newhedge ";
+                        break;
+
+                    case EdgeType.None:
+                        uiclass = " ";
+                        hedgeclass = " ui.class:hedge ";
+                        break;
+                }
+                var bu = new StringBuilder($"an \"{Id}\" {hedgeclass} label:\"{Label}({d1})({d2})\"\r\n"); //
+
+                foreach (var node in InputNodes.Values)
+                    bu.Append($"ae \"{node.Id}{Id}\" \"{node.Id}\" > \"{Id}\" {uiclass}\r\n");
+
+                foreach (var node in OuputNodes.Values)
+                    bu.Append($"ae \"{Id}{node.Id}\" \"{Id}\" > \"{node.Id}\" {uiclass}\r\n");
+
+                return bu.ToString();
+
+            }
         }
 
         /**
          * simple node ( not hypernode )
          */
-        public class Node
+        public class Node:IComparable<Node>
         {
             internal readonly Guid Id;
             internal string Label;
@@ -201,13 +235,13 @@ namespace Metabol
             internal HashSet<Edge> OutputFromEdge = new HashSet<Edge>();
             internal int Level { get; set; }
             //private bool isNonBorder;
-            public readonly Tuple<int, int> AllReactions;
+            public readonly Tuple<int, int> ReactionCount;
 
             internal Node(Guid id, string l)
             {
                 Label = l;
                 Id = id;
-                AllReactions = Util.AllReactionCache[id];
+                //this.ReactionCount = Util.AllReactionCache[id];
             }
 
             internal ServerSpecies ToSpecies => Util.CachedS(Id);
@@ -217,18 +251,18 @@ namespace Metabol
                 return new Node(id, label);
             }
 
-            internal bool IsLonely => !IsBorder && ((InputToEdge.Count == 0 && OutputFromEdge.Count != 0) || (InputToEdge.Count != 0 && OutputFromEdge.Count == 0));
+            internal bool IsLonely => true;//!IsBorder && ((InputToEdge.Count == 0 && OutputFromEdge.Count != 0) || (InputToEdge.Count != 0 && OutputFromEdge.Count == 0));
 
             internal bool IsBorder => IsConsumedBorder || IsProducedBorder;
 
             internal bool IsConsumedBorder
             {
-                get { return AllReactions.Item2 != InputToEdge.Count(e => !e.IsImaginary); }
+                get { return this.ReactionCount.Item2 != InputToEdge.Count(e => !e.IsImaginary); }
             }
 
             internal bool IsProducedBorder
             {
-                get { return AllReactions.Item1 != OutputFromEdge.Count(e => !e.IsImaginary); }
+                get { return this.ReactionCount.Item1 != OutputFromEdge.Count(e => !e.IsImaginary); }
             }
 
             internal bool IsTempBorder
@@ -239,7 +273,7 @@ namespace Metabol
                 }
             }
 
-            internal int TotalReaction => AllReactions.Item1 + AllReactions.Item2;
+            internal int TotalReaction => this.ReactionCount.Item1 + this.ReactionCount.Item2;
 
             internal IEnumerable<Node> AllNeighborNodes()
             {
@@ -247,6 +281,7 @@ namespace Metabol
                 r.UnionWith(InputToEdge.SelectMany(e => e.AllNodes()));
                 r.UnionWith(OutputFromEdge.SelectMany(e => e.AllNodes()));
                 r.Remove(this);
+
                 //return InputToEdge.SelectMany(e => e.AllNodes()).Concat(OutputFromEdge.SelectMany(e => e.AllNodes())).Where(n => n.Id != Id);
                 return r;
             }
@@ -280,6 +315,11 @@ namespace Metabol
                 return $"an \"{Id}\"  label:\"{Label}\"  {uiclass}";
             }
 
+            public int CompareTo(Node other)
+            {
+                return other.Id.CompareTo(Id);
+            }
+
             public override string ToString()
             {
                 return Label;
@@ -293,6 +333,14 @@ namespace Metabol
             public override bool Equals(object obj)
             {
                 return obj is Node && ((Node)obj).Id.Equals(Id);
+            }
+
+            public IEnumerable<Edge> AllReactions()
+            {
+                var r = new HashSet<Edge>();
+                r.UnionWith(InputToEdge);
+                r.UnionWith(OutputFromEdge);
+                return r;
             }
         }
 
