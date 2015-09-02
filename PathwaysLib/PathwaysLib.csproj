@@ -150,6 +150,9 @@
     <Reference Include="SBWCSharp">
       <HintPath>.\SBWCSharp.dll</HintPath>
     </Reference>
+    <Reference Include="SBWCSharp.2.7.3127.39653.Fakes">
+      <HintPath>FakesAssemblies\SBWCSharp.2.7.3127.39653.Fakes.dll</HintPath>
+    </Reference>
     <Reference Include="System">
       <Name>System</Name>
     </Reference>

@@ -55,11 +55,6 @@
             Creates a new instance of the NoBugForm class.
             </summary>
         </member>
-        <member name="P:MasterPagesLib.NoBugForm.UniqueID">
-            <summary>
-            Overriden to fix the bug.
-            </summary>
-        </member>
         <member name="M:MasterPagesLib.NoBugForm.RenderAttributes(System.Web.UI.HtmlTextWriter)">
             <summary>
             Overridden to fix the bug.
@@ -71,6 +66,11 @@
             Overridden to fix the bug.
             </summary>
             <param name="writer"></param>
+        </member>
+        <member name="P:MasterPagesLib.NoBugForm.UniqueID">
+            <summary>
+            Overriden to fix the bug.
+            </summary>
         </member>
         <member name="T:MasterPagesLib.Region">
             <summary>

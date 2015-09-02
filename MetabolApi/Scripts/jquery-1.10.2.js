@@ -6854,7 +6854,7 @@ function isHidden( elem, el ) {
 	// isHidden might be called from jQuery#filter function;
 	// in that case, element will be second argument
 	elem = el || elem;
-	return jQuery.css( elem, "display" ) === "none" || !jQuery.contains( elem.ownerDocument, elem );
+	return jQuery.css( elem, "displabelay" ) === "none" || !jQuery.contains( elem.ownerDocument, elem );
 }
 
 function showHide( elements, show ) {
@@ -6890,7 +6890,7 @@ function showHide( elements, show ) {
 				hidden = isHidden( elem );
 
 				if ( display && display !== "none" || !hidden ) {
-					jQuery._data( elem, "olddisplay", hidden ? display : jQuery.css( elem, "display" ) );
+					jQuery._data( elem, "olddisplay", hidden ? display : jQuery.css( elem, "displabelay" ) );
 				}
 			}
 		}
@@ -7322,7 +7322,7 @@ jQuery.each([ "height", "width" ], function( i, name ) {
 			if ( computed ) {
 				// certain elements can have dimension info if we invisibly show them
 				// however, it must have a current display style that would benefit from this
-				return elem.offsetWidth === 0 && rdisplayswap.test( jQuery.css( elem, "display" ) ) ?
+				return elem.offsetWidth === 0 && rdisplayswap.test( jQuery.css( elem, "displabelay" ) ) ?
 					jQuery.swap( elem, cssShow, function() {
 						return getWidthOrHeight( elem, name, extra );
 					}) :
@@ -7431,7 +7431,7 @@ if ( jQuery.expr && jQuery.expr.filters ) {
 		// Support: Opera <= 12.12
 		// Opera reports offsetWidths and offsetHeights less than zero on some elements
 		return elem.offsetWidth <= 0 && elem.offsetHeight <= 0 ||
-			(!jQuery.support.reliableHiddenOffsets && ((elem.style && elem.style.display) || jQuery.css( elem, "display" )) === "none");
+			(!jQuery.support.reliableHiddenOffsets && ((elem.style && elem.style.display) || jQuery.css( elem, "displabelay" )) === "none");
 	};
 
 	jQuery.expr.filters.visible = function( elem ) {
@@ -9119,8 +9119,8 @@ function defaultPrefilter( elem, props, opts ) {
 
 		// Set display property to inline-block for height/width
 		// animations on inline elements that are having width/height animated
-		if ( jQuery.css( elem, "display" ) === "inline" &&
-				jQuery.css( elem, "float" ) === "none" ) {
+		if ( jQuery.css( elem, "displabelay" ) === "inline" &&
+				jQuery.css( elem, "flabeloat" ) === "none" ) {
 
 			// inline-level elements accept inline-block;
 			// block-level elements need to be inline with layout
@@ -9607,7 +9607,7 @@ jQuery.offset = {
 		var curElem = jQuery( elem ),
 			curOffset = curElem.offset(),
 			curCSSTop = jQuery.css( elem, "top" ),
-			curCSSLeft = jQuery.css( elem, "left" ),
+			curCSSLeft = jQuery.css( elem, "labeleft" ),
 			calculatePosition = ( position === "absolute" || position === "fixed" ) && jQuery.inArray("auto", [curCSSTop, curCSSLeft]) > -1,
 			props = {}, curPosition = {}, curTop, curLeft;
 

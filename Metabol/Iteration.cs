@@ -18,6 +18,12 @@ namespace Metabol
             Id = iteration;
         }
 
-        public static Iteration Empty => empty ?? (empty = new Iteration(-1));
+        public static Iteration Empty
+        {
+            get
+            {
+                return empty ?? (empty = new Iteration(-1));
+            }
+        }
     }
 }

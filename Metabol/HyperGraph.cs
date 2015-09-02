@@ -7,6 +7,8 @@ using PathwaysLib.ServerObjects;
 
 namespace Metabol
 {
+    using Newtonsoft.Json;
+
     public enum NodeType
     {
         New, Border, Selected, NewBorder, None
@@ -20,137 +22,350 @@ namespace Metabol
     /**
      * HyperGraph implementation  
      */
-    public class HGraph
+    public class HyperGraph
     {
-        private int step;
-        private readonly ConcurrentDictionary<Guid, int> idMap = new ConcurrentDictionary<Guid, int>();
-        private int idGen;
+        [JsonProperty("step")]
+        public int Step { get; set; }
 
-        public HGraph()
+        //private readonly ConcurrentDictionary<Guid, int> idMap = new ConcurrentDictionary<Guid, int>();
+        //private int idGen;
+
+        [JsonIgnore]
+        public int LastLevel
+        {
+            get { return Math.Max(Edges.Values.Select(v => v.Level).Max(), Nodes.Values.Select(n => n.Level).Max()); }
+        }
+
+        [JsonProperty("nodes")]
+        public ConcurrentDictionary<Guid, Node> Nodes { get; protected set; }
+
+        public ConcurrentDictionary<Guid, HashSet<Guid>> PseudoPath { get; protected set; }
+
+        [JsonProperty("edges")]
+        public ConcurrentDictionary<Guid, Edge> Edges { get; protected set; }
+
+        public HyperGraph()
         {
             Edges = new ConcurrentDictionary<Guid, Edge>();
             Nodes = new ConcurrentDictionary<Guid, Node>();
+            PseudoPath = new ConcurrentDictionary<Guid, HashSet<Guid>>();
         }
 
-        internal void NextStep()
+        public void NextStep()
         {
-            step++;
+            Step++;
         }
 
-        protected internal ConcurrentDictionary<Guid, Node> Nodes { get; protected set; }
-
-        protected internal ConcurrentDictionary<Guid, Edge> Edges { get; protected set; }
-
-        internal void AddInputNode(Guid eid, string elabel, Guid nid, string label, bool b)
+        public void AddPseudoPath(Guid n1, Guid n2)
         {
-            var exist = Nodes.ContainsKey(nid);
-            var node = Nodes.GetOrAdd(nid, Node.Create(nid, label));
-            if (!exist) node.Level = step;
+            PseudoPath.GetOrAdd(n1, new HashSet<Guid>()).Add(n2);
+        }
 
-            exist = Edges.ContainsKey(eid);
-            var e = Edges.GetOrAdd(eid, Edge.Create(eid));
+        public bool ExistPseudoPath(Guid n1, Guid n2)
+        {
+            return PseudoPath.ContainsKey(n1) && PseudoPath[n1].Contains(n2);
+        }
+
+        public Node GetNode(Guid id)
+        {
+            return Nodes[id];
+        }
+
+        public Edge GetEdge(Guid id)
+        {
+            return Edges[id];
+        }
+
+        public Node AddNode(Guid id, string label)
+        {
+            return Nodes.AddOrUpdate(id, Node.Create(id, label, Step), (guid, node) => node);
+        }
+
+        public Node AddNode(Guid id, string label, bool b)
+        {
+            return Nodes.AddOrUpdate(id, Node.Create(id, label, Step, b), (guid, node) => node);
+        }
+
+        public void AddReactant(Guid eid, string elabel, Guid nid, string label, bool b)
+        {
+            var node = Nodes.GetOrAdd(nid, Node.Create(nid, label, Step));
+            var e = Edges.GetOrAdd(eid, Edge.Create(eid, Step));
             e.Label = elabel;
-            e.AddInput(node);
-            e.IsImaginary = b;
-            if (!exist) e.Level = step;
+            e.AddReactant(node);
+            e.IsPseudo = b;
+            try
+            {
+                if (!b) node.Weights[eid] = Util.CachedRs(eid, nid).Stoichiometry;
+            }
+            catch (Exception ex)
+            {
+            }
+            node.UpdateImaginary();
         }
 
-        internal void AddOuputNode(Guid eid, string elabel, Guid nid, string label, bool b)
+        public void AddProduct(Guid eid, string elabel, Guid nid, string label, bool b)
         {
-            var exist = Nodes.ContainsKey(nid);
-            var node = Nodes.GetOrAdd(nid, Node.Create(nid, label));
-            if (!exist) node.Level = step;
+            var node = Nodes.GetOrAdd(nid, Node.Create(nid, label, Step));
 
-            exist = Edges.ContainsKey(eid);
-            var e = Edges.GetOrAdd(eid, Edge.Create(eid));
+            var e = Edges.GetOrAdd(eid, Edge.Create(eid, Step));
             e.Label = elabel;
-            e.AddOutput(node);
-            e.IsImaginary = b;
-            if (!exist) e.Level = step;
+            e.AddProduct(node);
+            e.IsPseudo = b;
+            try
+            {
+                if (!b) node.Weights[eid] = Util.CachedRs(eid, nid).Stoichiometry;
+            }
+            catch (Exception ex)
+            {
+            }
+            node.UpdateImaginary();
         }
 
-        internal Node AddNode(Guid id, string label)
+        public void AddProduct(Guid eid, string id, Guid nid, string sbmlId)
         {
-            return Nodes.AddOrUpdate(id, Node.Create(id, label), (guid, node) => node);
+            AddProduct(eid, id, nid, sbmlId, false);
         }
 
-        internal void AddOuputNode(Guid eid, string id, Guid nid, string sbmlId)
+        public void AddReactant(Guid eid, string elabel, Guid nid, string sbmlId)
         {
-            AddOuputNode(eid, id, nid, sbmlId, false);
+            AddReactant(eid, elabel, nid, sbmlId, false);
         }
 
-        internal void AddInputNode(Guid eid, string elabel, Guid nid, string sbmlId)
+        public void Clear()
         {
-            AddInputNode(eid, elabel, nid, sbmlId, false);
-        }
-
-        internal void Clear()
-        {
-            idMap.Clear();
+            //idMap.Clear();
             foreach (var edge in Edges)
             {
-                edge.Value.InputNodes.Clear();
-                edge.Value.OuputNodes.Clear();
+                edge.Value.Reactants.Clear();
+                edge.Value.Products.Clear();
             }
             foreach (var node in Nodes)
             {
-                node.Value.InputToEdge.Clear();
-                node.Value.OutputFromEdge.Clear();
+                node.Value.Consumers.Clear();
+                node.Value.Producers.Clear();
             }
         }
 
-        /**
-         * fancy  Hyperedge
-         */
-        public class Edge
+        #region json
+
+        //public IEnumerable<dynamic> JsonNodes(Dictionary<Guid, int> z)
+        //{
+        //    // "name": "Glucose", "type": "m", "isBorder": 1, "concentration": 10.1, 'change': '+'
+        //    var lastLevel = LastLevel;
+        //    var result = new List<object>();
+
+        //    foreach (var node in Nodes.Where(node => node.Value.Level == lastLevel))
+        //    {
+        //        var ch = "0";
+        //        if (z.ContainsKey(node.Key))
+        //            ch = z[node.Key] > 0 ? "+" : z[node.Key] < 0 ? "-" : "0";
+
+        //        dynamic n = new
+        //        {
+        //            id = idGen,
+        //            name = node.Value.Label,
+        //            type = "m",
+        //            isBorder = node.Value.IsBorder ? 1 : 0,
+        //            concentration = 10.0,
+        //            change = ch
+        //        };
+        //        idMap[node.Key] = idGen;
+        //        idGen++;
+        //        //yield return n;
+        //        result.Add(n);
+        //    }
+
+        //    // { "name": "Pyruvate xxx", "type": "r", "V": 9 }
+        //    foreach (var node in Edges.Where(node => node.Value.Level == lastLevel))
+        //    {
+        //        dynamic n = new
+        //        {
+        //            id = idGen,
+        //            name = node.Value.Label,
+        //            type = "r",
+        //            V = 1.0
+        //        };
+        //        idMap[node.Key] = idGen;
+        //        idGen++;
+        //        //yield return n;
+        //        result.Add(n);
+        //    }
+        //    return result;
+        //}
+
+        //public IEnumerable<dynamic> JsonLinks()
+        //{
+        //    // { "source": 0, "target": 3, "role": "s" }
+        //    // { "source": 3, "target": 4, "role": "p" }
+        //    var lastLevel = LastLevel;
+        //    var result = new List<dynamic>();
+
+        //    foreach (var link in Edges.Where(node => node.Value.Level == lastLevel))
+        //    {
+        //        foreach (var node in link.Value.Reactants.Values)
+        //        {
+        //            dynamic n = new { source = idMap[node.Id], target = idMap[link.Value.Id], role = "s" };
+        //            //yield return n;
+        //            result.Add(n);
+        //        }
+
+        //        foreach (var node in link.Value.Products.Values)
+        //        {
+        //            dynamic n = new { source = idMap[link.Value.Id], target = idMap[node.Id], role = "p" };
+        //            //yield return n;
+        //            result.Add(n);
+        //        }
+        //    }
+        //    return result;
+
+        //}
+
+        #endregion
+
+        public class Edge : IComparable<Edge>
         {
-            internal readonly Guid Id;
-            internal bool IsImaginary { get; set; }
-            internal string Label { get; set; }
-            internal int Level { get; set; }
+            #region Properties
 
-            internal Edge(Guid id)
+            [JsonProperty("id")]
+            public readonly Guid Id;
+
+            [JsonProperty("isPseudo")]
+            public bool IsPseudo { get; set; }
+
+            [JsonProperty("label")]
+            public string Label { get; set; }
+
+            [JsonProperty("value")]
+            public double Value { get; set; }
+
+            [JsonProperty("preValue")]
+            public double PreValue { get; set; }
+
+            [JsonProperty("level")]
+            public int Level { get; set; }
+
+            [JsonIgnore]
+            public ServerReaction ToServerReaction
             {
-                OuputNodes = new ConcurrentDictionary<Guid, Node>();
-                InputNodes = new ConcurrentDictionary<Guid, Node>();
+                get
+                {
+                    return Util.CachedR(Id);
+                }
+            }
+
+            [JsonProperty("inputNodes")]
+            public Dictionary<Guid, Node> Reactants { get; set; }
+
+            [JsonProperty("outputNodes")]
+            public Dictionary<Guid, Node> Products { get; set; }
+
+            [JsonProperty("updatePseudo")]
+            public HashSet<Guid> UpdatePseudo { get; set; }
+
+            public HashSet<Guid> Reactions { get; set; }
+            public HashSet<Guid> InitReactions { get; set; }
+            #endregion
+
+            public Edge(Guid id, int i)
+            {
+                Products = new Dictionary<Guid, Node>();
+                Reactants = new Dictionary<Guid, Node>();
+                UpdatePseudo = new HashSet<Guid>();
+                Reactions = new HashSet<Guid>();
+                InitReactions = new HashSet<Guid>();
+
                 Id = id;
-                //Level = step;
+                Level = i;
+                PreValue = -1;
             }
 
-            internal ServerReaction ToServerReaction => Util.CachedR(Id);
-
-            internal ConcurrentDictionary<Guid, Node> InputNodes { get; set; }
-
-            internal ConcurrentDictionary<Guid, Node> OuputNodes { get; set; }
-
-            internal static Edge Create(Guid id)
+            public static Edge Create(Guid id, int i)
             {
-                return new Edge(id);
+                return new Edge(id, i);
             }
 
-            internal Edge AddInput(Node node)
+            public Edge AddReactant(Node node)
             {
-                InputNodes.AddOrUpdate(node.Id, node, (guid, node1) => node1);
-                node.InputToEdge.Add(this);
+                Reactants[node.Id] = node;
+                //Reactants.AddOrUpdate(node.Id, node, (guid, node1) => node1);
+                node.Consumers.Add(this);
+                if (node.IsPseudo)
+                {
+                    //s2
+                    node.Weights[Id] = 1.0;
+                }
                 return this;
             }
 
-            internal Edge AddOutput(Node node)
+            public Edge AddProduct(Node node)
             {
-                OuputNodes.AddOrUpdate(node.Id, node, (guid, node1) => node1);
-                node.OutputFromEdge.Add(this);
+                Products[node.Id] = node;
+                //Products.AddOrUpdate(node.Id, node, (guid, node1) => node1);
+                node.Producers.Add(this);
+                if (node.IsPseudo)
+                {
+                    //s1
+                    node.Weights[Id] = 1.0;
+                }
                 return this;
             }
 
-            internal IEnumerable<Node> AllNodes()
+            public IEnumerable<Node> AllNodes()
             {
-                return new HashSet<Node>(InputNodes.Values.Concat(OuputNodes.Values));
+                return new HashSet<Node>(this.Reactants.Values.Concat(this.Products.Values));
             }
 
-            internal string ToDgs(EdgeType type, TheAlgorithm theAlgorithm)
+            public string ToDgs(EdgeType type, HyperGraph sm)
             {
-                var d1 = theAlgorithm.Fba.Results.ContainsKey(Label) ? theAlgorithm.Fba.Results[Label] : -1.0;
-                var d2 = theAlgorithm.Fba.PrevResults.ContainsKey(Label) ? theAlgorithm.Fba.PrevResults[Label] : -1.0;
+                //var d1 = theAlgorithm.Fba.Results.ContainsKey(Label) ? theAlgorithm.Fba.Results[Label] : -1.0;
+                //var d2 = theAlgorithm.Fba.PrevResults.ContainsKey(Label) ? theAlgorithm.Fba.PrevResults[Label] : -1.0;
+
+                var uiclass = "";
+                var hedgeclass = "";
+                switch (type)
+                {
+                    case EdgeType.New:
+                        if (Math.Abs(Value) < Double.Epsilon)
+                        {
+                            hedgeclass = " ui.class:newhedge0 ";
+                            uiclass = " ui.class:new ";
+                        }
+                        else
+                        {
+                            hedgeclass = " ui.class:newhedge ";
+                            uiclass = " ui.class:new ";
+                        }
+                        break;
+
+                    case EdgeType.None:
+                        if (Math.Abs(Value) < Double.Epsilon)
+                        {
+                            uiclass = " ui.class:new0 ";
+                            hedgeclass = " ui.class:hedge0 ";
+                        }
+                        else
+                        {
+                            uiclass = " ";
+                            hedgeclass = " ui.class:hedge ";
+                        }
+
+                        break;
+                }
+                var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\"{2}({3})({4})\"\r\n", Id, hedgeclass, Label, Value, PreValue)); //
+
+                foreach (var node in this.Reactants.Values.Where(n => sm.Nodes.ContainsKey(n.Id)))
+                    bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4}  label:\"{5}\"\r\n", node.Id, Id, node.Id, Id, uiclass, node.Weights[Id] == 0 ? 1 : node.Weights[Id]));
+
+                foreach (var node in this.Products.Values.Where(n => sm.Nodes.ContainsKey(n.Id)))
+                    bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4} label:\"{5}\"\r\n", Id, node.Id, Id, node.Id, uiclass, node.Weights[Id] == 0 ? 1 : node.Weights[Id]));
+
+                return bu.ToString();
+            }
+
+            public string ToDgs1(EdgeType type)
+            {
+                //var d1 = results.ContainsKey(Label) ? results[Label] : -1.0;
+                //var d2 = prevResults.ContainsKey(Label) ? prevResults[Label] : -1.0;
 
                 var uiclass = "";
                 var hedgeclass = "";
@@ -166,15 +381,50 @@ namespace Metabol
                         hedgeclass = " ui.class:hedge ";
                         break;
                 }
-                var bu = new StringBuilder($"an \"{Id}\" {hedgeclass} label:\"{Label}({d1})({d2})\"\r\n"); //
+                var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\"{2}({3})({4})\"\r\n", Id, hedgeclass, Label, Value, PreValue)); //
 
-                foreach (var node in InputNodes.Values)
-                    bu.Append($"ae \"{node.Id}{Id}\" \"{node.Id}\" > \"{Id}\" {uiclass}\r\n");
+                foreach (var node in this.Reactants.Values)
+                    bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4}\r\n", node.Id, Id, node.Id, Id, uiclass));
 
-                foreach (var node in OuputNodes.Values)
-                    bu.Append($"ae \"{Id}{node.Id}\" \"{Id}\" > \"{node.Id}\" {uiclass}\r\n");
+                foreach (var node in this.Products.Values)
+                    bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4}\r\n", Id, node.Id, Id, node.Id, uiclass));
 
                 return bu.ToString();
+
+            }
+
+            public string ToDgs2(EdgeType type)
+            {
+                var uiclass = "";
+                var hedgeclass = "";
+                switch (type)
+                {
+                    case EdgeType.New:
+                        uiclass = " ui.class:new ";
+                        hedgeclass = " ui.class:newhedge ";
+                        break;
+
+                    case EdgeType.None:
+                        uiclass = " ";
+                        hedgeclass = " ui.class:hedge ";
+                        break;
+                }
+                var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\"{2}\"\r\n", Id, hedgeclass, Label)); //
+
+                foreach (var node in this.Reactants.Values)
+                    bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4}\r\n", node.Id, Id, node.Id, Id, uiclass));
+
+                foreach (var node in this.Products.Values)
+                    bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4}\r\n", Id, node.Id, Id, node.Id, uiclass));
+
+                return bu.ToString();
+            }
+
+            #region Override
+
+            public int CompareTo(Edge other)
+            {
+                return Id.CompareTo(other.Id);
             }
 
             public override string ToString()
@@ -192,98 +442,177 @@ namespace Metabol
                 return Id.GetHashCode();
             }
 
-            public string ToDgs(EdgeType type, Dictionary<string, double> results, Dictionary<string, double> prevResults)
-            {
-                var d1 = results.ContainsKey(Label) ? results[Label] : -1.0;
-                var d2 = prevResults.ContainsKey(Label) ? prevResults[Label] : -1.0;
-
-                var uiclass = "";
-                var hedgeclass = "";
-                switch (type)
-                {
-                    case EdgeType.New:
-                        uiclass = " ui.class:new ";
-                        hedgeclass = " ui.class:newhedge ";
-                        break;
-
-                    case EdgeType.None:
-                        uiclass = " ";
-                        hedgeclass = " ui.class:hedge ";
-                        break;
-                }
-                var bu = new StringBuilder($"an \"{Id}\" {hedgeclass} label:\"{Label}({d1})({d2})\"\r\n"); //
-
-                foreach (var node in InputNodes.Values)
-                    bu.Append($"ae \"{node.Id}{Id}\" \"{node.Id}\" > \"{Id}\" {uiclass}\r\n");
-
-                foreach (var node in OuputNodes.Values)
-                    bu.Append($"ae \"{Id}{node.Id}\" \"{Id}\" > \"{node.Id}\" {uiclass}\r\n");
-
-                return bu.ToString();
-
-            }
+            #endregion
         }
 
-        /**
-         * simple node ( not hypernode )
-         */
-        public class Node:IComparable<Node>
+        public class Node : IComparable<Node>
         {
-            internal readonly Guid Id;
-            internal string Label;
-            internal HashSet<Edge> InputToEdge = new HashSet<Edge>();
-            internal HashSet<Edge> OutputFromEdge = new HashSet<Edge>();
-            internal int Level { get; set; }
-            //private bool isNonBorder;
+            #region Properties
+
+            [JsonProperty("id")]
+            public readonly Guid Id;
+
+            [JsonProperty("label")]
+            public string Label;
+
+            [JsonProperty("isPseudo")]
+            public bool IsPseudo;
+
+            [JsonProperty("consumerEdge")]
+            public HashSet<Edge> Consumers = new HashSet<Edge>();
+
+            [JsonProperty("producerEdge")]
+            public HashSet<Edge> Producers = new HashSet<Edge>();
+
+            [JsonProperty("level")]
+            public int Level { get; set; }
+
+            [JsonProperty("reactionCount")]
             public readonly Tuple<int, int> ReactionCount;
 
-            internal Node(Guid id, string l)
-            {
-                Label = l;
-                Id = id;
-                //this.ReactionCount = Util.AllReactionCache[id];
-            }
-
-            internal ServerSpecies ToSpecies => Util.CachedS(Id);
-
-            internal static Node Create(Guid id, string label)
-            {
-                return new Node(id, label);
-            }
-
-            internal bool IsLonely => true;//!IsBorder && ((InputToEdge.Count == 0 && OutputFromEdge.Count != 0) || (InputToEdge.Count != 0 && OutputFromEdge.Count == 0));
-
-            internal bool IsBorder => IsConsumedBorder || IsProducedBorder;
-
-            internal bool IsConsumedBorder
-            {
-                get { return this.ReactionCount.Item2 != InputToEdge.Count(e => !e.IsImaginary); }
-            }
-
-            internal bool IsProducedBorder
-            {
-                get { return this.ReactionCount.Item1 != OutputFromEdge.Count(e => !e.IsImaginary); }
-            }
-
-            internal bool IsTempBorder
+            [JsonIgnore]
+            public ServerSpecies ToSpecies
             {
                 get
                 {
-                    return !IsBorder && ((OutputFromEdge.Any(s => s.IsImaginary)) || (InputToEdge.Any(s => s.IsImaginary)));
+                    return Util.CachedS(Id);
                 }
             }
 
-            internal int TotalReaction => this.ReactionCount.Item1 + this.ReactionCount.Item2;
-
-            internal IEnumerable<Node> AllNeighborNodes()
+            [JsonIgnore]
+            public bool IsLonely
             {
-                var r = new HashSet<Node>();
-                r.UnionWith(InputToEdge.SelectMany(e => e.AllNodes()));
-                r.UnionWith(OutputFromEdge.SelectMany(e => e.AllNodes()));
-                r.Remove(this);
+                get
+                {
+                    //return !IsBorder
+                    //       && ((Consumers.Count == 0 && Producers.Count != 0)
+                    //           || (Consumers.Count != 0 && Producers.Count == 0));
+                    return ReactionCount.Item1 == 0 || ReactionCount.Item2 == 0;
+                }
+            }
 
-                //return InputToEdge.SelectMany(e => e.AllNodes()).Concat(OutputFromEdge.SelectMany(e => e.AllNodes())).Where(n => n.Id != Id);
-                return r;
+            [JsonProperty("isBorder")]
+            public bool IsBorder
+            {
+                get
+                {
+                    return IsConsumedBorder || IsProducedBorder;
+                }
+            }
+
+            [JsonProperty("isConsumedBorder")]
+            public bool IsConsumedBorder
+            {
+                get
+                {
+                    return ReactionCount.Item1 != this.Consumers.Count(e => !e.IsPseudo);
+                }
+            }
+
+            [JsonProperty("isProducedBorder")]
+            public bool IsProducedBorder
+            {
+                get
+                {
+                    return ReactionCount.Item2 != this.Producers.Count(e => !e.IsPseudo);
+                }
+            }
+
+            [JsonIgnore]
+            public bool IsTempBorder
+            {
+                get
+                {
+                    return ((this.Producers.Any(s => s.IsPseudo) && IsProducedBorder)
+                        || (this.Consumers.Any(s => s.IsPseudo) && IsConsumedBorder));
+                }
+            }
+
+            [JsonIgnore]
+            public int TotalReaction
+            {
+                get
+                {
+                    return ReactionCount.Item1 + ReactionCount.Item2;
+                }
+            }
+
+            [JsonProperty("weights")]
+            public Dictionary<Guid, double> Weights { get; set; }
+
+            [JsonProperty("removedConsumerEx")]
+            public Edge RemovedConsumerExchange { get; set; }
+
+            [JsonProperty("removedProducerEx")]
+            public Edge RemovedProducerExchange { get; set; }
+
+            //[JsonProperty("pseudoConsumerVars")]
+            //public HashSet<string> PseudoConsumerVars { get; set; }
+
+            //[JsonProperty("pseudoProducerVars")]
+            //public HashSet<string> PseudoProducerVars { get; set; }
+
+            #endregion
+
+            public Node(Guid id, string label, int i)
+            {
+                Label = label;
+                Id = id;
+                Level = i;
+                Weights = new Dictionary<Guid, double>();
+                //PseudoConsumerVars = new HashSet<string>();
+                //PseudoProducerVars = new HashSet<string>();
+
+                try
+                {
+                    ReactionCount = Util.GetReactionCount(id);
+                    Util.GetStoichiometry(id);
+                }
+                catch (Exception e)
+                {
+                    // ignored
+                }
+            }
+
+            private Node(Guid id, string label, int lastLevel, bool pseudo)
+                : this(id, label, lastLevel)
+            {
+                IsPseudo = pseudo;
+                ReactionCount = Tuple.Create(0, 0);
+                Util.AllStoichiometryCache[id] = Tuple.Create(1.0, 1.0);
+            }
+
+            public static Node Create(Guid id, string label, int i)
+            {
+                return new Node(id, label, i);
+            }
+
+            public static Node Create(Guid newGuid, string label, int lastLevel, bool pseudo)
+            {
+                return new Node(newGuid, label, lastLevel, pseudo);
+            }
+
+            public void UpdateImaginary()
+            {
+                var im = this.Consumers.Count(e => e.IsPseudo) != 0 ? this.Consumers.First(e => e.IsPseudo) : null;
+                var io = this.Producers.Count(e => e.IsPseudo) != 0 ? this.Producers.First(e => e.IsPseudo) : null;
+
+                if (im != null)
+                {
+                    var wsum = this.Consumers.Count == 1
+                          ? 0
+                          : this.Consumers.Where(edge => !edge.IsPseudo).Sum(edge => Weights[edge.Id]);
+                    Weights[im.Id] = Util.GetReactionCount(Id).Item1 - wsum;
+                }
+
+                if (io != null)
+                {
+                    var wsum = this.Producers.Count == 1
+                          ? 0
+                          : this.Producers.Where(edge => !edge.IsPseudo).Sum(edge => Weights[edge.Id]);
+
+                    Weights[io.Id] = Util.GetReactionCount(Id).Item2 - wsum;
+                }
             }
 
             public string ToDgs(NodeType type)
@@ -312,9 +641,27 @@ namespace Metabol
                         break;
                 }
 
-                return $"an \"{Id}\"  label:\"{Label}\"  {uiclass}";
+                return string.Format("an \"{0}\"  label:\"{1}\"  {2}", Id, Label, uiclass);
             }
 
+            public IEnumerable<Edge> AllReactions()
+            {
+                var r = new SortedSet<Edge>();
+                r.UnionWith(this.Consumers);
+                r.UnionWith(this.Producers);
+                return r;
+            }
+
+            public SortedSet<Node> AllNeighborNodes()
+            {
+                var r = new SortedSet<Node>();
+                r.UnionWith(this.Consumers.SelectMany(e => e.AllNodes()));
+                r.UnionWith(this.Producers.SelectMany(e => e.AllNodes()));
+                r.Remove(this);
+                return r;
+            }
+
+            #region override
             public int CompareTo(Node other)
             {
                 return other.Id.CompareTo(Id);
@@ -334,90 +681,8 @@ namespace Metabol
             {
                 return obj is Node && ((Node)obj).Id.Equals(Id);
             }
+            #endregion
 
-            public IEnumerable<Edge> AllReactions()
-            {
-                var r = new HashSet<Edge>();
-                r.UnionWith(InputToEdge);
-                r.UnionWith(OutputFromEdge);
-                return r;
-            }
-        }
-
-        public IEnumerable<object> JsonNodes(Dictionary<Guid, int> z)
-        {
-            // "name": "Glucose", "type": "m", "isBorder": 1, "concentration": 10.1, 'change': '+'
-            var lastLevel = LastLevel;
-            var result = new List<object>();
-
-            foreach (var node in Nodes.Where(node => node.Value.Level == lastLevel))
-            {
-                var ch = "0";
-                if (z.ContainsKey(node.Key))
-                    ch = z[node.Key] > 0 ? "+" : z[node.Key] < 0 ? "-" : "0";
-
-                var n = new
-                {
-                    id = idGen,
-                    name = node.Value.Label,
-                    type = "m",
-                    isBorder = node.Value.IsBorder ? 1 : 0,
-                    concentration = 10.0,
-                    change = ch
-                };
-                idMap[node.Key] = idGen;
-                idGen++;
-                //yield return n;
-                result.Add(n);
-            }
-
-            // { "name": "Pyruvate xxx", "type": "r", "V": 9 }
-            foreach (var node in Edges.Where(node => node.Value.Level == lastLevel))
-            {
-                var n = new
-                {
-                    id = idGen,
-                    name = node.Value.Label,
-                    type = "r",
-                    V = 1.0
-                };
-                idMap[node.Key] = idGen;
-                idGen++;
-                //yield return n;
-                result.Add(n);
-            }
-            return result;
-        }
-
-        public int LastLevel
-        {
-            get { return Math.Max(Edges.Values.Select(v => v.Level).Max(), Nodes.Values.Select(n => n.Level).Max()); }
-        }
-
-        public IEnumerable<object> JsonLinks()
-        {
-            // { "source": 0, "target": 3, "role": "s" }
-            // { "source": 3, "target": 4, "role": "p" }
-            var lastLevel = LastLevel;
-            var result = new List<object>();
-
-            foreach (var link in Edges.Where(node => node.Value.Level == lastLevel))
-            {
-                foreach (var node in link.Value.InputNodes.Values)
-                {
-                    object n = new { source = idMap[node.Id], target = idMap[link.Value.Id], role = "s" };
-                    //yield return n;
-                    result.Add(n);
-                }
-
-                foreach (var node in link.Value.OuputNodes.Values)
-                {
-                    object n = new { source = idMap[link.Value.Id], target = idMap[node.Id], role = "p" };
-                    //yield return n;
-                    result.Add(n);
-                }
-            }
-            return result;
 
         }
     }

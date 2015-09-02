@@ -1,56 +1,81 @@
 ﻿namespace Metabol
 {
     using System;
-    using System.Collections;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Configuration;
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
-    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
+
+    using ILOG.CPLEX;
+
+    using Newtonsoft.Json;
 
     using PathwaysLib.ServerObjects;
 
     public class TheAlgorithm
     {
-        internal readonly Fba2 Fba = new Fba2();
-        internal readonly HGraph Sm = new HGraph();
-        //internal readonly Stopwatch Timer = new Stopwatch();
-        //internal TheAlgorithm Algorithm = new TheAlgorithm();
-        //internal string file1;
-        //internal string file2;
-        internal int Iteration = 1;
-        private int IterationId => Iteration++;
+        public readonly Fba3N Fba = new Fba3N();
+
+        [JsonProperty("isFeasable")]
+        public bool IsFeasable { get; set; }
+
+        [JsonProperty("graph")]
+        public readonly HyperGraph Sm = new HyperGraph();
+
         private bool init;
+
+        //public readonly Stopwatch Timer = new Stopwatch();
+
+        [JsonProperty("iter")]
+        public int Iteration = 1;
+
+        [JsonProperty("Z")]
         public Dictionary<Guid, int> Z = new Dictionary<Guid, int>();
 
-        internal SortedDictionary<Guid, SortedSet<Tuple<int, double>>> hist = new SortedDictionary<Guid, SortedSet<Tuple<int, double>>>();
-
-        public IEnumerable<Iteration> Step(int step)
+        public int IterationId
         {
-            if (!this.init) yield break;
-            for (var i = 0; i < step; i++)
+            get
+            {
+                return Iteration++;
+            }
+        }
+
+        public void Init(Dictionary<string, int> change)
+        {
+            if (init)
+            {
+                return;
+            }
+
+            var strCon = ConfigurationManager.AppSettings["dbConnectString"];
+            DBWrapper.Instance = new DBWrapper(strCon);
+
+            var zlist =
+              (from s in change select ServerSpecies.AllSpeciesByName(s.Key) into spec where spec.Length > 0 select spec[0])
+                  .ToList();
+            zlist.Sort((species, serverSpecies) => string.Compare(species.SbmlId, serverSpecies.SbmlId, StringComparison.Ordinal));
+            foreach (var s in zlist)
+                Z[s.ID] = (s.ID.GetHashCode() % 2) == 0 ? -1 : 1;//rand.NextDouble() >= 0.5 ? 1 : -1;
+            init = true;
+        }
+
+        public void Step()
+        {
+            if (!this.init) return;
+
+            //for (var i = 0; i < step; i++)
             {
                 //Timer.Reset();
                 //Timer.Start();
 
                 // steps 4, 5
-                var fba = ApplyFba(Sm, Z, IterationId);
+                ApplyFba(Sm, Z, IterationId);
                 //while (iteration.Fba == 0)
                 //Console.ReadKey();
 
-                //foreach (var result in Fba.Results)
-                //{
-                //    if (!hist.ContainsKey(result.Key))
-                //        hist.Add(result.Key, new SortedSet<Tuple<int, double>>
-                //                    (
-                //                    Comparer<Tuple<int, double>>.Create((tuple, tuple1) => tuple.Item1.CompareTo(tuple1.Item1))
-                //                    )
-                //                );
-
-                //    hist[result.Key].Add(Tuple.Create(Sm.LastLevel, result.Value));
-                //}
 
                 //Task.Run(delegate
                 //{
@@ -61,21 +86,27 @@
                 //        $"{sm.Nodes.Count},{iteration.BorderMCount},{sm.Edges.Count},{timer.ElapsedMilliseconds * 1.0 / 1000.0}\n");
                 //});
 
-
                 //8. Let m’ be a border metabolite in S(m) involved in the smallest total number of reactions.
                 var borderm = GetBorderMetabolites(Sm);
+                if (borderm.Count == 0)
+                {
+                    Util.SaveAsDgs(Sm.Nodes.First().Value, Sm, this);
+                    Console.WriteLine("NO BORDER METABILTES");
+                    Console.ReadKey();
+                    Environment.Exit(0);
+                }
+
                 var m2 = LonelyMetabolite(borderm);
                 Util.SaveAsDgs(m2, Sm, this);
                 Sm.NextStep();
-                Console.WriteLine("{0} ignore*****************************", Fba.IgnoreSet.Count);
-                Console.WriteLine("{0} update*****************************", Fba.UpdateExchangeConstraint.Count);
+                //Console.WriteLine("{0} ignore*****************************", Fba.IgnoreSet.Count);
+                //Console.WriteLine("{0} update*****************************", Fba.UpdateExchangeConstraint.Count);
 
-                Fba.IgnoreSet.Clear();
-                Fba.UpdateExchangeConstraint.Clear();
+                //Fba.IgnoreSet.Clear();
+                //Fba.UpdateExchangeConstraint.Clear();
                 //Extend S(m) with m’ and its reactions from M.
                 var ex = ExtendGraph(m2.ToSpecies, Sm);
                 //ex.Wait(int.MaxValue);
-
 
                 //Remove the exchange reaction that was introduced for m’ in step 4.
                 //Add a constraint that total net flux of reactions of m’ should
@@ -84,25 +115,84 @@
 
                 //Go to step 4 to add exchange fluxes for the new border metabolites. 
                 //If S(m) cannot be extended, then go to step 3.
-                yield return fba;
+                //yield return fba;
             }
         }
 
-        public void Start1()
+        public void Start2()
+        {
+            //78419436-263A-4B48-BCB1-F508A50C9119
+            //2D4A4044-940F-41A5-9AFD-E710D93FDC50
+            //91889477-FFC2-4318-BF02-91E32F34A890
+            if (init)
+            {
+                return;
+            }
+            var mid = Guid.Parse("2D4A4044-940F-41A5-9AFD-E710D93FDC50");
+
+            var g = new HyperGraph();
+            var id = mid;
+            while (g.Nodes.Count < 9)
+            {
+                ExtendGraph(Util.CachedS(id), g);
+                foreach (var node in g.Nodes[id].AllNeighborNodes())
+                {
+                    ExtendGraph(Util.CachedS(node.Id), g);
+                    id = node.Id;
+                }
+            }
+
+            foreach (var node in g.Nodes)
+            {
+                Z[node.Value.Id] = (node.Value.Id.GetHashCode() % 2) == 0 ? -1 : 1;
+            }
+
+            Sm.AddNode(
+                Util.CachedS(mid).ID,
+                Util.CachedS(mid).SbmlId);
+
+            var ex = ExtendGraph(Util.CachedS(mid), Sm);
+            init = true;
+        }
+
+        public void Start()
         {
             if (init) return;
+
+            string[] zn =
+            {
+                "D-Fructose 6-phosphate", "D-Fructose 1,6-bisphosphate", "Dihydroxyacetone phosphate",
+                "Glyceraldehyde 3-phosphate", "L-threonine", "taurochenodeoxycholate",
+                "D-glucose", "3-Phospho-D-glycerate", "D-Glycerate 2-phosphate", "Phosphoenolpyruvate", "pyruvate"
+            };
+
+            var zlist =
+                (from s in zn select ServerSpecies.AllSpeciesByNameOnly(s) into spec where spec.Length > 0 select spec[0])
+                    .ToList();
+            //zlist.Sort((species, serverSpecies) => string.Compare(species.SbmlId, serverSpecies.SbmlId, StringComparison.Ordinal));
+            //var rand = new Random((int)DateTime.UtcNow.ToBinary());
+
+            foreach (var s in zlist)
+            {
+                Z[s.ID] = (s.ID.GetHashCode() % 2) == 0 ? -1 : 1;//rand.NextDouble() >= 0.5 ? 1 : -1;
+                Console.WriteLine("{0}:{1}", s.SbmlId, Z[s.ID]);
+            }
+
+            var id = Guid.Parse("{05954e8b-244a-4b59-b650-315f2c8e0f43}");
+            Z[id] = (id.GetHashCode() % 2) == 0 ? -1 : 1; //rand.NextDouble() >= 0.5 ? 1 : -1;
 
             var strCon = ConfigurationManager.AppSettings["dbConnectString"];
             DBWrapper.Instance = new DBWrapper(strCon);
             //var reconId = Guid.Parse("c7b42b40-ccd9-42f3-b6bd-9a4111fcbec5");
             //1. Among a user-provided set of observed metabolite changes Z,
             //  let m be the metabolite with the least total number of producer and consumer reactions in the respective metabolic network M
-            var m = Util.CachedS(Z.Keys.OrderBy(Util.TotalReactions).First());
-
+            //var m = Util.CachedS(Z.Keys.OrderBy(Util.GetReactionCountSum).First()); //e => Z[e] > 0
+            var m = Util.CachedS(Guid.Parse("{ae3aa029-b36a-4106-8802-9a65ef225fce}"));
+            //Fba.M = m;
             //2. Let S(m) be a subnetwork of the whole metabolic network M. 
             //Initialize S(m) so that iteration contains only m
             Sm.AddNode(m.ID, m.SbmlId);
-            //HGraph.Step++;
+            //HyperGraph.Step++;
             //3. Extend S(m) with a subset K of m’s consumers and producers such that K has not been used before to extend the current subnetwork. 
             //HashSet<ServerSpecies> K = new HashSet<ServerSpecies>();
             var ex = ExtendGraph(m, Sm);
@@ -117,7 +207,7 @@
             init = true;
         }
 
-        public void Start()
+        public void Start1()
         {
             if (init) return;
 
@@ -127,13 +217,16 @@
             var zn = File.ReadAllLines(Util.SelectedMetaFile).Select(s => s.Split(';'));
 
             foreach (var s in zn)
+            {
                 Z[Guid.Parse(s[0])] = int.Parse(s[1]);
+            }
 
             //  let m be the metabolite with the least total number of producer and consumer reactions in the respective metabolic network M
-            var m = Util.CachedS(Z.Keys
-                .Where(guid => Util.AllReactionCache[guid].Item1 + Util.AllReactionCache[guid].Item2 > 0)
-                .OrderBy(s => Util.AllReactionCache[s].Item1 + Util.AllReactionCache[s].Item2).First()
-                );
+            var m =
+                Util.CachedS(
+                    Z.Keys.Where(guid => Util.GetReactionCountSum(guid) > 0)
+                        .OrderBy(Util.GetReactionCountSum)
+                        .First());
 
             //2. Let S(m) be a subnetwork of the whole metabolic network M. 
             //Initialize S(m) so that iteration contains only m
@@ -141,7 +234,7 @@
 
             //3. Extend S(m) with a subset K of m’s consumers and producers such that K has not been used before to extend the current subnetwork. 
             //HashSet<ServerSpecies> K = new HashSet<ServerSpecies>();
-            var ex = ExtendGraph(m, Sm);
+            this.ExtendGraph(m, this.Sm);
             //ex.Wait(int.MaxValue);
             //Util.SaveAsDgs(sm.Nodes[m.ID], sm, "start");
 
@@ -162,77 +255,132 @@
             //Util.ClearCache();
         }
 
-        internal void RemoveExchangeReaction(HGraph sm, HGraph.Node m2)
+        public void RemoveExchangeReaction(HyperGraph sm, HyperGraph.Node m2)
         {
             // remove producer exchange reaction of  non-produced-border metabolite            
             //dont remove producer exchange reaction if producer exchange reaction is only producer reaction
-            var removeox = !m2.IsProducedBorder
-                && m2.OutputFromEdge.Any(edge => edge.IsImaginary)
-                && m2.OutputFromEdge.Count(edge => !edge.IsImaginary) != 0;
+            var removeox = !m2.IsProducedBorder && m2.Producers.Any(edge => edge.IsPseudo)
+                           && m2.Producers.Count(edge => !edge.IsPseudo) != 0;
+
+            foreach (var ps in Sm.Edges.Values.Where(e => e.IsPseudo))
+                ps.Reactions.ExceptWith(Sm.Edges.Keys);
 
             if (removeox)
             {
-                var outex = m2.OutputFromEdge.First(s => s.IsImaginary);
-                Fba.RemovedProducerExchange[m2.Id] = outex;//Fba.Results[outex.Id];
-                m2.OutputFromEdge.Remove(outex);
-                //Fba.Results.Remove(outex.Id);
-                HGraph.Edge ee1;
+                var outex = m2.Producers.First(s => s.IsPseudo);
+                m2.RemovedProducerExchange = outex;
+                m2.Producers.Remove(outex);
+                HyperGraph.Edge ee1;
                 sm.Edges.TryRemove(outex.Id, out ee1);
-                //HashSet<Guid> v;
-                //Fba.UpdateExchangeConstraint.TryRemove(outex.Id, out v);
+                if (ee1.Reactants.Values.Any(n => n.IsPseudo))
+                {
+                    foreach (var id in ee1.Reactants.Where(n => n.Value.IsPseudo))
+                    {
+                        HyperGraph.Node b;
+                        sm.Nodes.TryRemove(id.Key, out b);
+                    }
+                }
+                //try
+                //{
+                //    if (sm.PseudoPath.ContainsKey(m2.Id))
+                //    {
+                //        foreach (var n in sm.PseudoPath[m2.Id])
+                //        {
+                //            var nodes = sm.Nodes[n].Consumers.First(pe => pe.IsPseudo).Products;
+                //            var guid = nodes.First(pn => pn.Value.IsPseudo && pn.Value.Label.Equals(m2.Label + "_" + sm.Nodes[n].Label)).Key;
+                //            nodes.Remove(guid);
+
+
+                //        }
+                //    }
+                //}
+                //catch
+                //{
+                //    // ignored
+                //    Console.WriteLine();
+
+                //}
             }
 
             // remove consumer exchange reaction of  non-consumed-border metabolite 
             //dont remove consumer exchange reaction if consumer exchange reaction is only consumer reaction
-            var removeix = !m2.IsConsumedBorder
-                && m2.InputToEdge.Any(edge => edge.IsImaginary)
-                && m2.InputToEdge.Count(edge => !edge.IsImaginary) != 0;
+            var removeix = !m2.IsConsumedBorder && m2.Consumers.Any(edge => edge.IsPseudo)
+                           && m2.Consumers.Count(edge => !edge.IsPseudo) != 0;
 
             if (removeix)
             {
-                var inex = m2.InputToEdge.First(s => s.IsImaginary);
-                Fba.RemovedConsumerExchange[m2.Id] = inex;//Fba.Results[inex.Id];
-                m2.InputToEdge.Remove(inex);
-                //Fba.Results.Remove(inex.Id);
-                HGraph.Edge e;
+                var inex = m2.Consumers.First(s => s.IsPseudo);
+                m2.RemovedConsumerExchange = inex;
+                m2.Consumers.Remove(inex);
+
+                HyperGraph.Edge e;
                 sm.Edges.TryRemove(inex.Id, out e);
-                //HashSet<Guid> v;
-                //Fba.UpdateExchangeConstraint.TryRemove(inex.Id, out v);
+                if (e.Products.Values.Any(n => n.IsPseudo))
+                {
+                    foreach (var id in e.Products.Where(n => n.Value.IsPseudo))
+                    {
+                        HyperGraph.Node b;
+                        sm.Nodes.TryRemove(id.Key, out b);
+                    }
+                }
+                //try
+                //{
+                //    if (sm.PseudoPath.ContainsKey(m2.Id))
+                //    {
+                //        foreach (var n in sm.PseudoPath[m2.Id])
+                //        {
+                //            var nodes = sm.Nodes[n].Producers.First(pe => pe.IsPseudo).Reactants;
+                //            var guid = nodes.First(pn => pn.Value.IsPseudo && pn.Value.Label.Equals(m2.Label + "_" + sm.Nodes[n].Label)).Key;
+                //            nodes.Remove(guid);
+
+                //            HyperGraph.Node b;
+                //            sm.Nodes.TryRemove(guid, out b);
+                //        }
+                //    }
+                //}
+                //catch
+                //{
+                //    // ignored
+                //    Console.WriteLine();
+                //}
             }
         }
 
-        internal void UpdateNeighbore(HGraph sm, HGraph.Node m2)
+        public void UpdateNeighbore(HyperGraph sm, HyperGraph.Node m2)
         {
-            //var inex = m2.InputToEdge.Any(e => e.IsImaginary) ? m2.InputToEdge.First(s => s.IsImaginary) : null;
-            //var outex = m2.OutputFromEdge.Any(e => e.IsImaginary) ? m2.OutputFromEdge.First(s => s.IsImaginary) : null;
+            var inex = m2.Consumers.Any(e => e.IsPseudo) ? m2.Consumers.First(s => s.IsPseudo) : null;
+            var outex = m2.Producers.Any(e => e.IsPseudo) ? m2.Producers.First(s => s.IsPseudo) : null;
 
-            Fba.IgnoreSet.UnionWith(m2.OutputFromEdge.Select(e => e.Id));//.Where(e => e.IsImaginary)
-            Fba.IgnoreSet.UnionWith(m2.InputToEdge.Select(e => e.Id));//.Where(e => e.IsImaginary)
+            if (inex != null)
+            {
+                inex.UpdatePseudo.Clear();
+                foreach (var s in m2.Consumers.Where(s => !s.IsPseudo && sm.LastLevel <= s.Level)) //
+                {
+                    //if (!Fba.UpdateExchangeConstraint.ContainsKey(inex.Id))
+                    //{
+                    //    Fba.UpdateExchangeConstraint[inex.Id] = new HashSet<Guid>();
+                    //}
+                    inex.UpdatePseudo.Add(s.Id);
+                    //Fba.UpdateExchangeConstraint[inex.Id].Add(s.Id);
+                }
+            }
 
-            //if (inex != null)
-            //    foreach (var s in m2.InputToEdge.Where(s => !s.IsImaginary && inex.Level < s.Level))
-            //    {
-            //        if (!Fba.UpdateExchangeConstraint.ContainsKey(inex.Id))
-            //            Fba.UpdateExchangeConstraint[inex.Id] = new HashSet<Guid>();
-
-            //        Fba.UpdateExchangeConstraint[inex.Id].Add(s.Id);
-            //        //Fba.IgnoreSet.UnionWith(m2.OutputFromEdge.Select(e => e.Id));//.Where(e => e.IsImaginary)
-            //        //Fba.IgnoreSet.UnionWith(m2.InputToEdge.Select(e => e.Id));//.Where(e => e.IsImaginary)
-            //    }
-
-            //if (outex != null)
-            //    foreach (var s in m2.OutputFromEdge.Where(s => !s.IsImaginary && outex.Level < s.Level))
-            //    {
-            //        if (!Fba.UpdateExchangeConstraint.ContainsKey(outex.Id))
-            //            Fba.UpdateExchangeConstraint[outex.Id] = new HashSet<Guid>();
-
-            //        Fba.UpdateExchangeConstraint[outex.Id].Add(s.Id);
-            //        //Fba.IgnoreSet.UnionWith(m2.OutputFromEdge.Select(e => e.Id));//.Where(e => e.IsImaginary)
-            //        //Fba.IgnoreSet.UnionWith(m2.InputToEdge.Select(e => e.Id));//.Where(e => e.IsImaginary)
-            //    }
+            if (outex != null)
+            {
+                outex.UpdatePseudo.Clear();
+                foreach (var s in m2.Producers.Where(s => !s.IsPseudo && sm.LastLevel <= s.Level)) //
+                {
+                    //if (!Fba.UpdateExchangeConstraint.ContainsKey(outex.Id))
+                    //{
+                    //    Fba.UpdateExchangeConstraint[outex.Id] = new HashSet<Guid>();
+                    //}
+                    outex.UpdatePseudo.Add(s.Id);
+                    //Fba.UpdateExchangeConstraint[outex.Id].Add(s.Id);
+                }
+            }
         }
 
-        internal Iteration ApplyFba(HGraph sm, Dictionary<Guid, int> z, int iteration)
+        public void ApplyFba(HyperGraph sm, Dictionary<Guid, int> z, int iteration)
         {
             //4. Let a metabolite mb be labeled as a border metabolite 
             // if there is at least one consumer or producer of mb that is not included in the current subnetwork, S(m). 
@@ -240,218 +388,201 @@
             //borderm.Remove(sm.Nodes[m.ID]);
 
             // Define exchange reactions for all border metabolites in S(m).
-            Task.WaitAll(borderm.Select(mb => Util.CachedS(mb.Id)).Select(mbs => DefineExReaction(mbs, sm)).ToArray());
+            borderm.Select(mb => Util.CachedS(mb.Id)).ToList().ForEach(mbs => DefinePseudo(mbs, sm));
 
-            Fba.Label = Util.FbaLabel();
+            //Fba.Label = Util.FbaLabel();
             var nonborder = GetNonBorderMetabolites(sm);
-            var reactions = sm.Edges.Values.Select(ToReaction).ToDictionary(e => e.Id);
 
-            var dic = new Dictionary<Guid, int>();
-            foreach (var guid in z.Select(s => s.Key).Intersect(nonborder.Select(n => n.Id)))
-                dic[guid] = z[guid];
+            var dic = Intersect(z, nonborder);
 
             //5. Apply Flux Balance Analysis on S(m) with the objective function F defined as follows. 
             //For  each non-border metabolite  m  that  is  included  in  both S(m)and  Z,  perform  the following checks:
             var timer = new Stopwatch();
             timer.Start();
-            var f = Fba.Solve(reactions, dic, sm);
+            IsFeasable = Fba.Solve(dic, sm);
             Fba.LastRuntime = timer.ElapsedMilliseconds * 1.0 / 1000.0;
             timer.Stop();
-            var it = new Iteration(iteration)
-            {
-                Fba = f ? 1 : 0,
-                Time = Fba.LastRuntime,
-                //BorderMCount = borderm.Count,
-                Nodes = sm.JsonNodes(z),
-                Links = sm.JsonLinks()
-            };
-            //sm.NextStep();
-            return it;
+            //var it = new Iteration(iteration)
+            //             {
+            //                 Fba = f ? 1 : 0,
+            //                 Time = Fba.LastRuntime,
+            //                 //BorderMCount = borderm.Count,
+            //                 Nodes = sm.JsonNodes(z),
+            //                 Links = sm.JsonLinks()
+            //             };
+            ////sm.NextStep();
+            //return it;
         }
 
-        internal Reaction ToReaction(HGraph.Edge edge1)
+        public ConcurrentDictionary<Guid, int> Intersect(Dictionary<Guid, int> z, HashSet<HyperGraph.Node> nonborder)
         {
-            //if (CacheReaction2.ContainsKey(edge1.Id))
-            //    return CacheReaction2[edge1.Id];
-
-            if (edge1.IsImaginary)
+            var dic = new ConcurrentDictionary<Guid, int>();
+            foreach (var guid in z.Select(s => s.Key).Intersect(nonborder.Select(n => n.Id)))
             {
-                var rea = new Reaction
-                {
-                    Id = edge1.Id,
-                    Name = edge1.Label,
-                    Reversible = false,
-                    Reactants = GetMetabolites(edge1, Util.Reactant),
-                    Products = GetMetabolites(edge1, Util.Product),
-                    Level = edge1.Level
-                };
-                //CacheReaction2[edge1.Id] = rea;
-                return rea;
+                dic[guid] = z[guid];
             }
-            else
-            {
-                var re = ServerReactionSpecies.GetAllReactionsSpeciesForOneReaction(edge1.Id);
-                var rea = new Reaction
-                {
-                    Id = edge1.Id,
-                    Name = Regex.Replace(edge1.ToServerReaction.SbmlId, "[^0-9a-zA-Z]+", "_"),
-                    Reversible = edge1.ToServerReaction.Reversible,
-                    Reactants = GetMetabolites(re, Util.Reactant),
-                    Products = GetMetabolites(re, Util.Product),
-                    Level = edge1.Level
-                };
-                //CacheReaction2[edge1.Id] = rea;
-                return rea;
-            }
+            return dic;
         }
 
-        internal async Task DefineExReaction(ServerSpecies m, HGraph sm)
+        public async Task DefinePseudo(ServerSpecies m, HyperGraph sm)
         {
-            if (sm.Nodes.ContainsKey(m.ID) && sm.Nodes[m.ID].InputToEdge.Any(s => s.IsImaginary) ||
-                sm.Nodes.ContainsKey(m.ID) && sm.Nodes[m.ID].OutputFromEdge.Any(s => s.IsImaginary))
+            await DefineExReaction(m, sm);
+
+            var consumer = sm.Nodes[m.ID].Consumers.First(e => e.IsPseudo).Id;
+
+            foreach (var meta in
+                from r in Util.GetAllReaction(m, Util.Reactant).Where(e => !sm.Edges.ContainsKey(e.ID))
+                from meta in r.GetAllProducts()//.Where(n => sm.Nodes.ContainsKey(n.ID))
+                where sm.Nodes.ContainsKey(meta.ID) && sm.Nodes[meta.ID].IsBorder
+                select meta)
+            {
+                if (meta.SbmlId.Equals("M_xolest_hs_c"))
+                   Console.WriteLine();
+                await DefineExReaction(Util.CachedS(meta.ID), sm);
+
+                if (sm.ExistPseudoPath(m.ID, meta.ID)) continue;
+                sm.AddPseudoPath(m.ID, meta.ID);
+                var id = Guid.NewGuid();
+                var n = sm.AddNode(id, m.SbmlId + "_" + meta.SbmlId, true);
+                //var n = HyperGraph.Node.Create(id, m.SbmlId + "_" + meta.SbmlId, sm.LastLevel, true);
+                if (n.Label.Equals("M_chsterol_c_M_xolest_hs_c"))
+                    Console.WriteLine("");
+                sm.Edges[consumer].AddProduct(n);
+                var producer = sm.Nodes[meta.ID].Producers.First(e => e.IsPseudo).Id;
+                sm.Edges[producer].AddReactant(n);
+            }
+
+
+            //foreach (var meta in
+            //  from r in Util.GetAllReaction(m, Util.Product)
+            //  from meta in r.GetAllReactants()
+            //  where sm.Nodes.ContainsKey(meta.ID)
+            //  select meta)
+            //{
+            //    await DefineExReaction(Util.CachedS(meta.ID), sm);
+            //    var id = Guid.NewGuid();
+            //    var n = sm.AddNode(id, m.SbmlId + "_" + meta.SbmlId, true);
+            //    //var n = HyperGraph.Node.Create(id, m.SbmlId + "_" + meta.SbmlId, sm.LastLevel, true);
+            //    sm.Edges[consumer].AddProduct(n);
+            //    var producer = sm.Nodes[m.ID].Producers.First(e => e.IsPseudo).Id;
+            //    sm.Edges[producer].AddReactant(n);
+            //}
+
+            await Task.Delay(TimeSpan.Zero);
+        }
+
+        private async Task DefineExReaction(ServerSpecies m, HyperGraph sm)
+        {
+            //if (sm.Nodes.ContainsKey(m.ID) && sm.Nodes[m.ID].Consumers.Any(s => s.IsPseudo)
+            //    || sm.Nodes.ContainsKey(m.ID) && sm.Nodes[m.ID].Producers.Any(s => s.IsPseudo))
+            //{
+            //    return;
+            //}
+
+            if ((sm.Nodes[m.ID].IsProducedBorder || sm.Nodes[m.ID].ReactionCount.Item2 == 0) && !sm.Nodes[m.ID].Producers.Any(s => s.IsPseudo))
+            {
+                var producer = Guid.NewGuid();
+                sm.AddProduct(producer, string.Format("exr_{0}_prod", m.SbmlId), m.ID, m.SbmlId, true);
+                sm.Edges[producer].Reactions.UnionWith(m.getAllReactions(Util.Product).Select(e => e.ID).Where(id => !sm.Edges.ContainsKey(id)));
+                sm.Edges[producer].InitReactions.UnionWith(sm.Edges[producer].Reactions);
+            }
+
+            if ((sm.Nodes[m.ID].IsConsumedBorder || sm.Nodes[m.ID].ReactionCount.Item1 == 0) && !sm.Nodes[m.ID].Consumers.Any(s => s.IsPseudo))
+            {
+                var consumer = Guid.NewGuid();
+                sm.AddReactant(consumer, string.Format("exr_{0}_cons", m.SbmlId), m.ID, m.SbmlId, true);
+                sm.Edges[consumer].Reactions.UnionWith(m.getAllReactions(Util.Reactant).Select(e => e.ID).Where(id => !sm.Edges.ContainsKey(id)));
+                sm.Edges[consumer].InitReactions.UnionWith(sm.Edges[consumer].Reactions);
+            }
+            await Task.Delay(TimeSpan.Zero);
+        }
+
+        public static async Task DefineExReactionLonely(HyperGraph.Node m, HyperGraph sm)
+        {
+            if (!m.IsLonely)
+            {
                 return;
-
-            if (sm.Nodes[m.ID].IsProducedBorder || sm.Nodes[m.ID].ReactionCount.Item1 == 0)
-            {
-                var r = Guid.NewGuid();
-                sm.AddOuputNode(r, $"exr{m.SbmlId}_prod", m.ID, m.SbmlId, true);
             }
 
-            if (sm.Nodes[m.ID].IsConsumedBorder || sm.Nodes[m.ID].ReactionCount.Item2 == 0)
+            if (m.Producers.Count == 0)
             {
-                var r = Guid.NewGuid();
-                sm.AddInputNode(r, $"exr{m.SbmlId}_cons", m.ID, m.SbmlId, true);
+                sm.AddProduct(Guid.NewGuid(), string.Format("exr{0}_prod", m.Label), m.Id, m.Label, true);
             }
-
-            await Task.Delay(TimeSpan.Zero);
-
-        }
-
-        internal static async Task DefineExReactionLonely(HGraph.Node m, HGraph sm)
-        {
-            if (!m.IsLonely) return;
-
-            if (m.OutputFromEdge.Count == 0)
+            else if (m.Consumers.Count == 0)
             {
-                var r = Guid.NewGuid();
-                sm.AddOuputNode(r, $"exr{m.Label}_prod", m.Id, m.Label, true);
-            }
-            else if (m.InputToEdge.Count == 0)
-            {
-                var r = Guid.NewGuid();
-                sm.AddInputNode(r, $"exr{m.Label}_cons", m.Id, m.Label, true);
+                sm.AddReactant(Guid.NewGuid(), string.Format("exr{0}_cons", m.Label), m.Id, m.Label, true);
             }
 
             await Task.Delay(TimeSpan.Zero);
         }
 
-        internal static Dictionary<Guid, MetaboliteWithStoichiometry> GetMetabolites(HGraph.Edge react, string role)
+        public static HashSet<HyperGraph.Node> GetBorderMetabolites(HyperGraph sm)
         {
-            if (!react.InputNodes.IsEmpty && role == Util.Reactant)
+            var borderm = new HashSet<HyperGraph.Node>();
+            foreach (var node in sm.Nodes.Values.Where(node => node.IsBorder && !node.IsPseudo))
             {
-                return new Dictionary<Guid, MetaboliteWithStoichiometry>
-                {
-                    { react.InputNodes.First().Value.Id,
-                    new MetaboliteWithStoichiometry
-                    {
-                        Metabolite = new Metabolite(react.InputNodes.First().Value.ToSpecies),
-                        Stoichiometry = 1
-                    }}
-                };
-            }
-            if (!react.OuputNodes.IsEmpty && role == Util.Product)
-            {
-                return new Dictionary<Guid, MetaboliteWithStoichiometry>
-                {
-                    {react.OuputNodes.First().Value.Id,
-                    new MetaboliteWithStoichiometry
-                    {
-                        Metabolite = new Metabolite(react.OuputNodes.First().Value.ToSpecies),
-                        Stoichiometry = 1
-                    }}
-                };
-            }
-
-            return new Dictionary<Guid, MetaboliteWithStoichiometry>();
-        }
-
-        internal static Dictionary<Guid, MetaboliteWithStoichiometry> GetMetabolites(IEnumerable<ServerReactionSpecies> re, string role)
-        {
-            return (from s in re
-                    where ServerReactionSpeciesRole.Load(s.RoleId).Role == role
-                    select new MetaboliteWithStoichiometry
-                    {
-                        Metabolite = new Metabolite(Util.CachedS(s.SpeciesId)),
-                        Stoichiometry = s.Stoichiometry
-                    }).ToDictionary(s => s.Metabolite.Id);
-        }
-
-        internal static HashSet<HGraph.Node> GetBorderMetabolites(HGraph sm)
-        {
-            var borderm = new HashSet<HGraph.Node>();
-            foreach (var node in sm.Nodes.Values.Where(node => node.IsBorder))
                 borderm.Add(node);
+            }
             return borderm;
         }
 
-        internal static HashSet<HGraph.Node> GetNonBorderMetabolites(HGraph sm)
+        public static HashSet<HyperGraph.Node> GetNonBorderMetabolites(HyperGraph sm)
         {
-            var borderm = new HashSet<HGraph.Node>();
+            var borderm = new HashSet<HyperGraph.Node>();
             foreach (var node in sm.Nodes.Values.Where(node => !node.IsBorder))
+            {
                 borderm.Add(node);
+            }
             return borderm;
         }
 
-        internal async Task ExtendGraph(ServerSpecies m, HGraph sm)
+        public async Task ExtendGraph(ServerSpecies m, HyperGraph sm)
         {
+            const int Outliear = 52;
+
             foreach (var r in m.getAllReactions(Util.Product).Where(r => r.SbmlId != "R_biomass_reaction"))
             {
-                sm.AddOuputNode(r.ID, r.SbmlId, m.ID, m.SbmlId);
+                sm.AddProduct(r.ID, r.SbmlId, m.ID, m.SbmlId);
 
                 var products = r.GetAllProducts();
                 var reactant = r.GetAllReactants();
 
-                foreach (var p in reactant)
-                    sm.AddInputNode(r.ID, r.SbmlId, p.ID, p.SbmlId);
+                foreach (var p in reactant.Where(p => Util.GetReactionCountSum(p.ID) < Outliear))
+                    sm.AddReactant(r.ID, r.SbmlId, p.ID, p.SbmlId);
 
-                foreach (var p in products)
-                    sm.AddOuputNode(r.ID, r.SbmlId, p.ID, p.SbmlId);
+                foreach (var p in products.Where(p => Util.GetReactionCountSum(p.ID) < Outliear))
+                    sm.AddProduct(r.ID, r.SbmlId, p.ID, p.SbmlId);
             }
 
             foreach (var r in m.getAllReactions(Util.Reactant).Where(r => r.SbmlId != "R_biomass_reaction"))
             {
-                sm.AddInputNode(r.ID, r.SbmlId, m.ID, m.SbmlId);
+                sm.AddReactant(r.ID, r.SbmlId, m.ID, m.SbmlId);
 
                 var products = r.GetAllProducts();
                 var reactant = r.GetAllReactants();
 
-                foreach (var p in reactant)
-                    sm.AddInputNode(r.ID, r.SbmlId, p.ID, p.SbmlId);
+                foreach (var p in reactant.Where(p => Util.GetReactionCountSum(p.ID) < Outliear))
+                    sm.AddReactant(r.ID, r.SbmlId, p.ID, p.SbmlId);
 
-                foreach (var p in products)
-                    sm.AddOuputNode(r.ID, r.SbmlId, p.ID, p.SbmlId);
+                foreach (var p in products.Where(p => Util.GetReactionCountSum(p.ID) < Outliear))
+                    sm.AddProduct(r.ID, r.SbmlId, p.ID, p.SbmlId);
             }
 
             // add exchange reaction to lonely(metabol. with only input or output reactions) metabolites   
             foreach (var lon in sm.Nodes.Values.Where(n => n.IsLonely))
                 await DefineExReactionLonely(lon, sm);
 
-            Fba.IgnoreSet.UnionWith(sm.Nodes[m.ID].OutputFromEdge.Select(e => e.Id));
-            Fba.IgnoreSet.UnionWith(sm.Nodes[m.ID].InputToEdge.Select(e => e.Id));
-
-            foreach (var meta in sm.Nodes[m.ID].AllReactions()
-                .Where(e => e.Level == sm.LastLevel)
-                .SelectMany(reaction => reaction.AllNodes()))
+            foreach (var node in sm.Nodes[m.ID].AllNeighborNodes()) //.Where(node => !node.IsBorder)
             {
-                if (meta.IsBorder)
-                    Fba.IgnoreSet.UnionWith(meta.AllReactions().Select(e => e.Id));
-                else if (meta.IsTempBorder)
-                    RemoveExchangeReaction(sm, meta);
+                if (node.IsBorder)
+                    UpdateNeighbore(sm, node);
+                //if (node.IsTempBorder)
+                RemoveExchangeReaction(sm, node);
             }
         }
 
         // involved in the smallest total number of reactions
-        internal static HGraph.Node LonelyMetabolite(ICollection<HGraph.Node> borderm)
+        public static HyperGraph.Node LonelyMetabolite(ICollection<HyperGraph.Node> borderm)
         {
             var nodes = borderm.OrderBy(Util.TotalReactions).ToList();
             return nodes.First();

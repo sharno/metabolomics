@@ -10,12 +10,17 @@ using System.Web.Http;
 
 namespace MetabolApi
 {
+    using System.Web.Http.Cors;
+
+    using WebApiContrib.Formatting.Jsonp;
+
     public static class WebApiConfig
     {
         public static void Register(HttpConfiguration config)
         {
             // Web API configuration and services
-
+            var cors = new EnableCorsAttribute("*", "*", "*");
+            config.EnableCors();
             // Web API routes
             config.MapHttpAttributeRoutes();
 
@@ -27,7 +32,7 @@ namespace MetabolApi
             GlobalConfiguration.Configuration.MessageHandlers.Insert(0, new ServerCompressionHandler(
                                         new GZipCompressor(),
                                         new DeflateCompressor()));
-
+            GlobalConfiguration.Configuration.Formatters.Insert(0, new JsonpMediaTypeFormatter(new BrowserJsonFormatter()));
             config.Formatters.Add(new BrowserJsonFormatter());
         }
 
@@ -37,6 +42,8 @@ namespace MetabolApi
             {
                 this.SupportedMediaTypes.Add(new MediaTypeHeaderValue("text/html"));
                 this.SerializerSettings.Formatting = Formatting.None;
+                this.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+                this.SerializerSettings.PreserveReferencesHandling = PreserveReferencesHandling.Objects;
             }
 
             public override void SetDefaultContentHeaders(Type type, HttpContentHeaders headers, MediaTypeHeaderValue mediaType)

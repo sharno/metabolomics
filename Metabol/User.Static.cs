@@ -16,7 +16,7 @@ namespace Metabol
             //if (ResultCache.Contains($"{userKey}-{it.Id}"))
             //    return (Iteration)ResultCache.Get($"{userKey}-{it.Id}");
 
-            ResultCache.Add($"{userKey}-{it.Id}", it, policy);
+            ResultCache.Add(string.Format("{0}-{1}", userKey, it.Id), it, policy);
             return it;
         }
 
@@ -33,16 +33,16 @@ namespace Metabol
 
         public static IEnumerable<Iteration> Step(string userkey, int p)
         {
-            if (ResultCache.Contains($"{userkey}-{p}"))
+            if (ResultCache.Contains(string.Format("{0}-{1}", userkey, p)))
             {
-                yield return ResultCache.Get($"{userkey}-{p}") as Iteration;
+                yield return ResultCache.Get(string.Format("{0}-{1}", userkey, p)) as Iteration;
                 yield break;
             }
 
             var citer = GetUser(userkey).Worker.Iteration - 1;
             var step = p > citer ? (p - citer) : 1;
 
-            foreach (var it in GetUser(userkey).Worker.Step(step))
+            foreach (var it in GetUser(userkey).Worker.Step())
                 yield return CacheResult(userkey, it);
 
         }
@@ -51,11 +51,11 @@ namespace Metabol
         {
             var id = Guid.NewGuid().ToString();
 
-            Task.Run(delegate
-            {
+            //Task.Run(delegate
+            //{
                 var user = GetUser(id);
                 user.Worker.Start();
-            });
+            //});
 
             return new { key = id };
         }
