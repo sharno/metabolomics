@@ -264,7 +264,8 @@
 
             foreach (var ps in Sm.Edges.Values.Where(e => e.IsPseudo))
                 ps.Reactions.ExceptWith(Sm.Edges.Keys);
-
+            //if (m2.Label.Equals("M_HC02161_e"))
+            //    Console.WriteLine();
             if (removeox)
             {
                 var outex = m2.Producers.First(s => s.IsPseudo);
@@ -289,8 +290,6 @@
                 //            var nodes = sm.Nodes[n].Consumers.First(pe => pe.IsPseudo).Products;
                 //            var guid = nodes.First(pn => pn.Value.IsPseudo && pn.Value.Label.Equals(m2.Label + "_" + sm.Nodes[n].Label)).Key;
                 //            nodes.Remove(guid);
-
-
                 //        }
                 //    }
                 //}

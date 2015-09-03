@@ -28,7 +28,7 @@
         public static void Main()
         {
             var p = new TheAlgorithm(); //InitProgram();
-            Init(p);
+            //Init(p);
             p.Fba.RemoveConstraints = false;
             p.Start();
             do
