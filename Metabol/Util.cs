@@ -217,7 +217,7 @@
         public static void SaveAsDgs(HyperGraph.Node m2, HyperGraph sm, TheAlgorithm algo)
         {
             var file = string.Format("{0}{1}graph.dgs", Dir, sm.LastLevel);
-            var maxLevel = sm.LastLevel;// sm.Nodes.Max(n => n.Value.Level);//Math.Max(sm.Nodes.Max(n => n.Value.Level), sm.Edges.Max(e => e.Value.Level));
+            var maxLevel = sm.LastLevel;// sm.Nodes.Max(n => n.Flux.Level);//Math.Max(sm.Nodes.Max(n => n.Flux.Level), sm.Edges.Max(e => e.Flux.Level));
 
             var lines = new List<string> { "DGS004", "\"Metabolic Network\" 0 0", "#Nodes", m2.ToDgs(NodeType.Selected) };
 
@@ -262,7 +262,7 @@
         public static void SaveAsDgs(HyperGraph.Node m2, HyperGraph sm, Dictionary<string, double> results, Dictionary<string, double> prevResults)
         {
             var file = Dir + sm.LastLevel + "graph.dgs";
-            var maxLevel = sm.LastLevel;// sm.Nodes.Max(n => n.Value.Level);//Math.Max(sm.Nodes.Max(n => n.Value.Level), sm.Edges.Max(e => e.Value.Level));
+            var maxLevel = sm.LastLevel;// sm.Nodes.Max(n => n.Flux.Level);//Math.Max(sm.Nodes.Max(n => n.Flux.Level), sm.Edges.Max(e => e.Flux.Level));
 
             var lines = new List<string> { "DGS004", "\"Metabolic Network\" 0 0", "#Nodes", m2.ToDgs(NodeType.Selected) };
 
@@ -298,7 +298,7 @@
         public static void SaveAsDgs(HyperGraph.Node mi, HyperGraph graph, string dir)
         {
             var file = dir + graph.LastLevel + "graph.dgs";
-            var maxLevel = graph.LastLevel;// sm.Nodes.Max(n => n.Value.Level);//Math.Max(sm.Nodes.Max(n => n.Value.Level), sm.Edges.Max(e => e.Value.Level));
+            var maxLevel = graph.LastLevel;// sm.Nodes.Max(n => n.Flux.Level);//Math.Max(sm.Nodes.Max(n => n.Flux.Level), sm.Edges.Max(e => e.Flux.Level));
 
             var lines = new List<string> { "DGS004", "\"Metabolic Network\" 0 0", "#Nodes" };
             lines.AddRange(from node in graph.Nodes.Values let type = NodeType.None select node.ToDgs(type));

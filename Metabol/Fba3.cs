@@ -76,7 +76,7 @@
                 }
                 else if (edge.PreValue != -1 && !vars.ContainsKey(edge.Label))//Results.ContainsKey(edge.Label)
                 {
-                    vars[edge.Label] = model.NumVar(edge.Value * (1 - Change), UpperBound, NumVarType.Float, edge.Label);//Results[edge.Label]
+                    vars[edge.Label] = model.NumVar(edge.Flux * (1 - Change), UpperBound, NumVarType.Float, edge.Label);//Results[edge.Label]
                 }
                 //else if (UpdateExchangeConstraint.ContainsKey(edge.Id))
                 else if (!vars.ContainsKey(edge.Label))
@@ -97,15 +97,15 @@
             //model.WriteConflict($"{Util.Dir}{sm.LastLevel}conflict.txt");
             //else
             //model.WriteSolution($"{Util.Dir}{sm.LastLevel}result.txt");
-            sm.Edges.Values.ToList().ForEach(e => e.PreValue = e.Value);
-            //Results.ToList().ForEach(d => PrevResults[d.Key] = d.Value);
+            sm.Edges.Values.ToList().ForEach(e => e.PreValue = e.Flux);
+            //Results.ToList().ForEach(d => PrevResults[d.Key] = d.Flux);
 
             if (isfeas)
-                sm.Edges.ToList().ForEach(d => d.Value.Value = model.GetValue(vars[d.Value.Label]));//Results[d.Value.Label]
+                sm.Edges.ToList().ForEach(d => d.Value.Flux = model.GetValue(vars[d.Value.Label]));//Results[d.Flux.Label]
             else
-                sm.Edges.ToList().ForEach(d => d.Value.Value = 0);
+                sm.Edges.ToList().ForEach(d => d.Value.Flux = 0);
 
-            var list = sm.Edges.ToList().Select(d => string.Format("{0}:{1}", d.Value.Label, d.Value.Value)).ToList();
+            var list = sm.Edges.ToList().Select(d => string.Format("{0}:{1}", d.Value.Label, d.Value.Flux)).ToList();
             list.Sort((decision, decision1) => string.Compare(decision, decision1, StringComparison.Ordinal));
             File.WriteAllLines(string.Format("{0}{1}result.txt", Util.Dir, sm.LastLevel), list);
 
@@ -255,32 +255,32 @@
                         ub += c;
                     }
                     sv.AddTerm(vars[reaction.Value.Label], (exchangeStoch - uc));
-                    model.AddGe(sv, reaction.Value.Value * (1 - Change) * (exchangeStoch - uc + ub), string.Format("update{0}ub", i));//(exchangeStoch - uc + ub) * Results[reaction.Value.Label]
-                    model.AddLe(sv, reaction.Value.Value * (1 + Change) * (exchangeStoch - uc + ub), string.Format("update{0}lb", i++));//(exchangeStoch - uc + ub) * Results[reaction.Value.Label]
+                    model.AddGe(sv, reaction.Value.Flux * (1 - Change) * (exchangeStoch - uc + ub), string.Format("update{0}ub", i));//(exchangeStoch - uc + ub) * Results[reaction.Flux.Label]
+                    model.AddLe(sv, reaction.Value.Flux * (1 + Change) * (exchangeStoch - uc + ub), string.Format("update{0}lb", i++));//(exchangeStoch - uc + ub) * Results[reaction.Flux.Label]
 
-                    //model.AddLe(sv, (exchangeStoch - uc + ub) * (Results[reaction.Value.Label] + 0.1 * Results[reaction.Value.Label]), $"update{i}ub");
-                    //model.AddGe(sv, (exchangeStoch - uc + ub) * (Results[reaction.Value.Label] - 0.1 * Results[reaction.Value.Label]), $"update{i++}lb");
+                    //model.AddLe(sv, (exchangeStoch - uc + ub) * (Results[reaction.Flux.Label] + 0.1 * Results[reaction.Flux.Label]), $"update{i}ub");
+                    //model.AddGe(sv, (exchangeStoch - uc + ub) * (Results[reaction.Flux.Label] - 0.1 * Results[reaction.Flux.Label]), $"update{i++}lb");
 
                     //model.AddRange(
                     //        (exchangeStoch - uc + ub)
-                    //        * (Results[reaction.Value.Label] - Change * Results[reaction.Value.Label]),
+                    //        * (Results[reaction.Flux.Label] - Change * Results[reaction.Flux.Label]),
                     //        sv,
                     //        (exchangeStoch - uc + ub)
-                    //        * (Results[reaction.Value.Label] + Change * Results[reaction.Value.Label]),
+                    //        * (Results[reaction.Flux.Label] + Change * Results[reaction.Flux.Label]),
                     //        $"update{i++}");
                 }
-                //else if (Results.ContainsKey(reaction.Value.Label) && Math.Abs(this.Results[reaction.Value.Label]) > double.Epsilon)  //&& !IgnoreSet.Contains(reaction.Key)
-                else if (reaction.Value.PreValue != -1 && Math.Abs(reaction.Value.Value) > double.Epsilon)
+                //else if (Results.ContainsKey(reaction.Flux.Label) && Math.Abs(this.Results[reaction.Flux.Label]) > double.Epsilon)  //&& !IgnoreSet.Contains(reaction.Key)
+                else if (reaction.Value.PreValue != -1 && Math.Abs(reaction.Value.Flux) > double.Epsilon)
                 {
-                    //model.AddGe(vars[reaction.Value.Label], Results[reaction.Value.Label], $"prev{i++}");
+                    //model.AddGe(vars[reaction.Flux.Label], Results[reaction.Flux.Label], $"prev{i++}");
                     //model.AddRange(
-                    //    Results[reaction.Value.Label] - Change * Results[reaction.Value.Label],
-                    //    vars[reaction.Value.Label],
-                    //    Results[reaction.Value.Label] + Change * Results[reaction.Value.Label],
+                    //    Results[reaction.Flux.Label] - Change * Results[reaction.Flux.Label],
+                    //    vars[reaction.Flux.Label],
+                    //    Results[reaction.Flux.Label] + Change * Results[reaction.Flux.Label],
                     //    $"prev{i++}");
 
-                    model.AddLe(vars[reaction.Value.Label], reaction.Value.Value * (1 + Change), string.Format("prev{0}ub", i));
-                    model.AddGe(vars[reaction.Value.Label], reaction.Value.Value * (1 - Change), string.Format("prev{0}lb", i++));
+                    model.AddLe(vars[reaction.Value.Label], reaction.Value.Flux * (1 + Change), string.Format("prev{0}ub", i));
+                    model.AddGe(vars[reaction.Value.Label], reaction.Value.Flux * (1 - Change), string.Format("prev{0}lb", i++));
                 }
             }
         }

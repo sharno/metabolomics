@@ -34,11 +34,15 @@
             do
             {
                 //var it = p.Step(1).First();
-                Console.WriteLine("*******ITERATION  " + p.Iteration);
+                Console.WriteLine("\n************** ITERATION {0} *************** ", p.Iteration);
                 p.Step();
                 if (!p.IsFeasable)
                 {
                     //p.Fba.RemoveConstraints = true;
+                    foreach (var str in p.Pathway)
+                    {
+                        Console.Write(str+" => ");
+                    }
                     Console.ReadKey();
                 }
 
@@ -79,7 +83,8 @@
                 Console.WriteLine("{0}:{1}", s.SbmlId, Worker.Z[s.ID]);
             }
 
-            var id = Guid.Parse("{05954e8b-244a-4b59-b650-315f2c8e0f43}");
+            //var id = Guid.Parse("{05954e8b-244a-4b59-b650-315f2c8e0f43}");
+            var id = Guid.Parse("1218e2af-e534-41e6-bc59-e9731c95b182");
             Worker.Z[id] = (id.GetHashCode() % 2) == 0 ? -1 : 1; //rand.NextDouble() >= 0.5 ? 1 : -1;
             Console.WriteLine("{0}:{1}", Util.CachedS(id).SbmlId, Worker.Z[id]);
         }

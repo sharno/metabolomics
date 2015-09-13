@@ -18,16 +18,18 @@
         public bool Solve(ConcurrentDictionary<Guid, int> smz, HyperGraph sm)
         {
             var model = new Cplex { Name = "FBA" };
+            model.SetParam(Cplex.Param.RootAlgorithm, Cplex.Algorithm.Concurrent);
+
             var vars = new Dictionary<string, INumVar>();
-            var UpperBound = Double.PositiveInfinity;
+            var UpperBound = double.PositiveInfinity;
 
             foreach (var edge in sm.Edges.Values)
             {
-                //if (!edge.IsPseudoReaction && edge.ToServerReaction.Reversible)
-                //{
-                //    vars[edge.Label] = model.NumVar(-upperBound, upperBound, NumVarType.Float, edge.Label);
-                //    continue;
-                //}
+                if (!edge.IsPseudo && edge.ToServerReaction.Reversible)
+                {
+                    vars[edge.Label] = model.NumVar(Double.NegativeInfinity, Double.PositiveInfinity, NumVarType.Float, edge.Label);
+                    continue;
+                }
 
                 //foreach (var n in edge.AllNodes())
                 //{
@@ -52,7 +54,7 @@
                 //}
                 //else if (edge.PreValue != -1 && !vars.ContainsKey(edge.Label))//Results.ContainsKey(edge.Label)
                 //{
-                //    vars[edge.Label] = model.NumVar(edge.Value * (1 - Change), UpperBound, NumVarType.Float, edge.Label);//Results[edge.Label]
+                //    vars[edge.Label] = model.NumVar(edge.Flux * (1 - Change), UpperBound, NumVarType.Float, edge.Label);//Results[edge.Label]
                 //}
                 ////else if (UpdateExchangeConstraint.ContainsKey(edge.Id))
                 //else if (!vars.ContainsKey(edge.Label))
@@ -68,24 +70,23 @@
                 }
             }
 
-            model.SetParam(Cplex.Param.RootAlgorithm, Cplex.Algorithm.Concurrent);
 
             AddReactionConstrait(sm, model, vars);
             var fobj = AddGlobalConstraint(smz, sm, model, vars);
             Console.WriteLine(fobj.ToString());
-            model.Objective(ObjectiveSense.Maximize, fobj, "fobj");
+            model.AddObjective(ObjectiveSense.Maximize, fobj, "fobj");
 
             var isfeas = model.Solve();
             model.ExportModel(string.Format("{0}{1}model.lp", Util.Dir, sm.LastLevel));
-         
-            sm.Edges.Values.ToList().ForEach(e => e.PreValue = e.Value);
+
+            sm.Edges.Values.ToList().ForEach(e => e.PreValue = e.Flux);
 
             if (isfeas)
-                sm.Edges.ToList().ForEach(d => d.Value.Value = model.GetValue(vars[d.Value.Label]));//Results[d.Value.Label]
+                sm.Edges.ToList().ForEach(d => d.Value.Flux = model.GetValue(vars[d.Value.Label]));//Results[d.Flux.Label]
             else
-                sm.Edges.ToList().ForEach(d => d.Value.Value = 0);
+                sm.Edges.ToList().ForEach(d => d.Value.Flux = 0);
 
-            var list = sm.Edges.ToList().Select(d => string.Format("{0}:{1}", d.Value.Label, d.Value.Value)).ToList();
+            var list = sm.Edges.ToList().Select(d => string.Format("{0}:{1}", d.Value.Label, d.Value.Flux)).ToList();
             list.Sort((decision, decision1) => string.Compare(decision, decision1, StringComparison.Ordinal));
             File.WriteAllLines(string.Format("{0}{1}result.txt", Util.Dir, sm.LastLevel), list);
 
@@ -148,7 +149,7 @@
                             vars[nvar.Name] = nvar;
                         interexp.AddTerm(vars[nvar.Name], 1.0);
                     }
-                    model.AddLe(interexp, model.Min(vars[producer.Label], vars[consumer.Label]), metabolite.Label + "_min");
+                    model.AddGe(interexp, model.Min(vars[producer.Label], vars[consumer.Label]), metabolite.Label + "_min");
 
                     //foreach (var nvar in union
                     //    .Select(cid => "sym_" + Util.CachedR(cid).SbmlId)
@@ -201,53 +202,62 @@
                     }
                 }
                 model.AddEq(exp, 0.0, metabolite.Label);
-                if(metabolite.Consumers.Any(e=>e.Label.StartsWith("R_EX")))
-                {
-                   var exch= metabolite.Consumers.First(e => e.Label.StartsWith("R_EX"));
-                   var exp1 = model.LinearNumExpr();
-                    foreach (var consumer in metabolite.Consumers)
-                    {
-                        exp1.AddTerm(vars[consumer.Label],1);
-                    }
-                    exp1.AddTerm(model.NumVar(1.0,1.0),-1);
-                    model.AddLe(vars[exch.Label], exp1,metabolite.Label+"_exch");
-                }
-
 
                 if (RemoveConstraints)
                 {
-                    //continue;
+                    continue;
                 }
-                bool skip = false;
+
+                if (metabolite.Consumers.Any(e => e.Label.StartsWith("R_EX")) && metabolite.Consumers.Count > 1)
+                {
+                    var exch = metabolite.Consumers.First(e => e.Label.StartsWith("R_EX"));
+                    var exp1 = model.LinearNumExpr();
+                    foreach (var consumer in metabolite.Consumers)
+                    {
+                        var c = 1;//Coefficient(consumer, metabolite);
+                        exp1.AddTerm(vars[consumer.Label], Math.Abs(c));
+                    }
+
+                    var constr = model.Not(model.Ge(vars[exch.Label], exp1, metabolite.Label + "_exch"));
+                    model.Add(constr);
+                }
+
+                var skip = false;
                 if (metabolite.RemovedConsumerExchange != null && metabolite.RemovedConsumerExchange.Products.Any(n => n.Value.IsPseudo))
                 {
                     var consexp1 = model.LinearNumExpr();
-                    foreach (var nvar in metabolite.RemovedConsumerExchange.InitReactions
-                        .Select(cid => Util.CachedR(cid).SbmlId)
-                        .Select(cname => model.NumVar(0.0, double.PositiveInfinity, NumVarType.Float, cname)))
+                    foreach (var react in metabolite.RemovedConsumerExchange.InitReactions
+                        .Select(Util.CachedR))
+                    //.Select(cname => model.NumVar(0.0, double.PositiveInfinity, NumVarType.Float, cname)))
                     {
-                        if (!vars.ContainsKey(nvar.Name))
-                            vars[nvar.Name] = nvar;
-                        consexp1.AddTerm(vars[nvar.Name], 1.0);
+                        if (!vars.ContainsKey(react.Name))
+                            vars[react.Name] = model.NumVar(0.0, double.PositiveInfinity, NumVarType.Float, react.Name);
+                        var c = 1;// Coefficient(sm.Edges[react.ID], metabolite);
+                        consexp1.AddTerm(vars[react.Name], c);
                     }
-                    model.AddEq(consexp1, metabolite.RemovedConsumerExchange.Value, metabolite.Label + "_cons2");
+                    //if (Math.Abs(metabolite.RemovedConsumerExchange.Flux) > Double.Epsilon)
+                    model.AddLe(consexp1, metabolite.RemovedConsumerExchange.Flux * (1 + Change), metabolite.Label + "_cons2U");
+                    model.AddGe(consexp1, metabolite.RemovedConsumerExchange.Flux * (1 - Change), metabolite.Label + "_cons2L");
+
                     skip = true;
                 }
 
                 if (metabolite.RemovedProducerExchange != null && metabolite.RemovedProducerExchange.Products.Any(n => n.Value.IsPseudo))
                 {
                     var prodexp1 = model.LinearNumExpr();
-
-                    foreach (var nvar in metabolite.RemovedProducerExchange.InitReactions
-                        .Select(cid => Util.CachedR(cid).SbmlId)
-                        .Select(cname => model.NumVar(0.0, double.PositiveInfinity, NumVarType.Float, cname)))
+                    foreach (var react in metabolite.RemovedProducerExchange.InitReactions
+                        .Select(Util.CachedR))
+                    //.Select(cname => model.NumVar(0.0, double.PositiveInfinity, NumVarType.Float, cname)))
                     {
-                        if (!vars.ContainsKey(nvar.Name))
-                            vars[nvar.Name] = nvar;
-                        prodexp1.AddTerm(vars[nvar.Name], 1.0);
+                        if (!vars.ContainsKey(react.Name))
+                            vars[react.Name] = model.NumVar(0.0, double.PositiveInfinity, NumVarType.Float, react.Name);
+                        var c = 1;// Coefficient(sm.Edges[react.ID], metabolite);
+                        prodexp1.AddTerm(vars[react.Name], c);
                     }
+                    //if (Math.Abs(metabolite.RemovedProducerExchange.Flux) > Double.Epsilon)
+                    model.AddLe(prodexp1, metabolite.RemovedProducerExchange.Flux * (1 + Change), metabolite.Label + "_prod2U");
+                    model.AddGe(prodexp1, metabolite.RemovedProducerExchange.Flux * (1 - Change), metabolite.Label + "_prod2L");
 
-                    model.AddEq(prodexp1, metabolite.RemovedProducerExchange.Value, metabolite.Label + "_prod2");
                     skip = true;
                 }
                 if (skip) continue;
@@ -295,52 +305,60 @@
             foreach (var reaction in sm.Edges)
             {
                 if (RemoveConstraints) continue;
-
+                // updated pseudo exchange reaction constriants
+                // a1*r1 + a2*r2 + ... + b*exr = (sum(ai) + b)*flux(exr)
+                // ai is stoch of ri
+                // ri is pulled out from exr 
+                // b = (sum of stoch's of reactions exr representing, initExchangeStoch) - sum(ai)
                 if (reaction.Value.UpdatePseudo.Count != 0)
                 {
                     var sv = model.LinearNumExpr();
-                    var isProducer = (reaction.Value.Products.Count > 0);
-                    var isConsumer = (reaction.Value.Reactants.Count > 0);
+                    var isProducer = (reaction.Value.Products.Count(n => !n.Value.IsPseudo) > 0);
+                    var isConsumer = (reaction.Value.Reactants.Count(n => !n.Value.IsPseudo) > 0);
 
-                    //if (!(isConsumer ^ isProducer))
-                    //{
-                    //    throw new Exception("pseudo exchange reaction cannot be producer xor consumer");
-                    //}
-
-                    KeyValuePair<Guid, HyperGraph.Node> meta = new KeyValuePair<Guid, HyperGraph.Node>();
-                    double exchangeStoch = -1;
-                    double uc = -1;
-                    if (isProducer && !reaction.Value.Products.Any(n => n.Value.IsPseudo))
+                    var meta = new KeyValuePair<Guid, HyperGraph.Node>();
+                    double initExchangeStoch = -1;
+                    double sum_ai = -1;
+                    if (isProducer)// && !reaction.Value.Products.Any(n => n.Value.IsPseudo)
                     {
                         meta = reaction.Value.Products.First(n => !n.Value.IsPseudo);
-                        exchangeStoch = Util.GetReactionCount(meta.Key).Item2;
-                        uc =
+                        initExchangeStoch = Util.GetStoichiometry(meta.Key).Item2;
+                        sum_ai =
                             meta.Value.Producers.Where(e => !e.IsPseudo)
                                 .Sum(e => Math.Abs(Coefficient(e, meta.Value)));
                     }
-                    else if (isConsumer && !reaction.Value.Reactants.Any(n => n.Value.IsPseudo))
+                    else if (isConsumer)// && !reaction.Value.Reactants.Any(n => n.Value.IsPseudo)
                     {
                         meta = reaction.Value.Reactants.First(n => !n.Value.IsPseudo);
-                        exchangeStoch = Util.GetReactionCount(meta.Key).Item1;
-                        uc =
+                        initExchangeStoch = Util.GetStoichiometry(meta.Key).Item1;
+                        sum_ai =
                          meta.Value.Consumers.Where(e => !e.IsPseudo)
                              .Sum(e => Math.Abs(Coefficient(e, meta.Value)));
                     }
-                    var ub = 0.0;
-                    foreach (var r in reaction.Value.UpdatePseudo) //UpdateExchangeConstraint[reaction.Key]
+                    var sum_ri = 0.0;
+                    foreach (var r in reaction.Value.UpdatePseudo)
                     {
                         var c = Math.Abs(Coefficient(sm.Edges[r], meta.Value));
                         sv.AddTerm(vars[sm.Edges[r].Label], c);
-                        ub += c;
+                        sum_ri += c;
                     }
-                    sv.AddTerm(vars[reaction.Value.Label], (exchangeStoch - uc));
-                    model.AddGe(sv, reaction.Value.Value * (1 - Change) * (exchangeStoch - uc + ub), string.Format("update{0}ub", i));//(exchangeStoch - uc + ub) * Results[reaction.Value.Label]
-                    model.AddLe(sv, reaction.Value.Value * (1 + Change) * (exchangeStoch - uc + ub), string.Format("update{0}lb", i++));//(exchangeStoch - uc + ub) * Results[reaction.Value.Label]
+                    sv.AddTerm(vars[reaction.Value.Label], (initExchangeStoch - sum_ai));
+
+                    var st = (initExchangeStoch - (sum_ai - sum_ri));
+                    model.AddLe(sv, reaction.Value.Flux * (1 + Change) * st, string.Format("update{0}ub", i++));
+                    model.AddGe(sv, reaction.Value.Flux * (1 - Change) * st, string.Format("update{0}lb", i));
+
                 }
-                else if (reaction.Value.PreValue != -1 && Math.Abs(reaction.Value.Value) > double.Epsilon)
+                else if (reaction.Value.PreValue != -1 && Math.Abs(reaction.Value.Flux) > double.Epsilon)
                 {
-                    model.AddLe(vars[reaction.Value.Label], reaction.Value.Value * (1 + Change), string.Format("prev{0}ub", i));
-                    model.AddGe(vars[reaction.Value.Label], reaction.Value.Value * (1 - Change), string.Format("prev{0}lb", i++));
+                    if (!reaction.Value.IsPseudo && reaction.Value.ToServerReaction.Reversible)
+                    {
+                        continue;
+                    }
+                    //if (reaction.Flux.Flux != 0)
+
+                    model.AddLe(vars[reaction.Value.Label], reaction.Value.Flux * (1 + Change), string.Format("prev{0}ub", i));
+                    model.AddGe(vars[reaction.Value.Label], reaction.Value.Flux * (1 - Change), string.Format("prev{0}lb", i++));
                 }
             }
         }

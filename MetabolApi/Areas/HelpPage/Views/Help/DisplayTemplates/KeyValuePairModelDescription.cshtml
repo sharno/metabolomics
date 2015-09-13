@@ -1,4 +1,4 @@
 @using MetabolApi.Areas.HelpPage.ModelDescriptions
-@model KeyValuePairModelDescription
+@model KeyFluxPairModelDescription
 Pair of @Html.DisplayFor(m => Model.KeyModelDescription.ModelType, "ModelDescriptionLink", new { modelDescription = Model.KeyModelDescription }) [key]
-and @Html.DisplayFor(m => Model.ValueModelDescription.ModelType, "ModelDescriptionLink", new { modelDescription = Model.ValueModelDescription }) [value]
+and @Html.DisplayFor(m => Model.FluxModelDescription.ModelType, "ModelDescriptionLink", new { modelDescription = Model.FluxModelDescription }) [value]

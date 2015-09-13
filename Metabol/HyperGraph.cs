@@ -100,7 +100,7 @@ namespace Metabol
             catch (Exception ex)
             {
             }
-            node.UpdateImaginary();
+            node.UpdatePseudo();
         }
 
         public void AddProduct(Guid eid, string elabel, Guid nid, string label, bool b)
@@ -114,11 +114,12 @@ namespace Metabol
             try
             {
                 if (!b) node.Weights[eid] = Util.CachedRs(eid, nid).Stoichiometry;
+
             }
             catch (Exception ex)
             {
             }
-            node.UpdateImaginary();
+            node.UpdatePseudo();
         }
 
         public void AddProduct(Guid eid, string id, Guid nid, string sbmlId)
@@ -154,7 +155,7 @@ namespace Metabol
         //    var lastLevel = LastLevel;
         //    var result = new List<object>();
 
-        //    foreach (var node in Nodes.Where(node => node.Value.Level == lastLevel))
+        //    foreach (var node in Nodes.Where(node => node.Flux.Level == lastLevel))
         //    {
         //        var ch = "0";
         //        if (z.ContainsKey(node.Key))
@@ -163,9 +164,9 @@ namespace Metabol
         //        dynamic n = new
         //        {
         //            id = idGen,
-        //            name = node.Value.Label,
+        //            name = node.Flux.Label,
         //            type = "m",
-        //            isBorder = node.Value.IsBorder ? 1 : 0,
+        //            isBorder = node.Flux.IsBorder ? 1 : 0,
         //            concentration = 10.0,
         //            change = ch
         //        };
@@ -176,12 +177,12 @@ namespace Metabol
         //    }
 
         //    // { "name": "Pyruvate xxx", "type": "r", "V": 9 }
-        //    foreach (var node in Edges.Where(node => node.Value.Level == lastLevel))
+        //    foreach (var node in Edges.Where(node => node.Flux.Level == lastLevel))
         //    {
         //        dynamic n = new
         //        {
         //            id = idGen,
-        //            name = node.Value.Label,
+        //            name = node.Flux.Label,
         //            type = "r",
         //            V = 1.0
         //        };
@@ -200,18 +201,18 @@ namespace Metabol
         //    var lastLevel = LastLevel;
         //    var result = new List<dynamic>();
 
-        //    foreach (var link in Edges.Where(node => node.Value.Level == lastLevel))
+        //    foreach (var link in Edges.Where(node => node.Flux.Level == lastLevel))
         //    {
-        //        foreach (var node in link.Value.Reactants.Values)
+        //        foreach (var node in link.Flux.Reactants.Values)
         //        {
-        //            dynamic n = new { source = idMap[node.Id], target = idMap[link.Value.Id], role = "s" };
+        //            dynamic n = new { source = idMap[node.Id], target = idMap[link.Flux.Id], role = "s" };
         //            //yield return n;
         //            result.Add(n);
         //        }
 
-        //        foreach (var node in link.Value.Products.Values)
+        //        foreach (var node in link.Flux.Products.Values)
         //        {
-        //            dynamic n = new { source = idMap[link.Value.Id], target = idMap[node.Id], role = "p" };
+        //            dynamic n = new { source = idMap[link.Flux.Id], target = idMap[node.Id], role = "p" };
         //            //yield return n;
         //            result.Add(n);
         //        }
@@ -236,7 +237,7 @@ namespace Metabol
             public string Label { get; set; }
 
             [JsonProperty("value")]
-            public double Value { get; set; }
+            public double Flux { get; set; }
 
             [JsonProperty("preValue")]
             public double PreValue { get; set; }
@@ -325,7 +326,7 @@ namespace Metabol
                 switch (type)
                 {
                     case EdgeType.New:
-                        if (Math.Abs(Value) < Double.Epsilon)
+                        if (Math.Abs(this.Flux) < Double.Epsilon)
                         {
                             hedgeclass = " ui.class:newhedge0 ";
                             uiclass = " ui.class:new ";
@@ -338,7 +339,7 @@ namespace Metabol
                         break;
 
                     case EdgeType.None:
-                        if (Math.Abs(Value) < Double.Epsilon)
+                        if (Math.Abs(this.Flux) < Double.Epsilon)
                         {
                             uiclass = " ui.class:new0 ";
                             hedgeclass = " ui.class:hedge0 ";
@@ -351,7 +352,7 @@ namespace Metabol
 
                         break;
                 }
-                var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\"{2}({3})({4})\"\r\n", Id, hedgeclass, Label, Value, PreValue)); //
+                var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\"{2}({3:#.#####})({4:#.#####})\"\r\n", Id, hedgeclass, Label, this.Flux, PreValue)); //
 
                 foreach (var node in this.Reactants.Values.Where(n => sm.Nodes.ContainsKey(n.Id)))
                     bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4}  label:\"{5}\"\r\n", node.Id, Id, node.Id, Id, uiclass, node.Weights[Id] == 0 ? 1 : node.Weights[Id]));
@@ -381,7 +382,7 @@ namespace Metabol
                         hedgeclass = " ui.class:hedge ";
                         break;
                 }
-                var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\"{2}({3})({4})\"\r\n", Id, hedgeclass, Label, Value, PreValue)); //
+                var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\"{2}({3:#.#####})({4:#.#####})\"\r\n", Id, hedgeclass, Label, this.Flux, PreValue)); //
 
                 foreach (var node in this.Reactants.Values)
                     bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4}\r\n", node.Id, Id, node.Id, Id, uiclass));
@@ -469,6 +470,9 @@ namespace Metabol
 
             [JsonProperty("reactionCount")]
             public readonly Tuple<int, int> ReactionCount;
+
+            [JsonProperty("isExtended")]
+            public bool IsExtended { get; set; }
 
             [JsonIgnore]
             public ServerSpecies ToSpecies
@@ -592,7 +596,7 @@ namespace Metabol
                 return new Node(newGuid, label, lastLevel, pseudo);
             }
 
-            public void UpdateImaginary()
+            public void UpdatePseudo()
             {
                 var im = this.Consumers.Count(e => e.IsPseudo) != 0 ? this.Consumers.First(e => e.IsPseudo) : null;
                 var io = this.Producers.Count(e => e.IsPseudo) != 0 ? this.Producers.First(e => e.IsPseudo) : null;
