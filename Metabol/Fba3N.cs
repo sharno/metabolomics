@@ -21,13 +21,13 @@
             model.SetParam(Cplex.Param.RootAlgorithm, Cplex.Algorithm.Concurrent);
 
             var vars = new Dictionary<string, INumVar>();
-            var UpperBound = double.PositiveInfinity;
-
+            var UpperBound = Double.MaxValue;//100000;
+            var LowerBound = Double.MinValue;
             foreach (var edge in sm.Edges.Values)
             {
                 if (!edge.IsPseudo && edge.ToServerReaction.Reversible)
                 {
-                    vars[edge.Label] = model.NumVar(Double.NegativeInfinity, Double.PositiveInfinity, NumVarType.Float, edge.Label);
+                    vars[edge.Label] = model.NumVar(LowerBound, UpperBound, NumVarType.Float, edge.Label);
                     continue;
                 }
 

@@ -606,7 +606,7 @@ namespace Metabol
                     var wsum = this.Consumers.Count == 1
                           ? 0
                           : this.Consumers.Where(edge => !edge.IsPseudo).Sum(edge => Weights[edge.Id]);
-                    Weights[im.Id] = Util.GetReactionCount(Id).Item1 - wsum;
+                    Weights[im.Id] = Util.GetStoichiometry(Id).Item1 - wsum;
                 }
 
                 if (io != null)
@@ -615,7 +615,7 @@ namespace Metabol
                           ? 0
                           : this.Producers.Where(edge => !edge.IsPseudo).Sum(edge => Weights[edge.Id]);
 
-                    Weights[io.Id] = Util.GetReactionCount(Id).Item2 - wsum;
+                    Weights[io.Id] = Util.GetStoichiometry(Id).Item2 - wsum;
                 }
             }
 
