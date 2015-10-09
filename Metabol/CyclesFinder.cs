@@ -8,69 +8,69 @@ namespace Metabol
     {
         
 
-        public static void Test()
+        public static void Run(HyperGraph graph)
         {
-            var a = Guid.NewGuid();
-            var b = Guid.NewGuid();
-            var c = Guid.NewGuid();
-            var d = Guid.NewGuid();
-            var e = Guid.NewGuid();
+            //var a = Guid.NewGuid();
+            //var b = Guid.NewGuid();
+            //var c = Guid.NewGuid();
+            //var d = Guid.NewGuid();
+            //var e = Guid.NewGuid();
 
-            var b1 = Guid.NewGuid();
-            var b2 = Guid.NewGuid();
+            //var b1 = Guid.NewGuid();
+            //var b2 = Guid.NewGuid();
 
-            var b3 = Guid.NewGuid();
+            //var b3 = Guid.NewGuid();
 
-            var v1 = Guid.NewGuid();
-            var v2 = Guid.NewGuid();
-            var v3 = Guid.NewGuid();
+            //var v1 = Guid.NewGuid();
+            //var v2 = Guid.NewGuid();
+            //var v3 = Guid.NewGuid();
 
-            var graph = new HyperGraph();
-            graph.AddNode(a, "A");
-            graph.AddNode(b, "B");
-            graph.AddNode(c, "C");
-            graph.AddNode(d, "D");
-            graph.AddNode(e, "E");
+            //var graph = new HyperGraph();
+            //graph.AddNode(a, "A");
+            //graph.AddNode(b, "B");
+            //graph.AddNode(c, "C");
+            //graph.AddNode(d, "D");
+            //graph.AddNode(e, "E");
 
-            graph.AddProduct(b1, "b1", a, "A");
-            graph.AddProduct(v1, "v1", b, "B");
-            graph.AddProduct(v2, "v2", c, "C");
-            graph.AddProduct(v2, "v2", e, "E");
-            graph.AddProduct(v3, "v3", d, "D");
+            //graph.AddProduct(b1, "b1", a, "A");
+            //graph.AddProduct(v1, "v1", b, "B");
+            //graph.AddProduct(v2, "v2", c, "C");
+            //graph.AddProduct(v2, "v2", e, "E");
+            //graph.AddProduct(v3, "v3", d, "D");
 
-            graph.AddReactant(v1, "v1", a, "A");
-            graph.AddReactant(v1, "v1", e, "E");
+            //graph.AddReactant(v1, "v1", a, "A");
+            //graph.AddReactant(v1, "v1", e, "E");
 
-            graph.AddReactant(v2, "v2", b, "B");
+            //graph.AddReactant(v2, "v2", b, "B");
 
-            graph.AddReactant(v3, "v3", a, "A");
-            graph.AddReactant(v3, "v3", e, "E");
+            //graph.AddReactant(v3, "v3", a, "A");
+            //graph.AddReactant(v3, "v3", e, "E");
 
-            graph.AddReactant(b3, "b3", d, "D");
-            graph.AddReactant(b2, "b2", c, "C");
+            //graph.AddReactant(b3, "b3", d, "D");
+            //graph.AddReactant(b2, "b2", c, "C");
 
             CyclesFinder cyclesFinder = new CyclesFinder();
             Dictionary<Guid, Dictionary<Guid, Vertex>> stronglyConnectedComponents = cyclesFinder.FindCycles(graph);
             cyclesFinder.CollapseCycles(graph, stronglyConnectedComponents);
 
-            foreach (var stronglyConnectedComponent in stronglyConnectedComponents)
-            {
-                Console.WriteLine("component");
-                foreach (var vertex in stronglyConnectedComponent.Value)
-                {
-                    Console.WriteLine(vertex.Value.Value.Label);
-                }
-            }
+            //foreach (var stronglyConnectedComponent in stronglyConnectedComponents)
+            //{
+            //    Console.WriteLine("component");
+            //    foreach (var vertex in stronglyConnectedComponent.Value)
+            //    {
+            //        Console.WriteLine(vertex.Value.Value.Label);
+            //    }
+            //}
 
-            Console.WriteLine("after collapse");
-            foreach (var node in graph.Edges[v2].Reactants)
-            {
-                Console.WriteLine(node.Value.Label);
-            }
-            Console.ReadLine();
+            //Console.WriteLine("after collapse");
+            //foreach (var node in graph.Edges[v2].Reactants)
+            //{
+            //    Console.WriteLine(node.Value.Label);
+            //}
+            //Console.ReadLine();
 
-            Console.WriteLine("saving ");
-            Util.SaveAsDgs(graph.Nodes[a], graph, "C://b/");
+            //Console.WriteLine("saving ");
+            //Util.SaveAsDgs(graph.Nodes[a], graph, "C://b/");
         }
 
         public void CollapseCycles(HyperGraph graph, Dictionary<Guid, Dictionary<Guid, Vertex>> stronglyConnectedComponents)
@@ -91,12 +91,11 @@ namespace Metabol
                 // store cycle data in a separate data structure
                 foreach (var metabolite in stronglyConnectedComponent.Value)
                 {
-                    Console.WriteLine("metabol " + metabolite.Value.Value.Label);
+                    Console.WriteLine("metabol>>> " + metabolite.Value.Value.Label);
                     cycle.graph.AddNode(metabolite.Key, metabolite.Value.Value.Label);
 
                     foreach (var consumer in metabolite.Value.Value.Consumers)
                     {
-                        Console.WriteLine("consumer " + consumer.Label);
                         foreach (var product in consumer.Products)
                         {
                             if (metabolite.Value.Dependencies.ContainsKey(product.Key))
@@ -104,17 +103,17 @@ namespace Metabol
                                 inCycle = true;
                                 cycle.graph.AddReactant(consumer.Id, consumer.Label, metabolite.Key, metabolite.Value.Value.Label);
                                 cycle.graph.AddProduct(consumer.Id, consumer.Label, product.Key, product.Value.Label);
-                                Console.WriteLine("adding " + consumer.Label);
                             }
                         }
 
                         Dictionary<Guid, HyperGraph.Node> outsideProducedMetabolites = consumer.Products.Where(e => !stronglyConnectedComponent.Value.ContainsKey(e.Key)).ToDictionary(e => e.Key, e => e.Value);
                         Dictionary<Guid, HyperGraph.Node> outsideConsumedMetabolites = consumer.Reactants.Where(e => !stronglyConnectedComponent.Value.ContainsKey(e.Key)).ToDictionary(e => e.Key, e => e.Value);
-                        Console.WriteLine(outsideProducedMetabolites.Count());
-                        Console.WriteLine(outsideConsumedMetabolites.Count());
+
+                        Console.WriteLine("getting out of cycle " + outsideProducedMetabolites.Count());
+                        Console.WriteLine("getting in cycle" + outsideConsumedMetabolites.Count());
+
                         if (outsideProducedMetabolites.Any())
                         {
-                            Console.WriteLine("outside");
                             cycle.AddOutOfCycleReaction(consumer);
                         }
                         else if (outsideConsumedMetabolites.Any())
@@ -122,6 +121,18 @@ namespace Metabol
                             cycle.AddInCycleReaction(consumer);
                         }
                     }
+
+                    // check for in cycle exchange reactions
+                    foreach (var producer in metabolite.Value.Value.Producers)
+                    {
+                        Dictionary<Guid, HyperGraph.Node> outsideConsumedMetabolites = producer.Reactants.Where(e => !stronglyConnectedComponent.Value.ContainsKey(e.Key)).ToDictionary(e => e.Key, e => e.Value);
+                        if (outsideConsumedMetabolites.Any())
+                        {
+                            cycle.AddInCycleReaction(producer);
+                        }
+                    }
+
+                    graph.RemoveNode(metabolite.Key);
                 }
 
                 // collapse cycle in original graph
