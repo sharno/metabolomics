@@ -19,8 +19,11 @@
         private static readonly MemoryCache CacheFba = new MemoryCache("fba");
 
 
-        private static readonly Dictionary<Guid, Tuple<int, int>> AllReactionCache = new Dictionary<Guid, Tuple<int, int>>();
-        public static readonly Dictionary<Guid, Tuple<double, double>> AllStoichiometryCache = new Dictionary<Guid, Tuple<double, double>>();
+        //private static readonly Dictionary<Guid, Tuple<int, int>> AllReactionCache = new Dictionary<Guid, Tuple<int, int>>();
+        private static readonly Dictionary<Guid, dynamic> AllReactionCache2 = new Dictionary<Guid, dynamic>();
+
+        //public static readonly Dictionary<Guid, Tuple<double, double>> AllStoichiometryCache = new Dictionary<Guid, Tuple<double, double>>();
+        public static readonly Dictionary<Guid, dynamic> AllStoichiometryCache2 = new Dictionary<Guid, dynamic>();
 
         //public static readonly Dictionary<string, Metabolite> Meta = new Dictionary<string, Metabolite>();
         public const string Product = "Product";
@@ -36,20 +39,20 @@
         public static string AllReactionFile = ConfigurationManager.AppSettings["allReaction"]; //"allReaction.csv";//
         public static string AllStoichiometryFile = ConfigurationManager.AppSettings["allStoichiometry"];// "allStoichiometry.csv";//
         public static string SelectedMetaFile = ConfigurationManager.AppSettings["selection"];// "selected.csv";//
-
+        public static string BlockedReactionsFile = ConfigurationManager.AppSettings["blockedReactions"];
         static Util()
         {
             //var list = (from species in ServerSpecies.AllSpecies()
+            //            let reactant = species.getAllReactions(Util.Reactant).Length
             //            let product = species.getAllReactions(Util.Product).Length
-            //            let role = species.getAllReactions(Util.Reactant).Length
-            //            select $"{species.ID},{role},{product}").ToList();
+            //            select string.Format("{0},{1},{2}", species.ID, reactant, product)).ToList();
             //File.AppendAllLines(Util.AllReactionFile, list);
 
             //var list = (from s in ServerSpecies.AllSpecies()
-            //            let rs = ServerReactionSpecies.GetAllReactionsSpeciesForOneSpecies(s.ID)
-            //            let rsum = rs.Where(r => r.RoleId == ReactantId).Sum(e => e.Stoichiometry)
-            //            let psum = rs.Where(r => r.RoleId == ProductId).Sum(e => e.Stoichiometry)
-            //            select $"{s.ID},{rsum},{psum}"
+            //        let rs = ServerReactionSpecies.GetAllReactionsSpeciesForOneSpecies(s.ID)
+            //        let rsum = rs.Where(r => r.RoleId == ReactantId).Sum(e => e.Stoichiometry)
+            //        let psum = rs.Where(r => r.RoleId == ProductId).Sum(e => e.Stoichiometry)
+            //        select string.Format("{0},{1},{2}", s.ID, rsum, psum)
             //            ).ToList();
             //File.AppendAllLines(AllStoichiometryFile, list);
             Init();
@@ -87,15 +90,15 @@
 
         public static int GetReactionCountSum(Guid id)
         {
-            return InvolvedReactionCount(id).Item1 + InvolvedReactionCount(id).Item2;
+            return InvolvedReactionCount(id).Consumers + InvolvedReactionCount(id).Producers;
         }
 
-        public static Tuple<int, int> GetReactionCount(Guid id)
+        public static dynamic GetReactionCount(Guid id)
         {
             return InvolvedReactionCount(id);
         }
 
-        public static Tuple<double, double> GetStoichiometry(Guid id)
+        public static dynamic GetStoichiometry(Guid id)
         {
             return InvolvedReactionStoch(id);
         }
@@ -107,15 +110,19 @@
                 Directory.CreateDirectory(Dir);
                 var lines = File.ReadAllLines(AllReactionFile);
                 foreach (var result in lines.Select(s => s.Split(',')))
-                    AllReactionCache[Guid.Parse(result[0])] = Tuple.Create(
-                        Int32.Parse(result[1]),
-                        Int32.Parse(result[2]));
+                    AllReactionCache2[Guid.Parse(result[0])] = 
+                        new { Consumers = int.Parse(result[1]), Producers = int.Parse(result[2]) };
+                //Tuple.Create(
+                //Int32.Parse(result[1]),
+                //Int32.Parse(result[2]));
 
                 lines = File.ReadAllLines(AllStoichiometryFile);
                 foreach (var result in lines.Select(s => s.Split(',')))
-                    AllStoichiometryCache[Guid.Parse(result[0])] = Tuple.Create(
-                        Double.Parse(result[1]),
-                        Double.Parse(result[2]));
+                    AllStoichiometryCache2[Guid.Parse(result[0])] =
+                         new { Consumers = double.Parse(result[1]), Producers = double.Parse(result[2]) };
+                        //Tuple.Create(
+                        //Double.Parse(result[1]),
+                        //Double.Parse(result[2]));
             }
             catch (Exception e)
             {
@@ -123,24 +130,24 @@
             }
         }
 
-        private static Tuple<int, int> InvolvedReactionCount(Guid id)
+        private static dynamic InvolvedReactionCount(Guid id)
         {
-            if (AllReactionCache.ContainsKey(id)) return AllReactionCache[id];
+            if (AllReactionCache2.ContainsKey(id)) return AllReactionCache2[id];
             var species = ServerSpecies.Load(id);
             var product = species.getAllReactions(Product).Length;
             var reactant = species.getAllReactions(Reactant).Length;
-            AllReactionCache[id] = Tuple.Create(reactant, product);
-            return AllReactionCache[id];
+            AllReactionCache2[id] = new { Consumers = reactant, Producers = product }; //Tuple.Create(reactant, product);
+            return AllReactionCache2[id];
         }
 
-        private static Tuple<double, double> InvolvedReactionStoch(Guid id)
+        private static dynamic InvolvedReactionStoch(Guid id)
         {
-            if (AllStoichiometryCache.ContainsKey(id)) return AllStoichiometryCache[id];
+            if (AllStoichiometryCache2.ContainsKey(id)) return AllStoichiometryCache2[id];
             var rs = ServerReactionSpecies.GetAllReactionsSpeciesForOneSpecies(id);
             var rsum = rs.Where(r => r.RoleId == ReactantId).Sum(e => e.Stoichiometry);
             var psum = rs.Where(r => r.RoleId == ProductId).Sum(e => e.Stoichiometry);
-            AllStoichiometryCache[id] = Tuple.Create(rsum, psum);
-            return AllStoichiometryCache[id];
+            AllStoichiometryCache2[id] = new { Consumers = rsum, Producers = psum }; //Tuple.Create(rsum, psum);
+            return AllStoichiometryCache2[id];
         }
 
         public static TheAlgorithm CachedFba(string id)
@@ -203,15 +210,15 @@
 
         public static int TotalReactions(HyperGraph.Node k)
         {
-            var sum = k.ReactionCount.Item1 + k.ReactionCount.Item2;
-            return sum == 0 ? Int32.MaxValue : sum;
+            var sum = k.ReactionCount.Consumers + k.ReactionCount.Producers;
+            return sum == 0 ? int.MaxValue : sum;
         }
 
         public static int TotalReactions(Guid id)
         {
-            var sum = AllReactionCache[id].Item1 + AllReactionCache[id].Item2;
+            var sum = AllReactionCache2[id].Consumers + AllReactionCache2[id].Producers;
             //if sum==0, k is probably Modifier
-            return sum == 0 ? Int32.MaxValue : sum;
+            return sum == 0 ? int.MaxValue : sum;
         }
 
         public static void SaveAsDgs(HyperGraph.Node m2, HyperGraph sm, TheAlgorithm algo)
@@ -245,7 +252,7 @@
                 if (edge.Level == maxLevel)
                     type = EdgeType.New;
 
-                lines.Add(edge.ToDgs(type,sm));
+                lines.Add(edge.ToDgs(type, sm));
             }
             File.AppendAllLines(file, lines);
         }
@@ -320,6 +327,8 @@
             return 1.0 / Math.Pow(1 - new Random().NextDouble(), 1.0 / (n + 1));
         }
 
-      
+
+
+
     }
 }

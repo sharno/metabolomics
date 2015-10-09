@@ -81,7 +81,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Fba3N.cs" />
+    <Compile Include="Fba3.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FVA.cs" />
     <Compile Include="HyperGraph.cs" />
     <Compile Include="Iteration.cs" />
     <Compile Include="NetworkGenerator.cs" />
@@ -96,13 +99,12 @@
     <Compile Include="Util.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="allReaction.csv">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="allStoichiometry.csv">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <None Include="allReaction.csv" />
+    <None Include="allStoichiometry.csv" />
     <None Include="App.config" />
+    <None Include="blocked.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

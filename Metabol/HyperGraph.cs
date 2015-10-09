@@ -38,7 +38,7 @@ namespace Metabol
 
         [JsonProperty("nodes")]
         public ConcurrentDictionary<Guid, Node> Nodes { get; protected set; }
-
+        public HashSet<Guid> CommonMetabolites { get; protected set; }
         public ConcurrentDictionary<Guid, HashSet<Guid>> PseudoPath { get; protected set; }
 
         [JsonProperty("edges")]
@@ -49,6 +49,7 @@ namespace Metabol
             Edges = new ConcurrentDictionary<Guid, Edge>();
             Nodes = new ConcurrentDictionary<Guid, Node>();
             PseudoPath = new ConcurrentDictionary<Guid, HashSet<Guid>>();
+            CommonMetabolites = new HashSet<Guid>();
         }
 
         public void NextStep()
@@ -95,7 +96,7 @@ namespace Metabol
             e.IsPseudo = b;
             try
             {
-                if (!b) node.Weights[eid] = Util.CachedRs(eid, nid).Stoichiometry;
+                if (!b) node.Weights[eid] = Math.Abs(Util.CachedRs(eid, nid).Stoichiometry);
             }
             catch (Exception ex)
             {
@@ -106,14 +107,13 @@ namespace Metabol
         public void AddProduct(Guid eid, string elabel, Guid nid, string label, bool b)
         {
             var node = Nodes.GetOrAdd(nid, Node.Create(nid, label, Step));
-
             var e = Edges.GetOrAdd(eid, Edge.Create(eid, Step));
             e.Label = elabel;
             e.AddProduct(node);
             e.IsPseudo = b;
             try
             {
-                if (!b) node.Weights[eid] = Util.CachedRs(eid, nid).Stoichiometry;
+                if (!b) node.Weights[eid] = Math.Abs(Util.CachedRs(eid, nid).Stoichiometry);
 
             }
             catch (Exception ex)
@@ -132,9 +132,28 @@ namespace Metabol
             AddReactant(eid, elabel, nid, sbmlId, false);
         }
 
+        //public void AddProductCommon(Guid eid, string p1, Guid nid, string p2)
+        //{
+        //    var node = Node.Create(nid, p2, Step, true);
+        //    Nodes.GetOrAdd(node.Id, node);
+        //    var e = Edges.GetOrAdd(eid, Edge.Create(eid, Step));
+        //    e.Label = p1;
+        //    e.AddProduct(node);
+        //    node.Weights[eid] = Math.Abs(Util.CachedRs(eid, nid).Stoichiometry);
+        //}
+
+        //public void AddReactantCommon(Guid eid, string p1, Guid nid, string p2)
+        //{
+        //    var node = Node.Create(nid, p2, Step, true);
+        //    Nodes.GetOrAdd(node.Id, node);
+        //    var e = Edges.GetOrAdd(eid, Edge.Create(eid, Step));
+        //    e.Label = p1;
+        //    e.AddReactant(node);
+        //    node.Weights[eid] = Util.CachedRs(eid, nid).Stoichiometry;
+        //}
+
         public void Clear()
         {
-            //idMap.Clear();
             foreach (var edge in Edges)
             {
                 edge.Value.Reactants.Clear();
@@ -240,7 +259,7 @@ namespace Metabol
             public double Flux { get; set; }
 
             [JsonProperty("preValue")]
-            public double PreValue { get; set; }
+            public double PreFlux { get; set; }
 
             [JsonProperty("level")]
             public int Level { get; set; }
@@ -264,7 +283,7 @@ namespace Metabol
             public HashSet<Guid> UpdatePseudo { get; set; }
 
             public HashSet<Guid> Reactions { get; set; }
-            public HashSet<Guid> InitReactions { get; set; }
+            //public HashSet<Guid> InitReactions { get; set; }
             #endregion
 
             public Edge(Guid id, int i)
@@ -273,11 +292,11 @@ namespace Metabol
                 Reactants = new Dictionary<Guid, Node>();
                 UpdatePseudo = new HashSet<Guid>();
                 Reactions = new HashSet<Guid>();
-                InitReactions = new HashSet<Guid>();
+                //InitReactions = new HashSet<Guid>();
 
                 Id = id;
                 Level = i;
-                PreValue = -1;
+                this.PreFlux = double.NegativeInfinity;
             }
 
             public static Edge Create(Guid id, int i)
@@ -290,11 +309,11 @@ namespace Metabol
                 Reactants[node.Id] = node;
                 //Reactants.AddOrUpdate(node.Id, node, (guid, node1) => node1);
                 node.Consumers.Add(this);
-                if (node.IsPseudo)
-                {
-                    //s2
-                    node.Weights[Id] = 1.0;
-                }
+                //if (node.IsPseudo)
+                //{
+                //    //s2
+                //    node.Weights[Id] = 1.0;
+                //}
                 return this;
             }
 
@@ -303,11 +322,11 @@ namespace Metabol
                 Products[node.Id] = node;
                 //Products.AddOrUpdate(node.Id, node, (guid, node1) => node1);
                 node.Producers.Add(this);
-                if (node.IsPseudo)
-                {
-                    //s1
-                    node.Weights[Id] = 1.0;
-                }
+                //if (node.IsPseudo)
+                //{
+                //    //s1
+                //    node.Weights[Id] = 1.0;
+                //}
                 return this;
             }
 
@@ -352,13 +371,13 @@ namespace Metabol
 
                         break;
                 }
-                var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\"{2}({3:#.#####})({4:#.#####})\"\r\n", Id, hedgeclass, Label, this.Flux, PreValue)); //
+                var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\" {2}({3:#.#####})({4:#.#####}) \"\r\n", Id, hedgeclass, Label, this.Flux, this.PreFlux)); //
 
                 foreach (var node in this.Reactants.Values.Where(n => sm.Nodes.ContainsKey(n.Id)))
-                    bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4}  label:\"{5}\"\r\n", node.Id, Id, node.Id, Id, uiclass, node.Weights[Id] == 0 ? 1 : node.Weights[Id]));
+                    bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4}  label:\" {5} \"\r\n", node.Id, Id, node.Id, Id, uiclass, node.Weights[Id] == 0 ? 1 : node.Weights[Id]));
 
                 foreach (var node in this.Products.Values.Where(n => sm.Nodes.ContainsKey(n.Id)))
-                    bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4} label:\"{5}\"\r\n", Id, node.Id, Id, node.Id, uiclass, node.Weights[Id] == 0 ? 1 : node.Weights[Id]));
+                    bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4} label:\" {5} \"\r\n", Id, node.Id, Id, node.Id, uiclass, node.Weights[Id] == 0 ? 1 : node.Weights[Id]));
 
                 return bu.ToString();
             }
@@ -382,7 +401,7 @@ namespace Metabol
                         hedgeclass = " ui.class:hedge ";
                         break;
                 }
-                var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\"{2}({3:#.#####})({4:#.#####})\"\r\n", Id, hedgeclass, Label, this.Flux, PreValue)); //
+                var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\" {2}({3:#.#####})({4:#.#####}) \"\r\n", Id, hedgeclass, Label, this.Flux, this.PreFlux)); //
 
                 foreach (var node in this.Reactants.Values)
                     bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4}\r\n", node.Id, Id, node.Id, Id, uiclass));
@@ -410,7 +429,7 @@ namespace Metabol
                         hedgeclass = " ui.class:hedge ";
                         break;
                 }
-                var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\"{2}\"\r\n", Id, hedgeclass, Label)); //
+                var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\" {2} \"\r\n", Id, hedgeclass, Label)); //
 
                 foreach (var node in this.Reactants.Values)
                     bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4}\r\n", node.Id, Id, node.Id, Id, uiclass));
@@ -453,11 +472,13 @@ namespace Metabol
             [JsonProperty("id")]
             public readonly Guid Id;
 
+            public Guid RealId;
+
             [JsonProperty("label")]
             public string Label;
 
-            [JsonProperty("isPseudo")]
-            public bool IsPseudo;
+            [JsonProperty("isCommon")]
+            public bool IsCommon;
 
             [JsonProperty("consumerEdge")]
             public HashSet<Edge> Consumers = new HashSet<Edge>();
@@ -469,7 +490,7 @@ namespace Metabol
             public int Level { get; set; }
 
             [JsonProperty("reactionCount")]
-            public readonly Tuple<int, int> ReactionCount;
+            public readonly dynamic ReactionCount;
 
             [JsonProperty("isExtended")]
             public bool IsExtended { get; set; }
@@ -491,7 +512,7 @@ namespace Metabol
                     //return !IsBorder
                     //       && ((Consumers.Count == 0 && Producers.Count != 0)
                     //           || (Consumers.Count != 0 && Producers.Count == 0));
-                    return ReactionCount.Item1 == 0 || ReactionCount.Item2 == 0;
+                    return ReactionCount.Consumers == 0 || ReactionCount.Producers == 0;
                 }
             }
 
@@ -509,7 +530,7 @@ namespace Metabol
             {
                 get
                 {
-                    return ReactionCount.Item1 != this.Consumers.Count(e => !e.IsPseudo);
+                    return ReactionCount.Consumers != this.Consumers.Count(e => !e.IsPseudo);
                 }
             }
 
@@ -518,7 +539,7 @@ namespace Metabol
             {
                 get
                 {
-                    return ReactionCount.Item2 != this.Producers.Count(e => !e.IsPseudo);
+                    return ReactionCount.Producers != this.Producers.Count(e => !e.IsPseudo);
                 }
             }
 
@@ -537,7 +558,7 @@ namespace Metabol
             {
                 get
                 {
-                    return ReactionCount.Item1 + ReactionCount.Item2;
+                    return ReactionCount.Consumers + ReactionCount.Producers;
                 }
             }
 
@@ -578,12 +599,14 @@ namespace Metabol
                 }
             }
 
-            private Node(Guid id, string label, int lastLevel, bool pseudo)
+            private Node(Guid id, string label, int lastLevel, bool common)
                 : this(id, label, lastLevel)
             {
-                IsPseudo = pseudo;
-                ReactionCount = Tuple.Create(0, 0);
-                Util.AllStoichiometryCache[id] = Tuple.Create(1.0, 1.0);
+                Id = Guid.NewGuid();
+                RealId = id;
+                IsCommon = common;
+                //ReactionCount = Tuple.Create(0, 0);
+                //Util.AllStoichiometryCache[id] = Tuple.Create(1.0, 1.0);
             }
 
             public static Node Create(Guid id, string label, int i)
@@ -591,9 +614,9 @@ namespace Metabol
                 return new Node(id, label, i);
             }
 
-            public static Node Create(Guid newGuid, string label, int lastLevel, bool pseudo)
+            public static Node Create(Guid newGuid, string label, int lastLevel, bool common)
             {
-                return new Node(newGuid, label, lastLevel, pseudo);
+                return new Node(newGuid, label, lastLevel, common);
             }
 
             public void UpdatePseudo()
@@ -606,7 +629,7 @@ namespace Metabol
                     var wsum = this.Consumers.Count == 1
                           ? 0
                           : this.Consumers.Where(edge => !edge.IsPseudo).Sum(edge => Weights[edge.Id]);
-                    Weights[im.Id] = Util.GetStoichiometry(Id).Item1 - wsum;
+                    Weights[im.Id] = Util.GetStoichiometry(Id).Consumers - wsum;
                 }
 
                 if (io != null)
@@ -615,7 +638,7 @@ namespace Metabol
                           ? 0
                           : this.Producers.Where(edge => !edge.IsPseudo).Sum(edge => Weights[edge.Id]);
 
-                    Weights[io.Id] = Util.GetStoichiometry(Id).Item2 - wsum;
+                    Weights[io.Id] = Util.GetStoichiometry(Id).Producers - wsum;
                 }
             }
 
@@ -645,7 +668,7 @@ namespace Metabol
                         break;
                 }
 
-                return string.Format("an \"{0}\"  label:\"{1}\"  {2}", Id, Label, uiclass);
+                return string.Format("an \"{0}\"  label:\" {1} \"  {2}", Id, Label, uiclass);
             }
 
             public IEnumerable<Edge> AllReactions()
@@ -688,6 +711,8 @@ namespace Metabol
             #endregion
 
 
+
         }
+
     }
 }
