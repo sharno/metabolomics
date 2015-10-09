@@ -151,6 +151,34 @@ namespace Metabol
         //    e.AddReactant(node);
         //    node.Weights[eid] = Util.CachedRs(eid, nid).Stoichiometry;
         //}
+        // remove node for cycle detection
+        public void RemoveNode(Guid nid)
+        {
+            foreach (var consumer in Nodes[nid].Consumers)
+            {
+                consumer.Reactants.Remove(nid);
+                if (consumer.Reactants.Count == 0 && consumer.Products.Count == 0)
+                {
+                    Edge ingoredEdge;
+                    Edges.TryRemove(consumer.Id, out ingoredEdge);
+                }
+            }
+
+            foreach (var producer in Nodes[nid].Producers)
+            {
+                producer.Products.Remove(nid);
+                if (producer.Reactants.Count == 0 && producer.Products.Count == 0)
+                {
+                    Edge ingoredEdge;
+                    Edges.TryRemove(producer.Id, out ingoredEdge);
+                }
+            }
+
+            Node ignored;
+            Nodes.TryRemove(nid, out ignored);
+
+            // TODO check pseudo and stoichiometry
+        }
 
         public void Clear()
         {
