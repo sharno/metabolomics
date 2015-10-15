@@ -8,6 +8,7 @@ using PathwaysLib.ServerObjects;
 using System.Configuration;
 using System.Data.Entity.Migrations;
 using System.Threading;
+using CyclesCacher.DB;
 
 
 namespace CyclesCacher
@@ -16,6 +17,7 @@ namespace CyclesCacher
     {
         static void Main(string[] args)
         {
+            const int Outliear = 61;
             var strCon = ConfigurationManager.AppSettings["dbConnectString"];
             DBWrapper.Instance = new DBWrapper(strCon);
 
@@ -38,13 +40,13 @@ namespace CyclesCacher
                 Z[s.ID] = rand.NextDouble() >= 0.5 ? 1 : -1;
 
             var count = 0;
-            foreach (var sp in ServerSpecies.AllSpecies())
+            foreach (var sp in ServerSpecies.AllSpecies().Where(p => Util.GetReactionCountSum(p.ID) < Outliear))
             {
                 count++;
-                //                if (count == 100)
-                //                {
-                //                    break;
-                //                }
+//                if (count == 300)
+//                {
+//                    break;
+//                }
                 Console.WriteLine("adding metabolite " + count);
 
 
@@ -65,13 +67,29 @@ namespace CyclesCacher
 
             Dictionary<Guid, Cycle> cycles = CyclesFinder.Run(g);
 
+            // removing exchange reactions from non exchange in cycle
+            foreach (var cycle in cycles)
+            {
+                List<KeyValuePair<Guid, HyperGraph.Edge>> toRemove = cycle.Value.inCycleReactions.Where(e => cycle.Value.graph.Edges.ContainsKey(e.Key)).ToList();
+                toRemove.AddRange(cycle.Value.outOfCycleReactions.Where(e => cycle.Value.graph.Edges.ContainsKey(e.Key)).ToList());
+
+                foreach (var reaction in toRemove)
+                {
+                    HyperGraph.Edge _;
+                    cycle.Value.graph.Edges.TryRemove(reaction.Key, out _);
+                }
+
+                cycle.Value.inCycleReactions =
+                    cycle.Value.inCycleReactions.Where(e => !cycle.Value.outOfCycleReactions.ContainsKey(e.Key)).ToDictionary(e => e.Key, e => e.Value);
+            }
+
 
 
             using (var context = new DB.CycleReactionModel())
             {
+                context.CycleReactions.RemoveRange(context.CycleReactions.Where(e => true));
                 context.Cycles.RemoveRange(context.Cycles.Where(e => true));
-                var reactions = context.Reactions.Where(reaction => true).ToList();
-                reactions.ForEach(r => r.cycleId = null);
+                // TODO remove cycle reactions
                 context.SaveChanges();
 
 
@@ -81,21 +99,18 @@ namespace CyclesCacher
 
                     foreach (var reaction in cycle.Value.graph.Edges)
                     {
-                        //DB.Reaction reactionModel = new DB.Reaction() { id = reaction.Key };
-                        cycleModel.Reactions.Add(context.Reactions.Find(reaction.Key));
+                        cycleModel.CycleReactions.Add(new CycleReaction() {cycleId = cycle.Key, reactionId = reaction.Key, isExchange = false});
                     }
                     foreach (var reaction in cycle.Value.inCycleReactions)
                     {
-//                        DB.Reaction reactionModel = new DB.Reaction() { id = reaction.Key };
-                        cycleModel.Reactions.Add(context.Reactions.Find(reaction.Key));
+                        cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycle.Key, reactionId = reaction.Key, isExchange = true });
                     }
                     foreach (var reaction in cycle.Value.outOfCycleReactions)
                     {
-//                        DB.Reaction reactionModel = new DB.Reaction() { id = reaction.Key };
-                        cycleModel.Reactions.Add(context.Reactions.Find(reaction.Key));
+                        cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycle.Key, reactionId = reaction.Key, isExchange = true });
                     }
-                    cycleModel.Reactions = cycleModel.Reactions.Distinct().ToList();
                     context.Cycles.Add(cycleModel);
+//                    context.SaveChanges();
                 }
                 context.SaveChanges();
             }

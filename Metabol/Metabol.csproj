@@ -60,6 +60,10 @@
     <Reference Include="ILOG.CPLEX">
       <HintPath>..\Reference Assemblies\ILOG.CPLEX.dll</HintPath>
     </Reference>
+    <Reference Include="MathNet.Numerics, Version=3.8.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MathNet.Numerics.3.8.0\lib\net40\MathNet.Numerics.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.6.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
@@ -72,6 +76,7 @@
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.2.3\lib\net45\System.Net.Http.Formatting.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Web.Extensions" />
@@ -81,7 +86,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Fba3N.cs" />
+    <Compile Include="Fba3.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="FVA.cs" />
     <Compile Include="HyperGraph.cs" />
     <Compile Include="Iteration.cs" />
@@ -97,10 +104,10 @@
     <Compile Include="Util.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="allReaction.csv">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="allStoichiometry.csv">
+    <None Include="allReaction.csv" />
+    <None Include="allStoichiometry.csv" />
+    <None Include="App.config" />
+    <None Include="blocked.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="App.config">

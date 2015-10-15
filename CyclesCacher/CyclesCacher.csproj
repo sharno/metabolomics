@@ -55,11 +55,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CycleModel.cs" />
     <Compile Include="Cycle.cs" />
     <Compile Include="CyclesFinder.cs" />
-    <Compile Include="CycleReactionModel.cs" />
     <Compile Include="DB\Cycle.cs" />
+    <Compile Include="DB\CycleReaction.cs" />
     <Compile Include="DB\CycleReactionModel.cs" />
     <Compile Include="DB\Reaction.cs" />
     <Compile Include="Program.cs" />
@@ -69,7 +68,6 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
-    <Compile Include="Reaction.cs" />
     <Compile Include="_PathCase_SystemBiology_V5_2DataSet.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -77,11 +75,23 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="allReaction.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="allStoichiometry.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="App.config" />
+    <None Include="blocked.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <None Include="selected.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="_PathCase_SystemBiology_V5_2DataSet.xsc">
       <DependentUpon>_PathCase_SystemBiology_V5_2DataSet.xsd</DependentUpon>
@@ -105,6 +115,7 @@
       <Name>PathwaysLib</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

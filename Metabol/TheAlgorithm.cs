@@ -9,16 +9,15 @@
     using System.Linq;
     using System.Threading.Tasks;
 
-    using ILOG.CPLEX;
-
     using Newtonsoft.Json;
 
     using PathwaysLib.ServerObjects;
 
     public class TheAlgorithm
     {
-        public readonly Fba3N Fba = new Fba3N();
+        public readonly Fba3 Fba = new Fba3();
         public readonly LinkedList<string> Pathway = new LinkedList<string>();
+        //public readonly HashSet<Guid> BlockedReactions = new HashSet<Guid>();
 
         [JsonProperty("isFeasable")]
         public bool IsFeasable { get; set; }
@@ -118,15 +117,17 @@
             //78419436-263A-4B48-BCB1-F508A50C9119
             //2D4A4044-940F-41A5-9AFD-E710D93FDC50
             //91889477-FFC2-4318-BF02-91E32F34A890
+            //F42F7DA3-61EA-4FAF-B16C-385229C92DFB
             if (init)
             {
                 return;
             }
-            var mid = Guid.Parse("2D4A4044-940F-41A5-9AFD-E710D93FDC50");
+            var mid = Guid.Parse("F42F7DA3-61EA-4FAF-B16C-385229C92DFB");
 
             var g = new HyperGraph();
             var id = mid;
-            while (g.Nodes.Count < 9)
+            g.AddNode(id, Util.CachedS(id).Name);
+            while (g.Nodes.Count < 5)
             {
                 ExtendGraph(Util.CachedS(id), g);
                 foreach (var node in g.Nodes[id].AllNeighborNodes())
@@ -172,8 +173,8 @@
                 Console.WriteLine("{0}:{1}", s.SbmlId, Z[s.ID]);
             }
 
-           // var id = Guid.Parse("{1218e2af-e534-41e6-bc59-e9731c95b182}");
-            var id = Guid.Parse("5e101a10-c36a-4a02-b9c5-b49817fb2311");
+            // var id = Guid.Parse("{1218e2af-e534-41e6-bc59-e9731c95b182}");
+            var id = Guid.Parse("64893C3E-331F-4B24-8CA8-61D9D3D39D03");
             Z[id] = (id.GetHashCode() % 2) == 0 ? -1 : 1; //rand.NextDouble() >= 0.5 ? 1 : -1;
 
             var strCon = ConfigurationManager.AppSettings["dbConnectString"];
@@ -266,14 +267,14 @@
                 m2.Producers.Remove(outex);
                 HyperGraph.Edge ee1;
                 sm.Edges.TryRemove(outex.Id, out ee1);
-                if (ee1.Reactants.Values.Any(n => n.IsPseudo))
-                {
-                    foreach (var id in ee1.Reactants.Where(n => n.Value.IsPseudo))
-                    {
-                        HyperGraph.Node b;
-                        sm.Nodes.TryRemove(id.Key, out b);
-                    }
-                }
+                //if (ee1.Reactants.Values.Any(n => n.IsPseudo))
+                //{
+                //    foreach (var id in ee1.Reactants.Where(n => n.Value.IsPseudo))
+                //    {
+                //        HyperGraph.Node b;
+                //        sm.Nodes.TryRemove(id.Key, out b);
+                //    }
+                //}
             }
 
             // remove consumer exchange reaction of  non-consumed-border metabolite 
@@ -289,14 +290,14 @@
 
                 HyperGraph.Edge e;
                 sm.Edges.TryRemove(inex.Id, out e);
-                if (e.Products.Values.Any(n => n.IsPseudo))
-                {
-                    foreach (var id in e.Products.Where(n => n.Value.IsPseudo))
-                    {
-                        HyperGraph.Node b;
-                        sm.Nodes.TryRemove(id.Key, out b);
-                    }
-                }
+                //if (e.Products.Values.Any(n => n.IsPseudo))
+                //{
+                //    foreach (var id in e.Products.Where(n => n.Value.IsPseudo))
+                //    {
+                //        HyperGraph.Node b;
+                //        sm.Nodes.TryRemove(id.Key, out b);
+                //    }
+                //}
             }
         }
 
@@ -327,7 +328,8 @@
             var borderm = GetBorderMetabolites(sm);
 
             // Define exchange reactions for all border metabolites in S(m).
-            borderm.Select(mb => Util.CachedS(mb.Id)).ToList().ForEach(mbs => DefinePseudo(mbs, sm));
+            borderm.ToList().ForEach(mbs => DefinePseudo(mbs, sm));
+            sm.Nodes.Values.Where(n => n.IsCommon).ToList().ForEach(mbs => DefinePseudo(mbs, sm));
 
             var nonborder = GetNonBorderMetabolites(sm);
 
@@ -354,75 +356,78 @@
             return dic;
         }
 
-        public async Task DefinePseudo(ServerSpecies m, HyperGraph sm)
+        public async Task DefinePseudo(HyperGraph.Node node, HyperGraph sm)
         {
-            await DefineExReaction(m, sm);
+            await DefineExReaction(node, sm);
 
-            var consumer = sm.Nodes[m.ID].Consumers.First(e => e.IsPseudo).Id;
-
-            foreach (var meta in
-                from r in Util.GetAllReaction(m, Util.Reactant).Where(e => !sm.Edges.ContainsKey(e.ID))
-                from meta in r.GetAllProducts()
-                where sm.Nodes.ContainsKey(meta.ID) && sm.Nodes[meta.ID].IsBorder
-                select meta)
-            {
-                //if (meta.SbmlId.Equals("M_xolest_hs_c"))
-                //    Console.WriteLine();
-                await DefineExReaction(Util.CachedS(meta.ID), sm);
-
-                if (sm.ExistPseudoPath(m.ID, meta.ID)) continue;
-                sm.AddPseudoPath(m.ID, meta.ID);
-                var id = Guid.NewGuid();
-                var n = sm.AddNode(id, m.SbmlId + "_" + meta.SbmlId, true);
-                //var n = HyperGraph.Node.Create(id, m.SbmlId + "_" + meta.SbmlId, sm.LastLevel, true);
-                //if (n.Label.Equals("M_chsterol_c_M_xolest_hs_c"))
-                //    Console.WriteLine("");
-                sm.Edges[consumer].AddProduct(n);
-                var producer = sm.Nodes[meta.ID].Producers.First(e => e.IsPseudo).Id;
-                sm.Edges[producer].AddReactant(n);
-            }
-
+            //var consumer = sm.Nodes[m.ID].Consumers.First(e => e.IsPseudo).Id;
 
             //foreach (var meta in
-            //  from r in Util.GetAllReaction(m, Util.Product)
-            //  from meta in r.GetAllReactants()
-            //  where sm.Nodes.ContainsKey(meta.ID)
-            //  select meta)
+            //    from r in Util.GetAllReaction(m, Util.Reactant).Where(e => !sm.Edges.ContainsKey(e.ID))
+            //    from meta in r.GetAllProducts()
+            //    where sm.Nodes.ContainsKey(meta.ID) && sm.Nodes[meta.ID].IsBorder
+            //    select meta)
             //{
+            //    //if (meta.SbmlId.Equals("M_xolest_hs_c"))
+            //    //    Console.WriteLine();
             //    await DefineExReaction(Util.CachedS(meta.ID), sm);
+
+            //    if (sm.ExistPseudoPath(m.ID, meta.ID)) continue;
+            //    sm.AddPseudoPath(m.ID, meta.ID);
             //    var id = Guid.NewGuid();
             //    var n = sm.AddNode(id, m.SbmlId + "_" + meta.SbmlId, true);
             //    //var n = HyperGraph.Node.Create(id, m.SbmlId + "_" + meta.SbmlId, sm.LastLevel, true);
+            //    //if (n.Label.Equals("M_chsterol_c_M_xolest_hs_c"))
+            //    //    Console.WriteLine("");
             //    sm.Edges[consumer].AddProduct(n);
-            //    var producer = sm.Nodes[m.ID].Producers.First(e => e.IsPseudo).Id;
+            //    var producer = sm.Nodes[meta.ID].Producers.First(e => e.IsPseudo).Id;
             //    sm.Edges[producer].AddReactant(n);
             //}
 
-            await Task.Delay(TimeSpan.Zero);
+            //await Task.Delay(TimeSpan.Zero);
         }
 
-        private async Task DefineExReaction(ServerSpecies m, HyperGraph sm)
+        private async Task DefineExReaction(HyperGraph.Node node, HyperGraph sm)
         {
             //if (sm.Nodes.ContainsKey(m.ID) && sm.Nodes[m.ID].Consumers.Any(s => s.IsPseudo)
             //    || sm.Nodes.ContainsKey(m.ID) && sm.Nodes[m.ID].Producers.Any(s => s.IsPseudo))
             //{
             //    return;
             //}
-
-            if ((sm.Nodes[m.ID].IsProducedBorder || sm.Nodes[m.ID].ReactionCount.Item2 == 0) && !sm.Nodes[m.ID].Producers.Any(s => s.IsPseudo))
+            if ((node.IsProducedBorder || node.ReactionCount.Producers == 0) && !node.Producers.Any(s => s.IsPseudo))
             {
                 var producer = Guid.NewGuid();
-                sm.AddProduct(producer, string.Format("exr_{0}_prod", m.SbmlId), m.ID, m.SbmlId, true);
-                sm.Edges[producer].Reactions.UnionWith(m.getAllReactions(Util.Product).Select(e => e.ID).Where(id => !sm.Edges.ContainsKey(id)));
-                sm.Edges[producer].InitReactions.UnionWith(sm.Edges[producer].Reactions);
+                sm.AddProduct(producer, string.Format("exr_{0}_prod", node.Label), node.Id, node.Label, true);
+                sm.Edges[producer].Reactions.UnionWith(
+                    node.IsCommon
+                        ? Util.CachedS(node.RealId)
+                              .getAllReactions(Util.Product)
+                              .Select(e => e.ID)
+                              .Where(id => !sm.Edges.ContainsKey(id))
+                        : Util.CachedS(node.Id)
+                              .getAllReactions(Util.Product)
+                              .Select(e => e.ID)
+                              .Where(id => !sm.Edges.ContainsKey(id)));
+
+                //sm.Edges[producer].InitReactions.UnionWith(sm.Edges[producer].Reactions);
             }
 
-            if ((sm.Nodes[m.ID].IsConsumedBorder || sm.Nodes[m.ID].ReactionCount.Item1 == 0) && !sm.Nodes[m.ID].Consumers.Any(s => s.IsPseudo))
+            if ((node.IsConsumedBorder || node.ReactionCount.Consumers == 0) && !node.Consumers.Any(s => s.IsPseudo))
             {
                 var consumer = Guid.NewGuid();
-                sm.AddReactant(consumer, string.Format("exr_{0}_cons", m.SbmlId), m.ID, m.SbmlId, true);
-                sm.Edges[consumer].Reactions.UnionWith(m.getAllReactions(Util.Reactant).Select(e => e.ID).Where(id => !sm.Edges.ContainsKey(id)));
-                sm.Edges[consumer].InitReactions.UnionWith(sm.Edges[consumer].Reactions);
+                sm.AddReactant(consumer, string.Format("exr_{0}_cons", node.Label), node.Id, node.Label, true);
+                sm.Edges[consumer].Reactions.UnionWith(
+                    node.IsCommon
+                        ? Util.CachedS(node.RealId)
+                              .getAllReactions(Util.Product)
+                              .Select(e => e.ID)
+                              .Where(id => !sm.Edges.ContainsKey(id))
+                        : Util.CachedS(node.Id)
+                              .getAllReactions(Util.Product)
+                              .Select(e => e.ID)
+                              .Where(id => !sm.Edges.ContainsKey(id)));
+
+                //sm.Edges[consumer].InitReactions.UnionWith(sm.Edges[consumer].Reactions);
             }
             await Task.Delay(TimeSpan.Zero);
         }
@@ -436,11 +441,11 @@
 
             if (m.Producers.Count == 0)
             {
-                sm.AddProduct(Guid.NewGuid(), string.Format("exr{0}_prod", m.Label), m.Id, m.Label, true);
+                sm.AddProduct(Guid.NewGuid(), string.Format("exr_{0}_prod", m.Label), m.Id, m.Label, true);
             }
             else if (m.Consumers.Count == 0)
             {
-                sm.AddReactant(Guid.NewGuid(), string.Format("exr{0}_cons", m.Label), m.Id, m.Label, true);
+                sm.AddReactant(Guid.NewGuid(), string.Format("exr_{0}_cons", m.Label), m.Id, m.Label, true);
             }
 
             await Task.Delay(TimeSpan.Zero);
@@ -449,7 +454,7 @@
         public static HashSet<HyperGraph.Node> GetBorderMetabolites(HyperGraph sm)
         {
             var borderm = new HashSet<HyperGraph.Node>();
-            foreach (var node in sm.Nodes.Values.Where(node => node.IsBorder && !node.IsPseudo))
+            foreach (var node in sm.Nodes.Values.Where(node => !node.IsCommon && node.IsBorder))
             {
                 borderm.Add(node);
             }
@@ -459,7 +464,7 @@
         public static HashSet<HyperGraph.Node> GetNonBorderMetabolites(HyperGraph sm)
         {
             var borderm = new HashSet<HyperGraph.Node>();
-            foreach (var node in sm.Nodes.Values.Where(node => !node.IsBorder))
+            foreach (var node in sm.Nodes.Values.Where(node => !node.IsCommon && !node.IsBorder))
             {
                 borderm.Add(node);
             }
@@ -468,36 +473,45 @@
 
         public async Task ExtendGraph(ServerSpecies m, HyperGraph sm)
         {
-            const int Outliear = 52;
+            //common metabolite
+            const int Outliear = 61;
             Pathway.AddLast(m.SbmlId);
             sm.Nodes[m.ID].IsExtended = true;
 
-            foreach (var r in m.getAllReactions(Util.Product).Where(r => r.SbmlId != "R_biomass_reaction"))
+            foreach (var r in m.getAllReactions(Util.Product))//.Where(r => r.SbmlId != "R_biomass_reaction"))
             {
                 sm.AddProduct(r.ID, r.SbmlId, m.ID, m.SbmlId);
 
                 var products = r.GetAllProducts();
                 var reactant = r.GetAllReactants();
 
-                foreach (var p in reactant.Where(p => Util.GetReactionCountSum(p.ID) < Outliear))
+                foreach (var p in reactant.Where(p => Util.GetReactionCountSum(p.ID) < Outliear && p.BoundaryCondition==false)) 
                     sm.AddReactant(r.ID, r.SbmlId, p.ID, p.SbmlId);
+                //else
+                //    sm.AddReactantCommon(r.ID, r.SbmlId, p.ID, p.SbmlId);
 
-                foreach (var p in products.Where(p => Util.GetReactionCountSum(p.ID) < Outliear))
+                foreach (var p in products.Where(p => Util.GetReactionCountSum(p.ID) < Outliear && p.BoundaryCondition == false)) 
                     sm.AddProduct(r.ID, r.SbmlId, p.ID, p.SbmlId);
+                //else
+                //    sm.AddProductCommon(r.ID, r.SbmlId, p.ID, p.SbmlId);
             }
 
-            foreach (var r in m.getAllReactions(Util.Reactant).Where(r => r.SbmlId != "R_biomass_reaction"))
+            foreach (var r in m.getAllReactions(Util.Reactant))//.Where(r => r.SbmlId != "R_biomass_reaction"))
             {
                 sm.AddReactant(r.ID, r.SbmlId, m.ID, m.SbmlId);
 
                 var products = r.GetAllProducts();
                 var reactant = r.GetAllReactants();
 
-                foreach (var p in reactant.Where(p => Util.GetReactionCountSum(p.ID) < Outliear))
-                    sm.AddReactant(r.ID, r.SbmlId, p.ID, p.SbmlId);
+                foreach (var p in reactant.Where(p => Util.GetReactionCountSum(p.ID) < Outliear && p.BoundaryCondition == false))
+                        sm.AddReactant(r.ID, r.SbmlId, p.ID, p.SbmlId);
+                //else
+                //    sm.AddReactantCommon(r.ID, r.SbmlId, p.ID, p.SbmlId);
 
-                foreach (var p in products.Where(p => Util.GetReactionCountSum(p.ID) < Outliear))
-                    sm.AddProduct(r.ID, r.SbmlId, p.ID, p.SbmlId);
+                foreach (var p in products.Where(p => Util.GetReactionCountSum(p.ID) < Outliear && p.BoundaryCondition == false))
+                        sm.AddProduct(r.ID, r.SbmlId, p.ID, p.SbmlId);
+                //else
+                //    sm.AddProductCommon(r.ID, r.SbmlId, p.ID, p.SbmlId);
             }
 
             // add exchange reaction to lonely(metabol. with only input or output reactions) metabolites   
@@ -506,11 +520,39 @@
 
             foreach (var node in sm.Nodes[m.ID].AllNeighborNodes()) //.Where(node => !node.IsBorder)
             {
-                if (node.IsBorder)
-                    UpdateNeighbore(sm, node);
+                if (node.IsBorder) UpdateNeighbore(sm, node);
                 //if (node.IsTempBorder)
                 RemoveExchangeReaction(sm, node);
             }
+        }
+
+        public static void DefineBlockedReactions(HyperGraph graph)
+        {
+            Console.WriteLine("Running FVA...");
+            var fva = new FVA();
+            //var smodel = ServerModel.Load(Guid.Parse("74737800-92B5-41E3-9DAA-077CCAE71F0F"));
+            //var g = new HyperGraph();
+            //foreach (var m in smodel.GetAllSpecies())
+            //{
+            //    g.AddNode(m.ID, m.SbmlId);
+            //    foreach (var prod in m.getAllReactions(Util.Product))
+            //        g.AddProduct(prod.ID, prod.SbmlId, m.ID, m.SbmlId);
+
+            //    foreach (var react in m.getAllReactions(Util.Reactant))
+            //        g.AddReactant(react.ID, react.SbmlId, m.ID, m.SbmlId);
+
+            //    if (g.Nodes[m.ID].Producers.Count == 0)
+            //        g.AddProduct(Guid.NewGuid(), string.Format("exr{0}_prod", m.SbmlId), m.ID, m.SbmlId, true);
+            //    else if (g.Nodes[m.ID].Consumers.Count == 0)
+            //        g.AddReactant(Guid.NewGuid(), string.Format("exr{0}_cons", m.SbmlId), m.ID, m.SbmlId, true);
+            //}
+            //Util.SaveAsDgs(g.Nodes.Values.First(),g,"B:\\model2\\");
+            fva.Solve(graph);
+            foreach (var minmax in fva.Results.Where(minmax => Math.Abs(minmax.Value.Item1 - minmax.Value.Item2) < 0.0001))//&& Math.Abs(minmax.Value.Item2) < double.Epsilon
+            {
+                File.AppendAllText(Util.BlockedReactionsFile, string.Format("{0};{1}\n", graph.Edges[minmax.Key].Label, minmax.Value.Item1));
+            }
+            Console.WriteLine("Running FVA Done!");
         }
     }
 }

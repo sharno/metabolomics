@@ -12,12 +12,17 @@ namespace CyclesCacher.DB
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public Cycle()
         {
-            Reactions = new HashSet<Reaction>();
+            CycleReactions = new HashSet<CycleReaction>();
         }
 
         public Guid id { get; set; }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<Reaction> Reactions { get; set; }
+        public virtual ICollection<CycleReaction> CycleReactions { get; set; }
+
+        public override bool Equals(object obj)
+        {
+            return this.id == ((Cycle) obj).id;
+        }
     }
 }

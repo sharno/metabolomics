@@ -18,7 +18,7 @@
         public bool Solve(ConcurrentDictionary<Guid, int> smz, HyperGraph sm)
         {
             var model = new Cplex { Name = "FBA" };
-            model.SetParam(Cplex.Param.RootAlgorithm, Cplex.Algorithm.Concurrent);
+            model.SetParam(Cplex.Param.RootAlgorithm, Cplex.Algorithm.Dual);
 
             var vars = new Dictionary<string, INumVar>();
             var UpperBound = Double.MaxValue;//100000;
@@ -222,7 +222,6 @@
                     model.Add(constr);
                 }
 
-                var skip = false;
                 if (metabolite.RemovedConsumerExchange != null && metabolite.RemovedConsumerExchange.Products.Any(n => n.Value.IsPseudo))
                 {
                     var consexp1 = model.LinearNumExpr();
@@ -238,8 +237,6 @@
                     //if (Math.Abs(metabolite.RemovedConsumerExchange.Flux) > Double.Epsilon)
                     model.AddLe(consexp1, metabolite.RemovedConsumerExchange.Flux * (1 + Change), metabolite.Label + "_cons2U");
                     model.AddGe(consexp1, metabolite.RemovedConsumerExchange.Flux * (1 - Change), metabolite.Label + "_cons2L");
-
-                    skip = true;
                 }
 
                 if (metabolite.RemovedProducerExchange != null && metabolite.RemovedProducerExchange.Products.Any(n => n.Value.IsPseudo))
@@ -249,18 +246,15 @@
                         .Select(Util.CachedR))
                     //.Select(cname => model.NumVar(0.0, double.PositiveInfinity, NumVarType.Float, cname)))
                     {
-                        if (!vars.ContainsKey(react.Name))
-                            vars[react.Name] = model.NumVar(0.0, double.PositiveInfinity, NumVarType.Float, react.Name);
+                        if (!vars.ContainsKey(react.SbmlId))
+                            vars[react.SbmlId] = model.NumVar(0.0, double.PositiveInfinity, NumVarType.Float, react.SbmlId);
                         var c = 1;// Coefficient(sm.Edges[react.ID], metabolite);
-                        prodexp1.AddTerm(vars[react.Name], c);
+                        prodexp1.AddTerm(vars[react.SbmlId], c);
                     }
                     //if (Math.Abs(metabolite.RemovedProducerExchange.Flux) > Double.Epsilon)
                     model.AddLe(prodexp1, metabolite.RemovedProducerExchange.Flux * (1 + Change), metabolite.Label + "_prod2U");
                     model.AddGe(prodexp1, metabolite.RemovedProducerExchange.Flux * (1 - Change), metabolite.Label + "_prod2L");
-
-                    skip = true;
                 }
-                if (skip) continue;
 
                 //Add a constraint that total net flux of reactions of m’ should
                 //be equal to those of the removed flux exchange reaction.
@@ -300,7 +294,6 @@
 
         private void AddReactionConstrait(HyperGraph sm, Cplex model, Dictionary<string, INumVar> vars)
         {
-
             var i = 0;
             foreach (var reaction in sm.Edges)
             {
@@ -353,6 +346,8 @@
                 {
                     if (!reaction.Value.IsPseudo && reaction.Value.ToServerReaction.Reversible)
                     {
+                        //model.AddLe(model.Abs(vars[reaction.Value.Label]), Math.Abs(reaction.Value.Flux) * (1 + Change), string.Format("abs_prev{0}ub", i));
+                        //model.AddGe(model.Abs(vars[reaction.Value.Label]), Math.Abs(reaction.Value.Flux) * (1 - Change), string.Format("abs_prev{0}lb", i++));
                         continue;
                     }
                     //if (reaction.Flux.Flux != 0)

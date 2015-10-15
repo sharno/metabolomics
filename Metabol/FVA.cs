@@ -37,13 +37,13 @@ namespace Metabol
             var count = 0;
             var y = Console.CursorTop + 2;
 
-            var obj = model.AddObjective(ObjectiveSense.Maximize, vars["r00"]);
+
+            var obj = model.AddObjective(ObjectiveSense.Maximize, vars["biomass_reaction"]);
             var f = model.Solve();
-            Console.WriteLine("solved");
             var z = model.BestObjValue;
-            //model.Remove(obj);
-            //model.AddGe(vars["biomass_reaction"], 0.0 * z);
-            /*foreach (var edge in graph.Edges.Values)
+            model.Remove(obj);
+            model.AddGe(vars["biomass_reaction"], 0.0*z);
+            foreach (var edge in graph.Edges.Values)
             {
                 Console.Clear();
                 Console.SetCursorPosition(0, y);
@@ -63,7 +63,7 @@ namespace Metabol
                 Results[edge.Id] = Tuple.Create(min, max);
 
                 Console.Write("\r{0} reactions   ", count++);
-            }*/
+            }
         }
 
         public static void SaveResult(HyperGraph graph, bool isfeas, Cplex model, Dictionary<string, INumVar> vars, HyperGraph.Edge edge)

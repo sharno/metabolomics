@@ -19,8 +19,8 @@ namespace CyclesCacher
 
         public Guid id { get; protected set; }
         public HyperGraph graph = new HyperGraph();
-        public Dictionary<Guid, HyperGraph.Edge> inCycleReactions { get; protected set; }
-        public Dictionary<Guid, HyperGraph.Edge> outOfCycleReactions { get; protected set; }
+        public Dictionary<Guid, HyperGraph.Edge> inCycleReactions { get; set; }
+        public Dictionary<Guid, HyperGraph.Edge> outOfCycleReactions { get; set; }
 
         public void AddInCycleReaction(HyperGraph.Edge inCycleReaction)
         {

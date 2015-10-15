@@ -9,6 +9,12 @@ namespace CyclesCacher.DB
     [Table("Reaction")]
     public partial class Reaction
     {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
+        public Reaction()
+        {
+            CycleReactions = new HashSet<CycleReaction>();
+        }
+
         public Guid id { get; set; }
 
         public Guid modelId { get; set; }
@@ -23,13 +29,12 @@ namespace CyclesCacher.DB
 
         public Guid? kineticLawId { get; set; }
 
-        public Guid? cycleId { get; set; }
-
-        public virtual Cycle Cycle { get; set; }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<CycleReaction> CycleReactions { get; set; }
 
         public override bool Equals(object obj)
         {
-            return this.id == ((Reaction) obj).id;
+            return this.id == ((Reaction)obj).id;
         }
     }
 }
