@@ -110,7 +110,7 @@
                 Directory.CreateDirectory(Dir);
                 var lines = File.ReadAllLines(AllReactionFile);
                 foreach (var result in lines.Select(s => s.Split(',')))
-                    AllReactionCache2[Guid.Parse(result[0])] = 
+                    AllReactionCache2[Guid.Parse(result[0])] =
                         new { Consumers = int.Parse(result[1]), Producers = int.Parse(result[2]) };
                 //Tuple.Create(
                 //Int32.Parse(result[1]),
@@ -120,9 +120,9 @@
                 foreach (var result in lines.Select(s => s.Split(',')))
                     AllStoichiometryCache2[Guid.Parse(result[0])] =
                          new { Consumers = double.Parse(result[1]), Producers = double.Parse(result[2]) };
-                        //Tuple.Create(
-                        //Double.Parse(result[1]),
-                        //Double.Parse(result[2]));
+                //Tuple.Create(
+                //Double.Parse(result[1]),
+                //Double.Parse(result[2]));
             }
             catch (Exception e)
             {
@@ -235,6 +235,7 @@
                     continue;
 
                 var type = NodeType.None;
+                //if (!node.IsCommon)
                 if (node.Level == maxLevel && node.IsBorder)
                     type = NodeType.NewBorder;
                 //else if (node.Level == maxLevel)
@@ -244,7 +245,8 @@
 
                 lines.Add(node.ToDgs(type));
             }
-
+            if (sm.HasCycle)
+                Console.WriteLine();
             lines.Add("#Hyperedges");
             foreach (var edge in sm.Edges.Values)
             {

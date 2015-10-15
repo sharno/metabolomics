@@ -454,7 +454,7 @@
         public static HashSet<HyperGraph.Node> GetBorderMetabolites(HyperGraph sm)
         {
             var borderm = new HashSet<HyperGraph.Node>();
-            foreach (var node in sm.Nodes.Values.Where(node => node.IsBorder && !node.IsCommon))
+            foreach (var node in sm.Nodes.Values.Where(node => !node.IsCommon && node.IsBorder))
             {
                 borderm.Add(node);
             }
@@ -464,7 +464,7 @@
         public static HashSet<HyperGraph.Node> GetNonBorderMetabolites(HyperGraph sm)
         {
             var borderm = new HashSet<HyperGraph.Node>();
-            foreach (var node in sm.Nodes.Values.Where(node => !node.IsBorder))
+            foreach (var node in sm.Nodes.Values.Where(node => !node.IsCommon && !node.IsBorder))
             {
                 borderm.Add(node);
             }

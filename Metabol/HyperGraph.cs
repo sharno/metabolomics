@@ -27,6 +27,8 @@ namespace Metabol
         [JsonProperty("step")]
         public int Step { get; set; }
 
+        public bool HasCycle { get; set; }
+
         //private readonly ConcurrentDictionary<Guid, int> idMap = new ConcurrentDictionary<Guid, int>();
         //private int idGen;
 
@@ -37,7 +39,7 @@ namespace Metabol
         }
 
         [JsonProperty("nodes")]
-        public ConcurrentDictionary<Guid, Node> Nodes { get; protected set; }
+        public ConcurrentDictionary<Guid, HyperGraph.Node> Nodes { get; protected set; }
         public HashSet<Guid> CommonMetabolites { get; protected set; }
         public ConcurrentDictionary<Guid, HashSet<Guid>> PseudoPath { get; protected set; }
 
@@ -96,7 +98,10 @@ namespace Metabol
             e.IsPseudo = b;
             try
             {
+                //if (node.IsCommon) node.Weights[eid] = 1;
                 if (!b) node.Weights[eid] = Math.Abs(Util.CachedRs(eid, nid).Stoichiometry);
+              
+
             }
             catch (Exception ex)
             {
@@ -113,8 +118,9 @@ namespace Metabol
             e.IsPseudo = b;
             try
             {
+                //if (node.IsCommon) node.Weights[eid] = 1;
                 if (!b) node.Weights[eid] = Math.Abs(Util.CachedRs(eid, nid).Stoichiometry);
-
+             
             }
             catch (Exception ex)
             {
@@ -401,10 +407,10 @@ namespace Metabol
                 }
                 var bu = new StringBuilder(string.Format("an \"{0}\" {1} label:\" {2}({3:#.#####})({4:#.#####}) \"\r\n", Id, hedgeclass, Label, this.Flux, this.PreFlux)); //
 
-                foreach (var node in this.Reactants.Values.Where(n => sm.Nodes.ContainsKey(n.Id)))
+                foreach (var node in this.Reactants.Values)
                     bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4}  label:\" {5} \"\r\n", node.Id, Id, node.Id, Id, uiclass, node.Weights[Id] == 0 ? 1 : node.Weights[Id]));
 
-                foreach (var node in this.Products.Values.Where(n => sm.Nodes.ContainsKey(n.Id)))
+                foreach (var node in this.Products.Values)
                     bu.Append(string.Format("ae \"{0}{1}\" \"{2}\" > \"{3}\" {4} label:\" {5} \"\r\n", Id, node.Id, Id, node.Id, uiclass, node.Weights[Id] == 0 ? 1 : node.Weights[Id]));
 
                 return bu.ToString();

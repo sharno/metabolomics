@@ -13,10 +13,33 @@
     using PathwaysLib.ServerObjects;
     using System.Configuration;
 
+    using MathNet.Numerics.LinearAlgebra;
+    using MathNet.Numerics.LinearAlgebra.Double;
+
     using PathwaysLib.SoapObjects;
 
     public class Program
     {
+        public static void Main()
+        {
+            Matrix<double> A = DenseMatrix.OfArray(
+                new double[,]
+                    {
+                        //{-1,0,0,1,0},
+                        //{1,-1,0,0,-1},
+                        //{0,1,-1,0,0},
+                        //{0,0,1,-1,1}});
+                        { -1, 0, 0, -1 }, 
+                        { 1, -1, 0, 0 }, 
+                        { 0, 1, -1, 0 }, 
+                        { 0, 0, 1, 1 }
+                    });
+
+            var nullspace = A.Kernel();
+            Console.WriteLine(nullspace);
+            Console.ReadKey();
+        }
+
         public static void Main5()
         {
             var meta = File.ReadAllLines("B:\\down\\meta.csv");
@@ -302,7 +325,7 @@
             var count = 0;
             foreach (var m in ServerModel.Load(Guid.Parse("18B867B4-CBBE-4140-B753-DDDFC0A49445")).GetAllSpecies())
             {
-               graph.AddNode(m.ID, m.SbmlId);
+                graph.AddNode(m.ID, m.SbmlId);
                 foreach (var consumer in m.getAllReactions(Util.Reactant))
                 {
                     graph.AddReactant(consumer.ID, consumer.SbmlId, m.ID, m.SbmlId);
@@ -351,7 +374,7 @@
         /// <summary>
         /// The main.
         /// </summary>
-        public static void Main()
+        public static void Main1()
         {
             var p = new TheAlgorithm();
             p.Fba.RemoveConstraints = false;
@@ -372,7 +395,12 @@
                     //{
                     //    Console.Write(str+" => ");
                     //}
-                   
+                    //if (p.Iteration == 8)
+                    //{
+                    //    var c = new CyclesFinder();
+                    //    c.Run(p.Sm);
+                    //    p.Sm.HasCycle = true;
+                    //}
                     Console.ReadKey();
                 }
 

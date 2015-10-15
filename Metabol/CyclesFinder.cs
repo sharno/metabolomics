@@ -6,9 +6,9 @@ namespace Metabol
 {
     class CyclesFinder
     {
-        
 
-        public static void Run(HyperGraph graph)
+
+        public void Run(HyperGraph graph)
         {
             //var a = Guid.NewGuid();
             //var b = Guid.NewGuid();
@@ -79,7 +79,7 @@ namespace Metabol
             int index = 0;
             foreach (var stronglyConnectedComponent in stronglyConnectedComponents)
             {
-                index ++;
+                index++;
                 Guid cycleId = Guid.NewGuid();
                 string cycleLabel = "_cycle_" + index + "_";
 
@@ -136,7 +136,7 @@ namespace Metabol
                 }
 
                 // collapse cycle in original graph
-                graph.AddNode(cycleId, cycleLabel);
+                graph.AddNode(cycleId, cycleLabel,true);
                 foreach (var inCycleReaction in cycle.inCycleReactions)
                 {
                     graph.AddProduct(inCycleReaction.Key, inCycleReaction.Value.Label, cycleId, cycleLabel);
@@ -168,7 +168,7 @@ namespace Metabol
             }
             // get rid of all single vertices in strongly connected components
             stronglyConnectedComponents = stronglyConnectedComponents.Where(s => s.Value.Count > 1).ToDictionary(s => s.Key, s => s.Value);
-            
+
             return stronglyConnectedComponents;
         }
 
@@ -195,7 +195,7 @@ namespace Metabol
 
             if (v.Value.LowLink == v.Value.Index)
             {
-                var scc = new Dictionary<Guid, Vertex>();;
+                var scc = new Dictionary<Guid, Vertex>(); ;
                 KeyValuePair<Guid, Vertex> w;
                 do
                 {
