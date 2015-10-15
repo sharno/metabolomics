@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Metabol;
 
-namespace Metabol
+namespace CyclesCacher
 {
     class CyclesFinder
     {
-        
 
-        public static void Run(HyperGraph graph)
+
+        public static Dictionary<Guid, Cycle> Run(HyperGraph graph)
         {
             //var a = Guid.NewGuid();
             //var b = Guid.NewGuid();
@@ -51,7 +52,7 @@ namespace Metabol
 
             CyclesFinder cyclesFinder = new CyclesFinder();
             Dictionary<Guid, Dictionary<Guid, Vertex>> stronglyConnectedComponents = cyclesFinder.FindCycles(graph);
-            cyclesFinder.CollapseCycles(graph, stronglyConnectedComponents);
+            return cyclesFinder.CollapseCycles(graph, stronglyConnectedComponents);
 
             //foreach (var stronglyConnectedComponent in stronglyConnectedComponents)
             //{
@@ -73,25 +74,64 @@ namespace Metabol
             //Util.SaveAsDgs(graph.Nodes[a], graph, "C://b/");
         }
 
-        public void CollapseCycles(HyperGraph graph, Dictionary<Guid, Dictionary<Guid, Vertex>> stronglyConnectedComponents)
+        public void ExpandCycle(HyperGraph graph, Cycle cycle)
+        {
+            graph.RemoveNode(cycle.id);
+
+            // adding metabolites
+            foreach (var metabolite in cycle.graph.Nodes)
+            {
+                graph.AddNode(metabolite.Key, metabolite.Value.Label);
+            }
+
+            // adding reactions
+            foreach (var reaction in cycle.graph.Edges)
+            {
+                foreach (var product in reaction.Value.Products)
+                {
+                    graph.AddProduct(reaction.Key, reaction.Value.Label, product.Key, product.Value.Label);
+                }
+                foreach (var reactant in reaction.Value.Reactants)
+                {
+                    graph.AddProduct(reaction.Key, reaction.Value.Label, reactant.Key, reactant.Value.Label);
+                }
+            }
+
+            // adding outside reactions
+            foreach (var inCycleReaction in cycle.inCycleReactions)
+            {
+                foreach (var product in inCycleReaction.Value.Products)
+                {
+                    graph.AddProduct(inCycleReaction.Key, inCycleReaction.Value.Label, product.Key, product.Value.Label);
+                }
+            }
+
+            foreach (var outOfCycleReaction in cycle.outOfCycleReactions)
+            {
+                foreach (var reactant in outOfCycleReaction.Value.Reactants)
+                {
+                    graph.AddProduct(outOfCycleReaction.Key, outOfCycleReaction.Value.Label, reactant.Key, reactant.Value.Label);
+                }
+            }
+        }
+
+        public Dictionary<Guid, Cycle> CollapseCycles(HyperGraph graph, Dictionary<Guid, Dictionary<Guid, Vertex>> stronglyConnectedComponents)
         {
             Dictionary<Guid, Cycle> cycles = new Dictionary<Guid, Cycle>();
             int index = 0;
             foreach (var stronglyConnectedComponent in stronglyConnectedComponents)
             {
-                index ++;
-                Guid cycleId = Guid.NewGuid();
+                index++;
                 string cycleLabel = "_cycle_" + index + "_";
 
                 Cycle cycle = new Cycle();
-                cycles[cycleId] = cycle;
+                cycles[cycle.id] = cycle;
 
                 bool inCycle = false;
 
                 // store cycle data in a separate data structure
                 foreach (var metabolite in stronglyConnectedComponent.Value)
                 {
-                    Console.WriteLine("metabol>>> " + metabolite.Value.Value.Label);
                     cycle.graph.AddNode(metabolite.Key, metabolite.Value.Value.Label);
 
                     foreach (var consumer in metabolite.Value.Value.Consumers)
@@ -109,14 +149,12 @@ namespace Metabol
                         Dictionary<Guid, HyperGraph.Node> outsideProducedMetabolites = consumer.Products.Where(e => !stronglyConnectedComponent.Value.ContainsKey(e.Key)).ToDictionary(e => e.Key, e => e.Value);
                         Dictionary<Guid, HyperGraph.Node> outsideConsumedMetabolites = consumer.Reactants.Where(e => !stronglyConnectedComponent.Value.ContainsKey(e.Key)).ToDictionary(e => e.Key, e => e.Value);
 
-                        Console.WriteLine("getting out of cycle " + outsideProducedMetabolites.Count());
-                        Console.WriteLine("getting in cycle" + outsideConsumedMetabolites.Count());
-
-                        if (outsideProducedMetabolites.Any())
+                        // adding outside reactions for the cycle (product count is zero for exchange reactions natural or artificial)
+                        if (outsideProducedMetabolites.Any() || consumer.Products.Count == 0)
                         {
                             cycle.AddOutOfCycleReaction(consumer);
                         }
-                        else if (outsideConsumedMetabolites.Any())
+                        else if (outsideConsumedMetabolites.Any() || consumer.Reactants.Count == 0)
                         {
                             cycle.AddInCycleReaction(consumer);
                         }
@@ -136,20 +174,18 @@ namespace Metabol
                 }
 
                 // collapse cycle in original graph
-                graph.AddNode(cycleId, cycleLabel);
+                graph.AddNode(cycle.id, cycleLabel);
                 foreach (var inCycleReaction in cycle.inCycleReactions)
                 {
-                    graph.AddProduct(inCycleReaction.Key, inCycleReaction.Value.Label, cycleId, cycleLabel);
-
-                    Console.WriteLine("adding product to reaction " + inCycleReaction.Value.Label);
+                    graph.AddProduct(inCycleReaction.Key, inCycleReaction.Value.Label, cycle.id, cycleLabel);
                 }
                 foreach (var outOfCycleReaction in cycle.outOfCycleReactions)
                 {
-                    graph.AddReactant(outOfCycleReaction.Key, outOfCycleReaction.Value.Label, cycleId, cycleLabel);
-
-                    Console.WriteLine("adding reactant to reaction " + outOfCycleReaction.Value.Label);
+                    graph.AddReactant(outOfCycleReaction.Key, outOfCycleReaction.Value.Label, cycle.id, cycleLabel);
                 }
             }
+
+            return cycles;
         }
 
         public Dictionary<Guid, Dictionary<Guid, Vertex>> FindCycles(HyperGraph graph)
@@ -168,7 +204,7 @@ namespace Metabol
             }
             // get rid of all single vertices in strongly connected components
             stronglyConnectedComponents = stronglyConnectedComponents.Where(s => s.Value.Count > 1).ToDictionary(s => s.Key, s => s.Value);
-            
+
             return stronglyConnectedComponents;
         }
 
@@ -195,7 +231,7 @@ namespace Metabol
 
             if (v.Value.LowLink == v.Value.Index)
             {
-                var scc = new Dictionary<Guid, Vertex>();;
+                var scc = new Dictionary<Guid, Vertex>(); ;
                 KeyValuePair<Guid, Vertex> w;
                 do
                 {

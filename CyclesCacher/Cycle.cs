@@ -1,19 +1,23 @@
-﻿using System;
+﻿using Metabol;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Metabol
+
+namespace CyclesCacher
 {
     class Cycle
     {
-        public Cycle() 
+        public Cycle()
         {
+            id = Guid.NewGuid();
             inCycleReactions = new Dictionary<Guid, HyperGraph.Edge>();
-            outOfCycleReactions = new Dictionary<Guid, HyperGraph.Edge>(); 
+            outOfCycleReactions = new Dictionary<Guid, HyperGraph.Edge>();
         }
 
+        public Guid id { get; protected set; }
         public HyperGraph graph = new HyperGraph();
         public Dictionary<Guid, HyperGraph.Edge> inCycleReactions { get; protected set; }
         public Dictionary<Guid, HyperGraph.Edge> outOfCycleReactions { get; protected set; }
