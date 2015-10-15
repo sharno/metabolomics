@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.22823.1
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PathwaysLib", "PathwaysLib\PathwaysLib.csproj", "{6D8FA5FC-7DFA-44DF-B6D8-D2558422D40E}"
 EndProject
@@ -17,6 +17,11 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetabolApi", "MetabolApi\MetabolApi.csproj", "{7A24C211-7B8F-4EED-BBD2-6FE0FD3E4104}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AQILib", "AQILib\AQILib.csproj", "{8B313230-E94D-42F0-ADB1-F3060E00B9D7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CyclesCacher", "CyclesCacher\CyclesCacher.csproj", "{AAC07319-DE70-4BA1-B891-469B81C2AF38}"
+	ProjectSection(ProjectDependencies) = postProject
+		{A858B1E3-1ACF-4634-9AA2-76787317C83D} = {A858B1E3-1ACF-4634-9AA2-76787317C83D}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -254,6 +259,38 @@ Global
 		{8B313230-E94D-42F0-ADB1-F3060E00B9D7}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{8B313230-E94D-42F0-ADB1-F3060E00B9D7}.Release|x86.ActiveCfg = Release|Any CPU
 		{8B313230-E94D-42F0-ADB1-F3060E00B9D7}.Release|x86.Build.0 = Release|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.ConsoleDebug|.NET.ActiveCfg = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.ConsoleDebug|.NET.Build.0 = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.ConsoleDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.ConsoleDebug|Any CPU.Build.0 = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.ConsoleDebug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.ConsoleDebug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.ConsoleDebug|x86.ActiveCfg = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.ConsoleDebug|x86.Build.0 = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Debug|.NET.ActiveCfg = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Debug|.NET.Build.0 = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Debug|x86.Build.0 = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Quick Debug|.NET.ActiveCfg = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Quick Debug|.NET.Build.0 = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Quick Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Quick Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Quick Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Quick Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Quick Debug|x86.ActiveCfg = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Quick Debug|x86.Build.0 = Debug|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Release|.NET.ActiveCfg = Release|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Release|.NET.Build.0 = Release|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Release|x86.ActiveCfg = Release|Any CPU
+		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

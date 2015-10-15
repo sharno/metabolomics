@@ -312,6 +312,7 @@
 
                 lines.Add(edge.ToDgs2(type));
             }
+
             File.AppendAllLines(file, lines);
         }
 

@@ -14,6 +14,61 @@
 
     public class Program
     {
+        public static void Main()
+        {
+            //var graph = new HyperGraph();
+            //Console.WriteLine("Loading graph...");
+            //var count = 0;
+            //foreach (var m in ServerModel.Load(Guid.Parse("682C0D3C-8652-4A26-8CC3-4AFA845919B8")).GetAllSpecies())
+            //{
+            //    graph.AddNode(m.ID, m.SbmlId);
+            //    foreach (var consumer in m.getAllReactions(Util.Reactant))
+            //    {
+            //        graph.AddReactant(consumer.ID, consumer.SbmlId, m.ID, m.SbmlId);
+            //    }
+
+            //    foreach (var producer in m.getAllReactions(Util.Product))
+            //    {
+            //        graph.AddProduct(producer.ID, producer.SbmlId, m.ID, m.SbmlId);
+            //    }
+
+            //    Console.Write("\r{0} metabolites  ", count++);
+            //}
+            //Console.WriteLine("M:{0}   R:{1}", graph.Nodes.Count, graph.Edges.Count);
+            //var deadend = graph.Nodes.Values.Where(n => n.Consumers.Count == 0 || n.Producers.Count == 0).Select(n => n.Label + " " + Util.GetReactionCountSum(n.Id));
+            //File.WriteAllLines("C:\\b\\deadend2.txt", deadend);
+            //var lone = graph.Nodes.Values.Count(n => n.Consumers.Count == 0 && n.Producers.Count == 0);
+
+            //foreach (var m in graph.Nodes.Values)
+            //{
+            //    if (graph.Nodes[m.Id].Producers.Count == 0)
+            //        graph.AddProduct(Guid.NewGuid(), string.Format("exr_{0}_prod", m.Label), m.Id, m.Label, true);
+
+            //    if (graph.Nodes[m.Id].Consumers.Count == 0)
+            //        graph.AddReactant(Guid.NewGuid(), string.Format("exr_{0}_cons", m.Label), m.Id, m.Label, true);
+            //}
+
+            //var deadend2 = graph.Nodes.Values.Count(n => n.Consumers.Count == 0 || n.Producers.Count == 0);
+            //var pseudo = graph.Edges.Values.Count(e => e.IsPseudo);
+            //var reacts = graph.Edges.Values.Count();
+
+            //Util.SaveAsDgs(graph.Nodes.First().Value, graph, "C://b/3before");
+            //new FVA().Solve(graph);
+
+
+            //CyclesFinder cyclesFinder = new CyclesFinder();
+            //Dictionary<Guid, Dictionary<Guid, CyclesFinder.Vertex>> stronglyConnectedComponents = cyclesFinder.FindCycles(graph);
+            //cyclesFinder.CollapseCycles(graph, stronglyConnectedComponents);
+            //Util.SaveAsDgs(graph.Nodes.First().Value, graph, "C://b/3after");
+
+            //Console.WriteLine("deadend:{0}  deadend2:{1}   lone:{2} | pseudo:{3}   reacts:{4}", deadend.Count(), deadend2, lone, pseudo, reacts);
+
+
+            //Console.WriteLine("\nDone!\n");
+            //Console.ReadKey();
+            //TheAlgorithm.DefineBlockedReactions(graph);
+        }
+
         public static void Main1()
         {
             var gen = new NetworkGenerator();
@@ -25,7 +80,7 @@
         /// <summary>
         /// The main.
         /// </summary>
-        public static void Main()
+        public static void MainOriginal()
         {
             var p = new TheAlgorithm(); //InitProgram();
             //Init(p);
