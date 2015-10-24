@@ -20,7 +20,7 @@
 
     public class Program
     {
-        public static void Main()
+        public static void Main1()
         {
             //var graph = new HyperGraph();
             //Console.WriteLine("Loading graph...");
@@ -75,7 +75,7 @@
             //TheAlgorithm.DefineBlockedReactions(graph);
         }
 
-        public static void Main1()
+        public static void Main6()
         {
             Matrix<double> A = DenseMatrix.OfArray(
                 new double[,]
@@ -419,18 +419,13 @@
             //TheAlgorithm.DefineBlockedReactions(graph);
         }
 
-        //public static void Main()
-        //{
-        //    var dir = Util.Dir;
-        //}
-
         #region main
 
         /// <summary>
         /// The main.
         /// </summary>
 
-        public static void Main11()
+        public static void Main()
         {
             var p = new TheAlgorithm();
             p.Fba.RemoveConstraints = false;
@@ -443,8 +438,8 @@
                 //var it = p.Step(1).First();
                 Console.WriteLine("\n************** ITERATION {0} *************** ", p.Iteration);
                 p.Step();
-                if (p.Iteration >= 8)
-                //if (!p.IsFeasable)
+                //if (p.Iteration >= 8)
+                if (!p.IsFeasable)
                 {
                     //p.Fba.RemoveConstraints = true;
                     //foreach (var str in p.Pathway)

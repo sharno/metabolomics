@@ -57,6 +57,95 @@
   <ItemGroup>
     <Compile Include="Cycle.cs" />
     <Compile Include="CyclesFinder.cs" />
+    <Compile Include="DB2\AnnotationQualifier.cs" />
+    <Compile Include="DB2\attribute_names.cs" />
+    <Compile Include="DB2\attribute_values.cs" />
+    <Compile Include="DB2\Author.cs" />
+    <Compile Include="DB2\basic_molecules.cs" />
+    <Compile Include="DB2\BlockedReaction.cs" />
+    <Compile Include="DB2\catalyze.cs" />
+    <Compile Include="DB2\chromosome.cs" />
+    <Compile Include="DB2\chromosomes_pathcase.cs" />
+    <Compile Include="DB2\chromosome_bands.cs" />
+    <Compile Include="DB2\common_molecules.cs" />
+    <Compile Include="DB2\common_species.cs" />
+    <Compile Include="DB2\Compartment.cs" />
+    <Compile Include="DB2\CompartmentClass.cs" />
+    <Compile Include="DB2\CompartmentType.cs" />
+    <Compile Include="DB2\Constraint.cs" />
+    <Compile Include="DB2\Cycle.cs" />
+    <Compile Include="DB2\CycleReaction.cs" />
+    <Compile Include="DB2\DataSource.cs" />
+    <Compile Include="DB2\DesignedBy.cs" />
+    <Compile Include="DB2\ec_go.cs" />
+    <Compile Include="DB2\ec_go_orig.cs" />
+    <Compile Include="DB2\ec_numbers.cs" />
+    <Compile Include="DB2\ec_number_name_lookups.cs" />
+    <Compile Include="DB2\entity_graph_nodes.cs" />
+    <Compile Include="DB2\entity_name_lookups.cs" />
+    <Compile Include="DB2\Event.cs" />
+    <Compile Include="DB2\EventAssignment.cs" />
+    <Compile Include="DB2\EventDelay.cs" />
+    <Compile Include="DB2\EventTrigger.cs" />
+    <Compile Include="DB2\external_databases.cs" />
+    <Compile Include="DB2\external_database_links.cs" />
+    <Compile Include="DB2\external_database_urls.cs" />
+    <Compile Include="DB2\FunctionDefinition.cs" />
+    <Compile Include="DB2\gene.cs" />
+    <Compile Include="DB2\gene_encodings.cs" />
+    <Compile Include="DB2\gene_products.cs" />
+    <Compile Include="DB2\GONodeCode.cs" />
+    <Compile Include="DB2\go_annotation_pathways.cs" />
+    <Compile Include="DB2\go_pathway_annotation_counts.cs" />
+    <Compile Include="DB2\go_pathway_group_annotation_counts.cs" />
+    <Compile Include="DB2\go_terms.cs" />
+    <Compile Include="DB2\go_terms_hierarchy.cs" />
+    <Compile Include="DB2\InitialAssignment.cs" />
+    <Compile Include="DB2\KineticLaw.cs" />
+    <Compile Include="DB2\MapModelsPathway.cs" />
+    <Compile Include="DB2\MapReactionECNumber.cs" />
+    <Compile Include="DB2\MapReactionsProcessEntity.cs" />
+    <Compile Include="DB2\MapSbaseGO.cs" />
+    <Compile Include="DB2\MapSpeciesMolecularEntity.cs" />
+    <Compile Include="DB2\MetabolicNetworkDbContext.cs" />
+    <Compile Include="DB2\MetaboliteReactionCount.cs" />
+    <Compile Include="DB2\Model.cs" />
+    <Compile Include="DB2\ModelLayout.cs" />
+    <Compile Include="DB2\ModelMetadata.cs" />
+    <Compile Include="DB2\ModelOrganism.cs" />
+    <Compile Include="DB2\molecular_entities.cs" />
+    <Compile Include="DB2\molecular_entity_names.cs" />
+    <Compile Include="DB2\molecular_entity_types.cs" />
+    <Compile Include="DB2\name_types.cs" />
+    <Compile Include="DB2\OLD_external_databases.cs" />
+    <Compile Include="DB2\OLD_external_database_links.cs" />
+    <Compile Include="DB2\organism.cs" />
+    <Compile Include="DB2\organism_groups.cs" />
+    <Compile Include="DB2\Parameter.cs" />
+    <Compile Include="DB2\pathway.cs" />
+    <Compile Include="DB2\pathway_groups.cs" />
+    <Compile Include="DB2\pathway_links.cs" />
+    <Compile Include="DB2\pathway_processes.cs" />
+    <Compile Include="DB2\pathway_types.cs" />
+    <Compile Include="DB2\process.cs" />
+    <Compile Include="DB2\process_entities.cs" />
+    <Compile Include="DB2\process_entity_roles.cs" />
+    <Compile Include="DB2\process_graph_nodes.cs" />
+    <Compile Include="DB2\protein.cs" />
+    <Compile Include="DB2\Reaction.cs" />
+    <Compile Include="DB2\ReactionSpeciesRole.cs" />
+    <Compile Include="DB2\ReactionSpecy.cs" />
+    <Compile Include="DB2\rna.cs" />
+    <Compile Include="DB2\rna_types.cs" />
+    <Compile Include="DB2\Rule.cs" />
+    <Compile Include="DB2\RuleType.cs" />
+    <Compile Include="DB2\Sbase.cs" />
+    <Compile Include="DB2\Species.cs" />
+    <Compile Include="DB2\SpeciesType.cs" />
+    <Compile Include="DB2\StoichiometryMath.cs" />
+    <Compile Include="DB2\Unit.cs" />
+    <Compile Include="DB2\UnitDefinition.cs" />
+    <Compile Include="DB2\viewState.cs" />
     <Compile Include="DB\Cycle.cs" />
     <Compile Include="DB\CycleReaction.cs" />
     <Compile Include="DB\CycleReactionModel.cs" />
@@ -67,11 +156,6 @@
       <AutoGen>True</AutoGen>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
-    </Compile>
-    <Compile Include="_PathCase_SystemBiology_V5_2DataSet.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>_PathCase_SystemBiology_V5_2DataSet.xsd</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -93,17 +177,6 @@
     <None Include="selected.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="_PathCase_SystemBiology_V5_2DataSet.xsc">
-      <DependentUpon>_PathCase_SystemBiology_V5_2DataSet.xsd</DependentUpon>
-    </None>
-    <None Include="_PathCase_SystemBiology_V5_2DataSet.xsd">
-      <Generator>MSDataSetGenerator</Generator>
-      <LastGenOutput>_PathCase_SystemBiology_V5_2DataSet.Designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="_PathCase_SystemBiology_V5_2DataSet.xss">
-      <DependentUpon>_PathCase_SystemBiology_V5_2DataSet.xsd</DependentUpon>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Metabol\Metabol.csproj">
@@ -114,6 +187,9 @@
       <Project>{6d8fa5fc-7dfa-44df-b6d8-d2558422d40e}</Project>
       <Name>PathwaysLib</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
