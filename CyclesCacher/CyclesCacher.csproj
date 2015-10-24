@@ -22,6 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -156,6 +157,14 @@
       <AutoGen>True</AutoGen>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+    <Compile Include="SimpleCycle\Cycle.cs" />
+    <Compile Include="SimpleCycle\CyclesFinder.cs" />
+    <Compile Include="SimpleCycle\Vertex.cs" />
+    <Compile Include="_PathCase_SystemBiology_V5_2DataSet.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>_PathCase_SystemBiology_V5_2DataSet.xsd</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
