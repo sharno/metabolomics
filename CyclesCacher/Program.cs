@@ -9,37 +9,39 @@ using System.Configuration;
 using System.Data.Entity.Migrations;
 using System.Threading;
 using CyclesCacher.DB;
+using CyclesCacher.SimpleCycle;
 
 
 namespace CyclesCacher
 {
     class Program
     {
-        public static Dictionary<Guid, HashSet<Guid>> ConvertFromHypergraph(HyperGraph hyperGraph)
+        public static Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> ConvertFromHypergraph(HyperGraph hyperGraph)
         {
-            Dictionary<Guid, HashSet<Guid>> graph = new Dictionary<Guid, HashSet<Guid>>();
+            Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph = new Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>>();
 
             foreach (var edge in hyperGraph.Edges)
             {
-                graph[edge.Key] = new HashSet<Guid>();
+                // Item1 is coming in edges, Item2 is going out edges
+                graph[edge.Key] = Tuple.Create(new HashSet<Guid>(), new HashSet<Guid>(), true);
 
+
+                // 1. recording going out edges
                 foreach (var product in edge.Value.Products)
                 {
                     foreach (var consumer in product.Value.Consumers)
                     {
-                        graph[edge.Key].Add(consumer.Id);
+                        graph[edge.Key].Item2.Add(consumer.Id);
                     }
-
                     // if one of the producers of the product is a reversible reaction
                     foreach (var producer in product.Value.Producers)
                     {
                         if (producer.ToServerReaction.Reversible)
                         {
-                            graph[edge.Key].Add(producer.Id);
+                            graph[edge.Key].Item2.Add(producer.Id);
                         }
                     }
                 }
-
                 // if it's a reversible reaction
                 if (edge.Value.ToServerReaction.Reversible)
                 {
@@ -47,34 +49,98 @@ namespace CyclesCacher
                     {
                         foreach (var consumer in reactant.Value.Consumers)
                         {
-                            graph[edge.Key].Add(consumer.Id);
+                            graph[edge.Key].Item2.Add(consumer.Id);
                         }
                     }
                 }
+
+
+                // 2. recording coming in edges
+                foreach (var reactant in edge.Value.Reactants)
+                {
+                    foreach (var producer in reactant.Value.Producers)
+                    {
+                        graph[edge.Key].Item1.Add(producer.Id);
+                    }
+                    // if one of the consumers of the reactant is a reversible reaction
+                    foreach (var consumer in reactant.Value.Consumers)
+                    {
+                        if (consumer.ToServerReaction.Reversible)
+                        {
+                            graph[edge.Key].Item1.Add(consumer.Id);
+                        }
+                    }
+                }
+                // if it's a reversible reaction
+                if (edge.Value.ToServerReaction.Reversible)
+                {
+                    foreach (var product in edge.Value.Products)
+                    {
+                        foreach (var producer in product.Value.Producers)
+                        {
+                            graph[edge.Key].Item1.Add(producer.Id);
+                        }
+                    }
+                }
+
+                // no self loops
+                graph[edge.Key].Item1.Remove(edge.Key);
+                graph[edge.Key].Item2.Remove(edge.Key);
             }
 
             foreach (var key in graph.Keys)
             {
                 Console.WriteLine(hyperGraph.Edges[key].Label);
-                Console.WriteLine(graph[key].Count);
+                Console.WriteLine(graph[key].Item2.Count);
             }
 
             return graph;
         }
 
-        public static Dictionary<Guid, HashSet<Guid>> ConvertFromHypergraphTest(HyperGraph hyperGraph)
+        public static Guid CollapseCycle(Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph, List<Guid> cycle)
         {
-            Dictionary<Guid, HashSet<Guid>> graph = new Dictionary<Guid, HashSet<Guid>>();
+            Guid cycleId = Guid.NewGuid();
+            graph[cycleId] = Tuple.Create(new HashSet<Guid>(), new HashSet<Guid>(), false);
+            foreach (var v in cycle)
+            {
+                foreach (var comingIn in graph[v].Item1)
+                {
+                    graph[comingIn].Item2.Remove(v);
+                    graph[comingIn].Item2.Add(cycleId);
+                }
+
+                foreach (var goingOut in graph[v].Item2)
+                {
+                    graph[goingOut].Item1.Remove(v);
+                    graph[goingOut].Item1.Add(cycleId);
+                }
+
+                graph[cycleId].Item1.UnionWith(graph[v].Item1.Except(cycle));
+                graph[cycleId].Item2.UnionWith(graph[v].Item2.Except(cycle));
+
+                // no self loops
+                graph[cycleId].Item1.Remove(cycleId);
+                graph[cycleId].Item2.Remove(cycleId);
+
+                graph.Remove(v);
+            }
+
+            return cycleId;
+        }
+
+        public static Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> ConvertFromHypergraphTest(HyperGraph hyperGraph)
+        {
+            Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph = new Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>>();
 
             foreach (var edge in hyperGraph.Edges)
             {
-                graph[edge.Key] = new HashSet<Guid>();
+                graph[edge.Key] = Tuple.Create(new HashSet<Guid>(), new HashSet<Guid>(), true);
 
                 foreach (var product in edge.Value.Products)
                 {
                     foreach (var consumer in product.Value.Consumers)
                     {
-                        graph[edge.Key].Add(consumer.Id);
+                        graph[edge.Key].Item2.Add(consumer.Id);
                     }
                 }
             }
@@ -82,15 +148,16 @@ namespace CyclesCacher
             return graph;
         }
 
-        public static void recordToDatabase(List<Guid> cycle)
+        public static void recordToDatabase(Guid cycleId, List<Guid> cycle)
         {
             CycleReactionModel context = new CycleReactionModel();
             var cycleModel = new DB.Cycle();
-            cycleModel.id = Guid.NewGuid();
+            cycleModel.id = cycleId;
 
             foreach (var reaction in cycle)
             {
-                cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycleModel.id, reactionId = reaction, isExchange = false });
+                bool _isReaction = (context.Reactions.Find(reaction) != null);
+                cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycleModel.id, reactionId = reaction, isReaction = _isReaction});
             }
             context.Cycles.Add(cycleModel);
             context.SaveChanges();
@@ -125,10 +192,10 @@ namespace CyclesCacher
                 foreach (var sp in ServerSpecies.AllSpecies().Where(p => Util.GetReactionCountSum(p.ID) < Outliear))
                 {
                     count++;
-                    if (count == 4)
-                    {
-                        break;
-                    }
+//                    if (count == 500)
+//                    {
+//                        break;
+//                    }
                     Console.WriteLine("adding metabolite " + count);
 
 
@@ -147,17 +214,25 @@ namespace CyclesCacher
                 //fba.Solve(reactions, Z, g);
                 //Console.ReadKey();
 
-//                using (var context = new CycleReactionModel())
+                using (var context = new CycleReactionModel())
+                {
+                    // delete all entries from DB
+                    context.CycleReactions.RemoveRange(context.CycleReactions.Where(e => true));
+                    context.Cycles.RemoveRange(context.Cycles.Where(e => true));
+                    context.SaveChanges();
+                    Console.WriteLine("deleted DB entries");
+                }
+
+
+                Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph = ConvertFromHypergraph(g);
+                DFS.DetectAndCollapseCycles(graph);
+//                while (SimpleCycle.CyclesFinder.Find(graph))
 //                {
-//                    // delete all entries from DB
-//                    context.CycleReactions.RemoveRange(context.CycleReactions.Where(e => true));
-//                    context.Cycles.RemoveRange(context.Cycles.Where(e => true));
-//                    context.SaveChanges();
-//                    Console.WriteLine("deleted DB entries");
+//                    Console.WriteLine("found cycle");
 //                }
 
-                List<List<Guid>> cycles = SimpleCycle.CyclesFinder.Find(ConvertFromHypergraph(g));
-                Console.WriteLine("Number of cycles: " + cycles.Count);
+                //                List<List<Guid>> cycles = SimpleCycle.CyclesFinder.Find(ConvertFromHypergraph(g));
+                //                Console.WriteLine("Number of cycles: " + cycles.Count);
 
                 using (var context = new CycleReactionModel())
                 {
@@ -260,18 +335,18 @@ namespace CyclesCacher
             //            graph.AddProduct(v5, "v5", c, "C");
 
 
-            List<List<Guid>> l = SimpleCycle.CyclesFinder.Find(ConvertFromHypergraphTest(graph));
+//            List<List<Guid>> l = SimpleCycle.CyclesFinder.Find(ConvertFromHypergraphTest(graph));
 
 
-            foreach (var cycle in l)
-            {
-                Console.WriteLine("cycle:");
-                foreach (var edge in cycle.ToArray())
-                {
-                    Console.WriteLine(graph.Edges[edge].Label);
-                }
-            }
-            Console.ReadKey();
+//            foreach (var cycle in l)
+//            {
+//                Console.WriteLine("cycle:");
+//                foreach (var edge in cycle.ToArray())
+//                {
+//                    Console.WriteLine(graph.Edges[edge].Label);
+//                }
+//            }
+//            Console.ReadKey();
         }
 
 
@@ -358,15 +433,15 @@ namespace CyclesCacher
 
                     foreach (var reaction in cycle.Value.graph.Edges)
                     {
-                        cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycle.Key, reactionId = reaction.Key, isExchange = false });
+                        cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycle.Key, reactionId = reaction.Key });
                     }
                     foreach (var reaction in cycle.Value.inCycleReactions)
                     {
-                        cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycle.Key, reactionId = reaction.Key, isExchange = true });
+                        cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycle.Key, reactionId = reaction.Key });
                     }
                     foreach (var reaction in cycle.Value.outOfCycleReactions)
                     {
-                        cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycle.Key, reactionId = reaction.Key, isExchange = true });
+                        cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycle.Key, reactionId = reaction.Key });
                     }
                     context.Cycles.Add(cycleModel);
                 }

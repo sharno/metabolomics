@@ -8,7 +8,7 @@ namespace CyclesCacher.DB
     public partial class CycleReactionModel : DbContext
     {
         public CycleReactionModel()
-            : base("name=CycleReactionModel1")
+            : base("name=CycleReactionModel3")
         {
         }
 
@@ -30,11 +30,6 @@ namespace CyclesCacher.DB
             modelBuilder.Entity<Reaction>()
                 .Property(e => e.name)
                 .IsUnicode(false);
-
-            modelBuilder.Entity<Reaction>()
-                .HasMany(e => e.CycleReactions)
-                .WithRequired(e => e.Reaction)
-                .WillCascadeOnDelete(false);
         }
     }
 }

@@ -71,6 +71,7 @@
     </Compile>
     <Compile Include="SimpleCycle\Cycle.cs" />
     <Compile Include="SimpleCycle\CyclesFinder.cs" />
+    <Compile Include="SimpleCycle\DFS.cs" />
     <Compile Include="SimpleCycle\Vertex.cs" />
     <Compile Include="_PathCase_SystemBiology_V5_2DataSet.Designer.cs">
       <AutoGen>True</AutoGen>

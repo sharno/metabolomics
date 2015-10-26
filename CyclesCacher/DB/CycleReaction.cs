@@ -17,15 +17,8 @@ namespace CyclesCacher.DB
         [Column(Order = 1)]
         public Guid reactionId { get; set; }
 
-        public bool isExchange { get; set; }
+        public bool isReaction { get; set; }
 
         public virtual Cycle Cycle { get; set; }
-
-        public virtual Reaction Reaction { get; set; }
-
-        public override bool Equals(object obj)
-        {
-            return this.cycleId == ((CycleReaction)obj).cycleId && this.reactionId == ((CycleReaction)obj).reactionId;
-        }
     }
 }

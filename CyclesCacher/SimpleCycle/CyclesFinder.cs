@@ -9,7 +9,7 @@ namespace CyclesCacher.SimpleCycle
 {
     class CyclesFinder
     {
-        public static List<List<Guid>> Find(Dictionary<Guid, HashSet<Guid>> graph)
+        public static bool Find(Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph)
         {
             List<List<Guid>> cycles = new List<List<Guid>>();
             Stack<Guid> pointStack = new Stack<Guid>();
@@ -25,7 +25,7 @@ namespace CyclesCacher.SimpleCycle
 
             foreach (var v in graph.Keys)
             {
-                Backtrack(v, v, graph, pointStack, marked, markedStack, cycles);
+                return Backtrack(v, v, graph, pointStack, marked, markedStack, cycles);
                 while (markedStack.Count != 0)
                 {
                     Guid u = markedStack.Pop();
@@ -33,20 +33,21 @@ namespace CyclesCacher.SimpleCycle
                 }
             }
 
-            return cycles;
+//            return cycles;
+            return false;
         }
 
-        public static bool Backtrack(Guid s, Guid v, Dictionary<Guid, HashSet<Guid>> graph, Stack<Guid> pointStack, Dictionary<Guid, bool> marked, Stack<Guid> markedStack, List<List<Guid>> cycles)
+        public static bool Backtrack(Guid s, Guid v, Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph, Stack<Guid> pointStack, Dictionary<Guid, bool> marked, Stack<Guid> markedStack, List<List<Guid>> cycles)
         {
             bool f = false;
             pointStack.Push(v);
             marked[v] = true;
             markedStack.Push(v);
 
-            foreach (var w in graph[v])
+            foreach (var w in graph[v].Item2.ToList())
             {
-                //                List<HyperGraph.Edge> consumers = product.Value.Consumers.ToList();
-                //                for (int i = consumers.Count-1; i >= 0; i--)
+//                if (! graph.ContainsKey(w)) continue;
+//                var w = graph[v].Item2
                 if (w.CompareTo(s) < 0)
                 {
 //                    consumers.RemoveAt(i);
@@ -55,15 +56,14 @@ namespace CyclesCacher.SimpleCycle
                 if (w == s)
                 {
                     // TODO remove DB recording
-//                                            CyclesCacher.Program.recordToDatabase(pointStack.ToList());
-                    cycles.Add(pointStack.ToList());
+                    Program.recordToDatabase(Program.CollapseCycle(graph, pointStack.ToList()), pointStack.ToList());
+//                    cycles.Add(pointStack.ToList());
                     f = true;
                 }
                 else if (!marked[w])
                 {
                     f = (Backtrack(s, w, graph, pointStack, marked, markedStack, cycles) || f);
                 }
-                //                product.Value.Consumers = new HashSet<HyperGraph.Edge>(consumers);
             }
 
             if (f)
