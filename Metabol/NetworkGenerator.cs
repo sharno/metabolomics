@@ -9,6 +9,8 @@ namespace Metabol
     using System.Configuration;
     using System.Diagnostics;
 
+    using CyclesCacher;
+
     using PathwaysLib.ServerObjects;
     using PathwaysLib.SoapObjects;
 

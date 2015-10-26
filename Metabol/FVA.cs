@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 using ILOG.Concert;
 using ILOG.CPLEX;
 
 namespace Metabol
 {
-    using System.Collections.Concurrent;
     using System.IO;
+
+    using Metabol.Util;
 
     class FVA
     {
@@ -28,7 +28,7 @@ namespace Metabol
             var UpperBound = 1000;
             var LowerBound = -1000;
             foreach (var edge in graph.Edges.Values)
-                if (!edge.IsPseudo && edge.ToServerReaction.Reversible)
+                if (!edge.IsPseudo && edge.ToServerReaction.reversible)
                     vars[edge.Label] = model.NumVar(LowerBound, UpperBound, NumVarType.Float, edge.Label);
                 else
                     vars[edge.Label] = model.NumVar(0, UpperBound, NumVarType.Float, edge.Label);
@@ -79,7 +79,7 @@ namespace Metabol
 
             var list = graph.Edges.ToList().Select(d => string.Format("{0}:{1}", d.Value.Label, d.Value.Flux)).ToList();
             list.Sort((decision, decision1) => string.Compare(decision, decision1, StringComparison.Ordinal));
-            File.WriteAllLines(string.Format("{0}{1}result.txt", Util.Dir, edge.Label), list);
+            File.WriteAllLines(string.Format("{0}{1}result.txt", Util.Core.Dir, edge.Label), list);
         }
 
         private void AddGlobalConstraint(HyperGraph sm, Cplex model, Dictionary<string, INumVar> vars)

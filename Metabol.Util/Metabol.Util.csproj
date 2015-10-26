@@ -1,0 +1,204 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{AAC07319-DE70-4BA1-B891-469B81C2AF38}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Metabol.Util</RootNamespace>
+    <AssemblyName>Metabol.Util</AssemblyName>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.6.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Caching" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Cycle.cs" />
+    <Compile Include="CyclesFinder.cs" />
+    <Compile Include="DB2\AnnotationQualifier.cs" />
+    <Compile Include="DB2\attribute_names.cs" />
+    <Compile Include="DB2\attribute_values.cs" />
+    <Compile Include="DB2\Author.cs" />
+    <Compile Include="DB2\basic_molecules.cs" />
+    <Compile Include="DB2\BlockedReaction.cs" />
+    <Compile Include="DB2\catalyze.cs" />
+    <Compile Include="DB2\chromosome.cs" />
+    <Compile Include="DB2\chromosomes_pathcase.cs" />
+    <Compile Include="DB2\chromosome_bands.cs" />
+    <Compile Include="DB2\common_molecules.cs" />
+    <Compile Include="DB2\common_species.cs" />
+    <Compile Include="DB2\Compartment.cs" />
+    <Compile Include="DB2\CompartmentClass.cs" />
+    <Compile Include="DB2\CompartmentType.cs" />
+    <Compile Include="DB2\Constraint.cs" />
+    <Compile Include="DB2\Cycle.cs" />
+    <Compile Include="DB2\CycleReaction.cs" />
+    <Compile Include="DB2\DataSource.cs" />
+    <Compile Include="DB2\DesignedBy.cs" />
+    <Compile Include="DB2\ec_go.cs" />
+    <Compile Include="DB2\ec_go_orig.cs" />
+    <Compile Include="DB2\ec_numbers.cs" />
+    <Compile Include="DB2\ec_number_name_lookups.cs" />
+    <Compile Include="DB2\entity_graph_nodes.cs" />
+    <Compile Include="DB2\entity_name_lookups.cs" />
+    <Compile Include="DB2\Event.cs" />
+    <Compile Include="DB2\EventAssignment.cs" />
+    <Compile Include="DB2\EventDelay.cs" />
+    <Compile Include="DB2\EventTrigger.cs" />
+    <Compile Include="DB2\external_databases.cs" />
+    <Compile Include="DB2\external_database_links.cs" />
+    <Compile Include="DB2\external_database_urls.cs" />
+    <Compile Include="DB2\FunctionDefinition.cs" />
+    <Compile Include="DB2\gene.cs" />
+    <Compile Include="DB2\gene_encodings.cs" />
+    <Compile Include="DB2\gene_products.cs" />
+    <Compile Include="DB2\GONodeCode.cs" />
+    <Compile Include="DB2\go_annotation_pathways.cs" />
+    <Compile Include="DB2\go_pathway_annotation_counts.cs" />
+    <Compile Include="DB2\go_pathway_group_annotation_counts.cs" />
+    <Compile Include="DB2\go_terms.cs" />
+    <Compile Include="DB2\go_terms_hierarchy.cs" />
+    <Compile Include="DB2\InitialAssignment.cs" />
+    <Compile Include="DB2\KineticLaw.cs" />
+    <Compile Include="DB2\MapModelsPathway.cs" />
+    <Compile Include="DB2\MapReactionECNumber.cs" />
+    <Compile Include="DB2\MapReactionsProcessEntity.cs" />
+    <Compile Include="DB2\MapSbaseGO.cs" />
+    <Compile Include="DB2\MapSpeciesMolecularEntity.cs" />
+    <Compile Include="DB2\MetabolicNetworkDbContext.cs" />
+    <Compile Include="DB2\MetaboliteReactionCount.cs" />
+    <Compile Include="DB2\MetaboliteReactionStoichiometry.cs" />
+    <Compile Include="DB2\Model.cs" />
+    <Compile Include="DB2\ModelLayout.cs" />
+    <Compile Include="DB2\ModelMetadata.cs" />
+    <Compile Include="DB2\ModelOrganism.cs" />
+    <Compile Include="DB2\molecular_entities.cs" />
+    <Compile Include="DB2\molecular_entity_names.cs" />
+    <Compile Include="DB2\molecular_entity_types.cs" />
+    <Compile Include="DB2\name_types.cs" />
+    <Compile Include="DB2\OLD_external_databases.cs" />
+    <Compile Include="DB2\OLD_external_database_links.cs" />
+    <Compile Include="DB2\organism.cs" />
+    <Compile Include="DB2\organism_groups.cs" />
+    <Compile Include="DB2\Parameter.cs" />
+    <Compile Include="DB2\pathway.cs" />
+    <Compile Include="DB2\pathway_groups.cs" />
+    <Compile Include="DB2\pathway_links.cs" />
+    <Compile Include="DB2\pathway_processes.cs" />
+    <Compile Include="DB2\pathway_types.cs" />
+    <Compile Include="DB2\process.cs" />
+    <Compile Include="DB2\process_entities.cs" />
+    <Compile Include="DB2\process_entity_roles.cs" />
+    <Compile Include="DB2\process_graph_nodes.cs" />
+    <Compile Include="DB2\protein.cs" />
+    <Compile Include="DB2\Reaction.cs" />
+    <Compile Include="DB2\ReactionSpeciesRole.cs" />
+    <Compile Include="DB2\ReactionSpecy.cs" />
+    <Compile Include="DB2\rna.cs" />
+    <Compile Include="DB2\rna_types.cs" />
+    <Compile Include="DB2\Rule.cs" />
+    <Compile Include="DB2\RuleType.cs" />
+    <Compile Include="DB2\Sbase.cs" />
+    <Compile Include="DB2\Species.cs" />
+    <Compile Include="DB2\SpeciesType.cs" />
+    <Compile Include="DB2\StoichiometryMath.cs" />
+    <Compile Include="DB2\Unit.cs" />
+    <Compile Include="DB2\UnitDefinition.cs" />
+    <Compile Include="DB2\viewState.cs" />
+    <Compile Include="Db.cs" />
+    <Compile Include="HyperGraph.cs" />
+    <Compile Include="Migrations\201510241602271_MetaboliteReaction.cs" />
+    <Compile Include="Migrations\201510241602271_MetaboliteReaction.Designer.cs">
+      <DependentUpon>201510241602271_MetaboliteReaction.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\Configuration.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+    <Compile Include="SimpleCycle\Cycle.cs" />
+    <Compile Include="SimpleCycle\CyclesFinder.cs" />
+    <Compile Include="SimpleCycle\Vertex.cs" />
+    <Compile Include="Core.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Migrations\201510241602271_MetaboliteReaction.resx">
+      <DependentUpon>201510241602271_MetaboliteReaction.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

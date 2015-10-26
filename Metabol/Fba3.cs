@@ -9,36 +9,22 @@
     using ILOG.Concert;
     using ILOG.CPLEX;
 
-    using Exception = System.Exception;
+    using Util;
 
     public class Fba3 : IDisposable
     {
         public bool RemoveConstraints = false;
-        //public string Label { get; set; }
         public double LastRuntime { get; set; }
-        //public Dictionary<Guid, HyperGraph.Edge> RemovedConsumerExchange { get; set; }
-        //public Dictionary<Guid, HyperGraph.Edge> RemovedProducerExchange { get; set; }
-        //public Dictionary<string, double> Results { get; set; }
-        //public Dictionary<string, double> PrevResults { get; set; }
-        //public ConcurrentDictionary<Guid, HashSet<Guid>> UpdateExchangeConstraint { get; set; }
         const double Change = 0.01;
         private Dictionary<string, double> BlockedReactions { get; set; }
 
         public Fba3()
         {
-            //Label = Util.FbaLabel();
-            //RemovedConsumerExchange = new Dictionary<Guid, HyperGraph.Edge>();
-            //RemovedProducerExchange = new Dictionary<Guid, HyperGraph.Edge>();
-            //Results = new Dictionary<string, double>();
-            //PrevResults = new Dictionary<string, double>();
-            //UpdateExchangeConstraint = new ConcurrentDictionary<Guid, HashSet<Guid>>();
             BlockedReactions = new Dictionary<string, double>();
-            //BlockedReactions.Add(Guid.Parse("8af5e2d3-6257-4d9c-ac8f-7f7296d6ab5c"));
-            //BlockedReactions.Add(Guid.Parse("35d76d03-46ad-414e-8ca3-cce213a6c71d"));
-            foreach (var split in File.ReadAllLines(Util.BlockedReactionsFile).Select(line => line.Split(';')))
-            {
-                this.BlockedReactions[split[0]] = double.Parse(split[1]);
-            }
+            //foreach (var split in File.ReadAllLines(Util.BlockedReactionsFile).Select(line => line.Split(';')))
+            //{
+            //    this.BlockedReactions[split[0]] = double.Parse(split[1]);
+            //}
         }
 
         public bool Solve(ConcurrentDictionary<Guid, int> smz, HyperGraph sm)
@@ -50,7 +36,7 @@
 
             foreach (var edge in sm.Edges.Values)
             {
-                if (!edge.IsPseudo && edge.ToServerReaction.Reversible)
+                if (!edge.IsPseudo && edge.ToServerReaction.reversible)
                 {
                     vars[edge.Label] = model.NumVar(LowerBound, UpperBound, NumVarType.Float, edge.Label);
                     continue;
@@ -66,7 +52,7 @@
             model.AddObjective(ObjectiveSense.Maximize, fobj, "fobj");
 
             var isfeas = model.Solve();
-            model.ExportModel(string.Format("{0}{1}model.lp", Util.Dir, sm.LastLevel));
+            model.ExportModel(string.Format("{0}{1}model.lp", Core.Dir, sm.LastLevel));
 
             //if (isfeas)
             //model.WriteConflict($"{Util.Dir}{sm.LastLevel}conflict.txt");
@@ -76,13 +62,13 @@
             //Results.ToList().ForEach(d => PrevResults[d.Key] = d.Flux);
 
             if (isfeas)
-                sm.Edges.ToList().ForEach(d => d.Value.Flux = model.GetValue(vars[d.Value.Label]));//Results[d.Flux.Label]
+                sm.Edges.ToList().ForEach(d => d.Value.Flux = model.GetValue(vars[d.Value.Label]));
             else
                 sm.Edges.ToList().ForEach(d => d.Value.Flux = 0);
 
             var list = sm.Edges.ToList().Select(d => string.Format("{0}:{1}", d.Value.Label, d.Value.Flux)).ToList();
             list.Sort((decision, decision1) => string.Compare(decision, decision1, StringComparison.Ordinal));
-            File.WriteAllLines(string.Format("{0}{1}result.txt", Util.Dir, sm.LastLevel), list);
+            File.WriteAllLines(string.Format("{0}{1}result.txt", Core.Dir, sm.LastLevel), list);
 
             var status = model.GetCplexStatus();
             Console.WriteLine(status);
@@ -205,6 +191,9 @@
                     continue;
                 }
 
+                //if (Db.Context.CycleReactions.Any(cr => cr.reactionId == reaction.Key))
+                //    continue;
+
                 if (RemoveConstraints) continue;
                 //if (UpdateExchangeConstraint.ContainsKey(reaction.Key))
                 if (reaction.Value.UpdatePseudo.Count != 0)
@@ -225,7 +214,7 @@
                     if (isProducer)
                     {
                         meta = reaction.Value.Products.First();
-                        exchangeStoch = Util.GetReactionCount(meta.Key).Producers;
+                        exchangeStoch = Db.GetReactionCount(meta.Key).Producers;
                         uc =
                             meta.Value.Producers.Where(e => !e.IsPseudo)
                                 .Sum(e => Math.Abs(Coefficient(e, meta.Value)));
@@ -233,7 +222,7 @@
                     else
                     {
                         meta = reaction.Value.Reactants.First();
-                        exchangeStoch = Util.GetReactionCount(meta.Key).Consumers;
+                        exchangeStoch = Db.GetReactionCount(meta.Key).Consumers;
                         uc =
                          meta.Value.Consumers.Where(e => !e.IsPseudo)
                              .Sum(e => Math.Abs(Coefficient(e, meta.Value)));
