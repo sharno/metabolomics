@@ -5,20 +5,21 @@
     using System.Collections.Generic;
     using System.Configuration;
     using System.Diagnostics;
-    using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
 
+    using Metabol.Util;
+    using Metabol.Util.DB2;
+
     using Newtonsoft.Json;
 
-    using PathwaysLib.ServerObjects;
 
     public class TheAlgorithm
     {
         public readonly Fba3 Fba = new Fba3();
         public readonly LinkedList<string> Pathway = new LinkedList<string>();
         //public readonly HashSet<Guid> BlockedReactions = new HashSet<Guid>();
-
+        private const int CommonMetabolite = 61;
         [JsonProperty("isFeasable")]
         public bool IsFeasable { get; set; }
 
@@ -43,73 +44,67 @@
             }
         }
 
-        public void Init(Dictionary<string, int> change)
-        {
-            if (init)
-            {
-                return;
-            }
+        //public void Init(Dictionary<string, int> change)
+        //{
+        //    if (init)
+        //    {
+        //        return;
+        //    }
 
-            var strCon = ConfigurationManager.AppSettings["dbConnectString"];
-            DBWrapper.Instance = new DBWrapper(strCon);
+        //    var strCon = ConfigurationManager.AppSettings["dbConnectString"];
+        //    //DBWrapper.Instance = new DBWrapper(strCon);
 
-            var zlist =
-              (from s in change select ServerSpecies.AllSpeciesByName(s.Key) into spec where spec.Length > 0 select spec[0])
-                  .ToList();
-            zlist.Sort((species, serverSpecies) => string.Compare(species.SbmlId, serverSpecies.SbmlId, StringComparison.Ordinal));
-            foreach (var s in zlist)
-                Z[s.ID] = (s.ID.GetHashCode() % 2) == 0 ? -1 : 1;//rand.NextDouble() >= 0.5 ? 1 : -1;
-            init = true;
-        }
+        //    var zlist =
+        //      (from s in change select Util.MnContext.Species.AllSpeciesByName(s.Key) into spec where spec.Length > 0 select spec[0])
+        //          .ToList();
+        //    zlist.Sort((species, serverSpecies) => string.Compare(species.SbmlId, serverSpecies.SbmlId, StringComparison.Ordinal));
+        //    foreach (var s in zlist)
+        //        Z[s.ID] = (s.ID.GetHashCode() % 2) == 0 ? -1 : 1;//rand.NextDouble() >= 0.5 ? 1 : -1;
+        //    init = true;
+        //}
 
         public void Step()
         {
-            if (!this.init) return;
+            if (!init) return;
 
-            //for (var i = 0; i < step; i++)
+            // steps 4, 5
+            ApplyFba(Sm, Z, IterationId);
+
+            //Task.Run(delegate
+            //{
+            //    //File.AppendAllText(file1, $"=========== {iteration.Id}. iteration ===========\n");
+            //    //File.AppendAllText(file1, $"FBA feasable: {iteration.Fba}  time:{Util.Fba.LastRuntime}\n");
+            //    //File.AppendAllText(file1, $"Nodes: {sm.Nodes.Count}  BorderM:{iteration.BorderMCount}  Edges: {sm.Edges.Count}\n");
+            //    File.AppendAllText(file2,
+            //        $"{sm.Nodes.Count},{iteration.BorderMCount},{sm.Edges.Count},{timer.ElapsedMilliseconds * 1.0 / 1000.0}\n");
+            //});
+
+            //8. Let m’ be a border metabolite in S(m) involved in the smallest total number of reactions.
+            var borderm = GetBorderMetabolites(Sm);
+            if (borderm.Count == 0)
             {
-                //Timer.Reset();
-                //Timer.Start();
-
-                // steps 4, 5
-                ApplyFba(Sm, Z, IterationId);
-
-                //Task.Run(delegate
-                //{
-                //    //File.AppendAllText(file1, $"=========== {iteration.Id}. iteration ===========\n");
-                //    //File.AppendAllText(file1, $"FBA feasable: {iteration.Fba}  time:{Util.Fba.LastRuntime}\n");
-                //    //File.AppendAllText(file1, $"Nodes: {sm.Nodes.Count}  BorderM:{iteration.BorderMCount}  Edges: {sm.Edges.Count}\n");
-                //    File.AppendAllText(file2,
-                //        $"{sm.Nodes.Count},{iteration.BorderMCount},{sm.Edges.Count},{timer.ElapsedMilliseconds * 1.0 / 1000.0}\n");
-                //});
-
-                //8. Let m’ be a border metabolite in S(m) involved in the smallest total number of reactions.
-                var borderm = GetBorderMetabolites(Sm);
-                if (borderm.Count == 0)
-                {
-                    Util.SaveAsDgs(Sm.Nodes.First().Value, Sm, this);
-                    Console.WriteLine("NO BORDER METABILTES");
-                    Console.ReadKey();
-                    Environment.Exit(0);
-                }
-
-                var m2 = borderm.OrderBy(Util.TotalReactions).First();
-                Util.SaveAsDgs(m2, Sm, this);
-                Sm.NextStep();
-
-                //Extend S(m) with m’ and its reactions from M.
-                var ex = ExtendGraph(m2.ToSpecies, Sm);
-                //ex.Wait(int.MaxValue);
-
-                //Remove the exchange reaction that was introduced for m’ in step 4.
-                //Add a constraint that total net flux of reactions of m’ should
-                //be equal to those of the removed flux exchange reaction.
-                RemoveExchangeReaction(Sm, m2);
-
-                //Go to step 4 to add exchange fluxes for the new border metabolites. 
-                //If S(m) cannot be extended, then go to step 3.
-                //yield return fba;
+                Core.SaveAsDgs(Sm.Nodes.First().Value, Sm, Core.Dir);
+                Console.WriteLine("NO BORDER METABILTES");
+                Console.ReadKey();
+                Environment.Exit(0);
             }
+
+            var m2 = borderm.Select(m => m.Id).OrderBy(Db.TotalReactions).First();
+            Core.SaveAsDgs(Sm.Nodes[m2], Sm, Core.Dir);
+            Sm.NextStep();
+
+            //Extend S(m) with m’ and its reactions from M.
+            var ex = ExtendGraph(m2, Sm);
+            //ex.Wait(int.MaxValue);
+
+            //Remove the exchange reaction that was introduced for m’ in step 4.
+            //Add a constraint that total net flux of reactions of m’ should
+            //be equal to those of the removed flux exchange reaction.
+            RemoveExchangeReaction(Sm, Sm.Nodes[m2]);
+
+            //Go to step 4 to add exchange fluxes for the new border metabolites. 
+            //If S(m) cannot be extended, then go to step 3.
+            //yield return fba;
         }
 
         public void Start2()
@@ -126,13 +121,13 @@
 
             var g = new HyperGraph();
             var id = mid;
-            g.AddNode(id, Util.CachedS(id).Name);
+            g.AddNode(id, Db.CachedS(id).name);
             while (g.Nodes.Count < 5)
             {
-                ExtendGraph(Util.CachedS(id), g);
+                ExtendGraph(id, g);
                 foreach (var node in g.Nodes[id].AllNeighborNodes())
                 {
-                    ExtendGraph(Util.CachedS(node.Id), g);
+                    ExtendGraph((node.Id), g);
                     id = node.Id;
                 }
             }
@@ -143,10 +138,10 @@
             }
 
             Sm.AddNode(
-                Util.CachedS(mid).ID,
-                Util.CachedS(mid).SbmlId);
+                Db.CachedS(mid).id,
+                Db.CachedS(mid).sbmlId);
 
-            var ex = ExtendGraph(Util.CachedS(mid), Sm);
+            var ex = ExtendGraph((mid), Sm);
             init = true;
         }
 
@@ -156,42 +151,45 @@
 
             string[] zn =
             {
-                "D-Fructose 6-phosphate", "D-Fructose 1,6-bisphosphate", "Dihydroxyacetone phosphate",
-                "Glyceraldehyde 3-phosphate", "L-threonine", "taurochenodeoxycholate",
-                "D-glucose", "3-Phospho-D-glycerate", "D-Glycerate 2-phosphate", "Phosphoenolpyruvate", "pyruvate"
+                "D-Fructose",
+                "Glyceraldehyde", "L-threonine", "taurochenodeoxycholate",
+                "D-glucose", "3-Phospho-D-glycerate", "pyruvate"
             };
 
-            var zlist =
-                (from s in zn select ServerSpecies.AllSpeciesByNameOnly(s) into spec where spec.Length > 0 select spec[0])
-                    .ToList();
+            var zlist = new List<Species>();
+            foreach (var s in zn)
+            {
+                zlist.AddRange(Db.Context.Species.Where(mm => mm.name.ToLower().Contains(s.ToLower())));
+            }
+
             //zlist.Sort((species, serverSpecies) => string.Compare(species.SbmlId, serverSpecies.SbmlId, StringComparison.Ordinal));
             //var rand = new Random((int)DateTime.UtcNow.ToBinary());
 
             foreach (var s in zlist)
             {
-                Z[s.ID] = (s.ID.GetHashCode() % 2) == 0 ? -1 : 1;//rand.NextDouble() >= 0.5 ? 1 : -1;
-                Console.WriteLine("{0}:{1}", s.SbmlId, Z[s.ID]);
+                Z[s.id] = (s.id.GetHashCode() % 2) == 0 ? -1 : 1;//rand.NextDouble() >= 0.5 ? 1 : -1;
+                Console.WriteLine("{0}:{1}", s.sbmlId, Z[s.id]);
             }
+            //dag_hs[e]
+            var id = Guid.Parse("47ae0af5-9f7d-443d-b0d5-064e4707e8b5");// Guid.Parse("817069E0-5D9D-4FEB-B66A-BE5E79C1822B");//Guid.Parse("64893C3E-331F-4B24-8CA8-61D9D3D39D03");
+            Z[id] = (id.GetHashCode() % 2) == 0 ? -1 : 1;
 
-            // var id = Guid.Parse("{1218e2af-e534-41e6-bc59-e9731c95b182}");
-            var id = Guid.Parse("64893C3E-331F-4B24-8CA8-61D9D3D39D03");
-            Z[id] = (id.GetHashCode() % 2) == 0 ? -1 : 1; //rand.NextDouble() >= 0.5 ? 1 : -1;
+            //var strCon = ConfigurationManager.AppSettings["dbConnectString"];
+            //DBWrapper.Instance = new DBWrapper(strCon);
 
-            var strCon = ConfigurationManager.AppSettings["dbConnectString"];
-            DBWrapper.Instance = new DBWrapper(strCon);
             //var reconId = Guid.Parse("c7b42b40-ccd9-42f3-b6bd-9a4111fcbec5");
             //1. Among a user-provided set of observed metabolite changes Z,
             //  let m be the metabolite with the least total number of producer and consumer reactions in the respective metabolic network M
             //var m = Util.CachedS(Z.Keys.OrderBy(Util.GetReactionCountSum).First()); //e => Z[e] > 0
-            var m = Util.CachedS(id);
+            var m = Db.CachedS(id);
             //Fba.M = m;
             //2. Let S(m) be a subnetwork of the whole metabolic network M. 
             //Initialize S(m) so that iteration contains only m
-            Sm.AddNode(m.ID, m.SbmlId);
+            Sm.AddNode(m.id, m.sbmlId);
             //HyperGraph.Step++;
             //3. Extend S(m) with a subset K of m’s consumers and producers such that K has not been used before to extend the current subnetwork. 
             //HashSet<ServerSpecies> K = new HashSet<ServerSpecies>();
-            var ex = ExtendGraph(m, Sm);
+            var ex = ExtendGraph(m.id, Sm);
             //ex.Wait(int.MaxValue);
 
             ////If there is no such qualifying subset K, then record the current hypothesis and exit
@@ -207,30 +205,31 @@
         {
             if (init) return;
 
-            var strCon = ConfigurationManager.AppSettings["dbConnectString"];
-            DBWrapper.Instance = new DBWrapper(strCon);
-            //1. Among a user-provided set of observed metabolite changes Z,
-            var zn = File.ReadAllLines(Util.SelectedMetaFile).Select(s => s.Split(';'));
+            //var strCon = ConfigurationManager.AppSettings["dbConnectString"];
+            //DBWrapper.Instance = new DBWrapper(strCon);
 
-            foreach (var s in zn)
-            {
-                Z[Guid.Parse(s[0])] = int.Parse(s[1]);
-            }
+            //1. Among a user-provided set of observed metabolite changes Z,
+            //var zn = File.ReadAllLines(Util.SelectedMetaFile).Select(s => s.Split(';'));
+
+            //foreach (var s in zn)
+            //{
+            //    Z[Guid.Parse(s[0])] = int.Parse(s[1]);
+            //}
 
             //  let m be the metabolite with the least total number of producer and consumer reactions in the respective metabolic network M
             var m =
-                Util.CachedS(
-                    Z.Keys.Where(guid => Util.GetReactionCountSum(guid) > 0)
-                        .OrderBy(Util.GetReactionCountSum)
+                Db.CachedS(
+                    Z.Keys.Where(guid => Db.GetReactionCountSum(guid) > 0)
+                        .OrderBy(Db.GetReactionCountSum)
                         .First());
 
             //2. Let S(m) be a subnetwork of the whole metabolic network M. 
             //Initialize S(m) so that iteration contains only m
-            Sm.AddNode(m.ID, m.SbmlId);
+            Sm.AddNode(m.id, m.sbmlId);
 
             //3. Extend S(m) with a subset K of m’s consumers and producers such that K has not been used before to extend the current subnetwork. 
             //HashSet<ServerSpecies> K = new HashSet<ServerSpecies>();
-            this.ExtendGraph(m, this.Sm);
+            ExtendGraph(m.id, Sm);
             //ex.Wait(int.MaxValue);
             //Util.SaveAsDgs(sm.Nodes[m.ID], sm, "start");
 
@@ -394,40 +393,42 @@
             //{
             //    return;
             //}
-            if ((node.IsProducedBorder || node.ReactionCount.Producers == 0) && !node.Producers.Any(s => s.IsPseudo))
+            try
             {
-                var producer = Guid.NewGuid();
-                sm.AddProduct(producer, string.Format("exr_{0}_prod", node.Label), node.Id, node.Label, true);
-                sm.Edges[producer].Reactions.UnionWith(
-                    node.IsCommon
-                        ? Util.CachedS(node.RealId)
-                              .getAllReactions(Util.Product)
-                              .Select(e => e.ID)
-                              .Where(id => !sm.Edges.ContainsKey(id))
-                        : Util.CachedS(node.Id)
-                              .getAllReactions(Util.Product)
-                              .Select(e => e.ID)
-                              .Where(id => !sm.Edges.ContainsKey(id)));
+                if ((node.IsProducedBorder || node.ReactionCount.Producers == 0) && !node.Producers.Any(s => s.IsPseudo))
+                {
+                    var producer = Guid.NewGuid();
+                    sm.AddProduct(producer, string.Format("exr_{0}_prod", node.Label), node.Id, node.Label, true);
+                    sm.Edges[producer].Reactions.UnionWith(
+                        node.ToSpecies.ReactionSpecies.Where(
+                            rs =>
+                            rs.speciesId == node.Id && rs.roleId == Db.ProductId && !sm.Edges.ContainsKey(rs.reactionId))
+                            .Select(e => e.reactionId));
 
-                //sm.Edges[producer].InitReactions.UnionWith(sm.Edges[producer].Reactions);
+                    //sm.Edges[producer].InitReactions.UnionWith(sm.Edges[producer].Reactions);
+                }
+
+                if ((node.IsConsumedBorder || node.ReactionCount.Consumers == 0) && !node.Consumers.Any(s => s.IsPseudo))
+                {
+                    var consumer = Guid.NewGuid();
+                    sm.AddReactant(consumer, string.Format("exr_{0}_cons", node.Label), node.Id, node.Label, true);
+                    sm.Edges[consumer].Reactions.UnionWith(
+                        //node.IsCommon
+                        //    ? Util.CachedS(node.RealId)
+                        //          .getAllReactions(Util.Product)
+                        //          .Select(e => e.ID)
+                        //          .Where(id => !sm.Edges.ContainsKey(id)): 
+                        node.ToSpecies.ReactionSpecies.Where(
+                            rs =>
+                            rs.speciesId == node.Id && rs.roleId == Db.ReactantId
+                            && !sm.Edges.ContainsKey(rs.reactionId)).Select(e => e.id));
+
+                    //sm.Edges[consumer].InitReactions.UnionWith(sm.Edges[consumer].Reactions);
+                }
             }
-
-            if ((node.IsConsumedBorder || node.ReactionCount.Consumers == 0) && !node.Consumers.Any(s => s.IsPseudo))
+            catch (Exception e)
             {
-                var consumer = Guid.NewGuid();
-                sm.AddReactant(consumer, string.Format("exr_{0}_cons", node.Label), node.Id, node.Label, true);
-                sm.Edges[consumer].Reactions.UnionWith(
-                    node.IsCommon
-                        ? Util.CachedS(node.RealId)
-                              .getAllReactions(Util.Product)
-                              .Select(e => e.ID)
-                              .Where(id => !sm.Edges.ContainsKey(id))
-                        : Util.CachedS(node.Id)
-                              .getAllReactions(Util.Product)
-                              .Select(e => e.ID)
-                              .Where(id => !sm.Edges.ContainsKey(id)));
-
-                //sm.Edges[consumer].InitReactions.UnionWith(sm.Edges[consumer].Reactions);
+                Console.WriteLine(e);
             }
             await Task.Delay(TimeSpan.Zero);
         }
@@ -471,58 +472,77 @@
             return borderm;
         }
 
-        public async Task ExtendGraph(ServerSpecies m, HyperGraph sm)
+        public async Task ExtendGraph(Guid mid, HyperGraph sm)
         {
-            //common metabolite
-            const int Outliear = 61;
-            Pathway.AddLast(m.SbmlId);
-            sm.Nodes[m.ID].IsExtended = true;
+            var sp = Db.Context.Species.Single(s => s.id == mid);
+            //Pathway.AddLast(sp.sbmlId);
+            sm.Nodes[mid].IsExtended = true;
 
-            foreach (var r in m.getAllReactions(Util.Product))//.Where(r => r.SbmlId != "R_biomass_reaction"))
+            foreach (var r in sp.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId).Select(rs => rs.Reaction))
             {
-                sm.AddProduct(r.ID, r.SbmlId, m.ID, m.SbmlId);
-
-                var products = r.GetAllProducts();
-                var reactant = r.GetAllReactants();
-
-                foreach (var p in reactant.Where(p => Util.GetReactionCountSum(p.ID) < Outliear && p.BoundaryCondition==false)) 
-                    sm.AddReactant(r.ID, r.SbmlId, p.ID, p.SbmlId);
-                //else
-                //    sm.AddReactantCommon(r.ID, r.SbmlId, p.ID, p.SbmlId);
-
-                foreach (var p in products.Where(p => Util.GetReactionCountSum(p.ID) < Outliear && p.BoundaryCondition == false)) 
-                    sm.AddProduct(r.ID, r.SbmlId, p.ID, p.SbmlId);
-                //else
-                //    sm.AddProductCommon(r.ID, r.SbmlId, p.ID, p.SbmlId);
+                sm.AddProduct(r.id, r.sbmlId, sp.id, sp.sbmlId);
+                AddCycleReactions(sm, r);
+                AddMetabolites(sm, r);
             }
 
-            foreach (var r in m.getAllReactions(Util.Reactant))//.Where(r => r.SbmlId != "R_biomass_reaction"))
+            foreach (var r in sp.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId).Select(rs => rs.Reaction))
             {
-                sm.AddReactant(r.ID, r.SbmlId, m.ID, m.SbmlId);
-
-                var products = r.GetAllProducts();
-                var reactant = r.GetAllReactants();
-
-                foreach (var p in reactant.Where(p => Util.GetReactionCountSum(p.ID) < Outliear && p.BoundaryCondition == false))
-                        sm.AddReactant(r.ID, r.SbmlId, p.ID, p.SbmlId);
-                //else
-                //    sm.AddReactantCommon(r.ID, r.SbmlId, p.ID, p.SbmlId);
-
-                foreach (var p in products.Where(p => Util.GetReactionCountSum(p.ID) < Outliear && p.BoundaryCondition == false))
-                        sm.AddProduct(r.ID, r.SbmlId, p.ID, p.SbmlId);
-                //else
-                //    sm.AddProductCommon(r.ID, r.SbmlId, p.ID, p.SbmlId);
+                sm.AddReactant(r.id, r.sbmlId, sp.id, sp.sbmlId);
+                AddCycleReactions(sm, r);
+                AddMetabolites(sm, r);
             }
 
             // add exchange reaction to lonely(metabol. with only input or output reactions) metabolites   
             foreach (var lon in sm.Nodes.Values.Where(n => n.IsLonely))
                 await DefineExReactionLonely(lon, sm);
 
-            foreach (var node in sm.Nodes[m.ID].AllNeighborNodes()) //.Where(node => !node.IsBorder)
+            foreach (var node in sm.Nodes[sp.id].AllNeighborNodes()) //.Where(node => !node.IsBorder)
             {
                 if (node.IsBorder) UpdateNeighbore(sm, node);
-                //if (node.IsTempBorder)
                 RemoveExchangeReaction(sm, node);
+            }
+        }
+
+        private static void AddCycleReactions(HyperGraph sm, Reaction r)
+        {
+            try
+            {
+                var cycles = Db.Context.CycleReactions.Where(cr => cr.reactionId == r.id && !cr.isExchange).Select(cr => cr.Cycle);
+                if (!cycles.Any()) return;
+                foreach (var c in cycles)
+                    foreach (var cr in c.CycleReactions)
+                        AddMetabolites(sm, cr.Reaction);
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+
+        private static void AddMetabolites(HyperGraph sm, Reaction reaction)
+        {
+            try
+            {
+                var products = Db.Context.ReactionSpecies
+                    .Where(rs => rs.roleId == Db.ProductId && rs.reactionId == reaction.id)
+                    .Select(rs => rs.Species).ToList();
+
+                var reactants = Db.Context.ReactionSpecies
+                    .Where(rs => rs.roleId == Db.ReactantId && rs.reactionId == reaction.id)
+                    .Select(rs => rs.Species).ToList();
+
+                foreach (var meta in reactants
+                    .Where(p => Db.GetReactionCountSum(p.id) < CommonMetabolite && p.boundaryCondition == false))
+                    sm.AddReactant(reaction.id, reaction.sbmlId, meta.id, meta.sbmlId);
+
+                foreach (var meta in products
+                    .Where(p => Db.GetReactionCountSum(p.id) < CommonMetabolite && p.boundaryCondition == false))
+                    sm.AddProduct(reaction.id, reaction.sbmlId, meta.id, meta.sbmlId);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
             }
         }
 
@@ -550,7 +570,7 @@
             fva.Solve(graph);
             foreach (var minmax in fva.Results.Where(minmax => Math.Abs(minmax.Value.Item1 - minmax.Value.Item2) < 0.0001))//&& Math.Abs(minmax.Value.Item2) < double.Epsilon
             {
-                File.AppendAllText(Util.BlockedReactionsFile, string.Format("{0};{1}\n", graph.Edges[minmax.Key].Label, minmax.Value.Item1));
+                //File.AppendAllText(Util.BlockedReactionsFile, string.Format("{0};{1}\n", graph.Edges[minmax.Key].Label, minmax.Value.Item1));
             }
             Console.WriteLine("Running FVA Done!");
         }

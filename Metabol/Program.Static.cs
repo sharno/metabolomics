@@ -1,8 +1,6 @@
 ﻿namespace Metabol
 {
     using System;
-    using System.Collections;
-    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -10,17 +8,14 @@
     using ILOG.Concert;
     using ILOG.CPLEX;
 
-    using PathwaysLib.ServerObjects;
-    using System.Configuration;
-
     using MathNet.Numerics.LinearAlgebra;
     using MathNet.Numerics.LinearAlgebra.Double;
 
-    using PathwaysLib.SoapObjects;
+    using Metabol.Util;
 
     public class Program
     {
-        public static void Main()
+        public static void Main1()
         {
             //var graph = new HyperGraph();
             //Console.WriteLine("Loading graph...");
@@ -75,7 +70,7 @@
             //TheAlgorithm.DefineBlockedReactions(graph);
         }
 
-        public static void Main1()
+        public static void Main6()
         {
             Matrix<double> A = DenseMatrix.OfArray(
                 new double[,]
@@ -84,9 +79,9 @@
                         //{1,-1,0,0,-1},
                         //{0,1,-1,0,0},
                         //{0,0,1,-1,1}});
-                        { -1, 0, 0, -1 }, 
-                        { 1, -1, 0, 0 }, 
-                        { 0, 1, -1, 0 }, 
+                        { -1, 0, 0, -1 },
+                        { 1, -1, 0, 0 },
+                        { 0, 1, -1, 0 },
                         { 0, 0, 1, 1 }
                     });
 
@@ -131,203 +126,203 @@
             }
 
 
-            DBWrapper.Instance = new DBWrapper(ConfigurationManager.AppSettings["dbConnectString"]);
+            //            DBWrapper.Instance = new DBWrapper(ConfigurationManager.AppSettings["dbConnectString"]);
 
-            #region prefill
+            //            #region prefill
 
-            ///*************************  Prefill UnitDefinition Table *************************************************/
+            //            ///*************************  Prefill UnitDefinition Table *************************************************/
 
-            //Console.WriteLine("Populating UnitDefinition Table...");
+            //            //Console.WriteLine("Populating UnitDefinition Table...");
 
-            //string[] basics =
-            //    {
-            //        "ampere", "gram", "katal", "metre", "second", "watt", "becquerel", "gray", "kelvin",
-            //        "mole", "siemens", "weber", "candela", "henry", "kilogram", "newton", "sievert",
-            //        "coulomb", "hertz", "litre", "ohm", "steradian", "dimensionless", "item", "lumen",
-            //        "pascal", "tesla", "farad", "joule", "lux", "radian", "volt"
-            //    };
+            //            //string[] basics =
+            //            //    {
+            //            //        "ampere", "gram", "katal", "metre", "second", "watt", "becquerel", "gray", "kelvin",
+            //            //        "mole", "siemens", "weber", "candela", "henry", "kilogram", "newton", "sievert",
+            //            //        "coulomb", "hertz", "litre", "ohm", "steradian", "dimensionless", "item", "lumen",
+            //            //        "pascal", "tesla", "farad", "joule", "lux", "radian", "volt"
+            //            //    };
 
-            //SoapUnitDefinition su;
-            //ServerUnitDefinition srvu;
-            //foreach (string unit in basics)
-            //{
-            //    su = new SoapUnitDefinition("", "", "", "", Guid.Empty, unit, unit, true);
-            //    srvu = new ServerUnitDefinition(su);
-            //    srvu.UpdateDatabase();
-            //}
+            //            //SoapUnitDefinition su;
+            //            //ServerUnitDefinition srvu;
+            //            //foreach (string unit in basics)
+            //            //{
+            //            //    su = new SoapUnitDefinition("", "", "", "", Guid.Empty, unit, unit, true);
+            //            //    srvu = new ServerUnitDefinition(su);
+            //            //    srvu.UpdateDatabase();
+            //            //}
 
-            ////substance: mole
-            //su = new SoapUnitDefinition("", "", "", "", Guid.Empty, "substance", "substance", false);
-            //srvu = new ServerUnitDefinition(su);
-            //srvu.UpdateDatabase();
-            //srvu.AddUnit(UnitDefinitionManager.GetBaseUnitId("mole"), 1, 0, 1);
+            //            ////substance: mole
+            //            //su = new SoapUnitDefinition("", "", "", "", Guid.Empty, "substance", "substance", false);
+            //            //srvu = new ServerUnitDefinition(su);
+            //            //srvu.UpdateDatabase();
+            //            //srvu.AddUnit(UnitDefinitionManager.GetBaseUnitId("mole"), 1, 0, 1);
 
-            ////volume: litre
-            //su = new SoapUnitDefinition("", "", "", "", Guid.Empty, "volume", "volume", false);
-            //srvu = new ServerUnitDefinition(su);
-            //srvu.UpdateDatabase();
-            //srvu.AddUnit(UnitDefinitionManager.GetBaseUnitId("litre"), 1, 0, 1);
+            //            ////volume: litre
+            //            //su = new SoapUnitDefinition("", "", "", "", Guid.Empty, "volume", "volume", false);
+            //            //srvu = new ServerUnitDefinition(su);
+            //            //srvu.UpdateDatabase();
+            //            //srvu.AddUnit(UnitDefinitionManager.GetBaseUnitId("litre"), 1, 0, 1);
 
-            ////area: square metre
-            //su = new SoapUnitDefinition("", "", "", "", Guid.Empty, "area", "area", false);
-            //srvu = new ServerUnitDefinition(su);
-            //srvu.UpdateDatabase();
-            //srvu.AddUnit(UnitDefinitionManager.GetBaseUnitId("metre"), 2, 0, 1);
+            //            ////area: square metre
+            //            //su = new SoapUnitDefinition("", "", "", "", Guid.Empty, "area", "area", false);
+            //            //srvu = new ServerUnitDefinition(su);
+            //            //srvu.UpdateDatabase();
+            //            //srvu.AddUnit(UnitDefinitionManager.GetBaseUnitId("metre"), 2, 0, 1);
 
-            ////length: metre
-            //su = new SoapUnitDefinition("", "", "", "", Guid.Empty, "length", "length", false);
-            //srvu = new ServerUnitDefinition(su);
-            //srvu.UpdateDatabase();
-            //srvu.AddUnit(UnitDefinitionManager.GetBaseUnitId("metre"), 1, 0, 1);
+            //            ////length: metre
+            //            //su = new SoapUnitDefinition("", "", "", "", Guid.Empty, "length", "length", false);
+            //            //srvu = new ServerUnitDefinition(su);
+            //            //srvu.UpdateDatabase();
+            //            //srvu.AddUnit(UnitDefinitionManager.GetBaseUnitId("metre"), 1, 0, 1);
 
-            ////time: second
-            //su = new SoapUnitDefinition("", "", "", "", Guid.Empty, "time", "time", false);
-            //srvu = new ServerUnitDefinition(su);
-            //srvu.UpdateDatabase();
-            //srvu.AddUnit(UnitDefinitionManager.GetBaseUnitId("second"), 1, 0, 1);
+            //            ////time: second
+            //            //su = new SoapUnitDefinition("", "", "", "", Guid.Empty, "time", "time", false);
+            //            //srvu = new ServerUnitDefinition(su);
+            //            //srvu.UpdateDatabase();
+            //            //srvu.AddUnit(UnitDefinitionManager.GetBaseUnitId("second"), 1, 0, 1);
 
-            ////************************************** prefill ReactionSpeciesRole Table ************************
-            //Console.WriteLine("Populating ReactionSpeciesRole Table...");
-            //string[] roles = { "Reactant", "Product", "Modifier" };
+            //            ////************************************** prefill ReactionSpeciesRole Table ************************
+            //            //Console.WriteLine("Populating ReactionSpeciesRole Table...");
+            //            //string[] roles = { "Reactant", "Product", "Modifier" };
 
-            //SoapReactionSpeciesRole rsr;
-            //ServerReactionSpeciesRole srvrsr;
+            //            //SoapReactionSpeciesRole rsr;
+            //            //ServerReactionSpeciesRole srvrsr;
 
-            //foreach (string role in roles)
-            //{
-            //    rsr = new SoapReactionSpeciesRole(role);
-            //    srvrsr = new ServerReactionSpeciesRole(rsr);
-            //    srvrsr.UpdateDatabase();
-            //}
-
-
-            ////************************************** prefill RuleType Table **********************************
-            //Console.WriteLine("Populating RuleType Table...");
-            //string[] ruleType = { "Algebraic Rule", "Assignment Rule", "Rate Rule" };
-
-            //SoapRuleType sRuleType;
-            //ServerRuleType serRuleType;
-
-            //foreach (string rule in ruleType)
-            //{
-            //    sRuleType = new SoapRuleType(rule);
-            //    serRuleType = new ServerRuleType(sRuleType);
-            //    serRuleType.UpdateDatabase();
-            //}
-            #endregion
-
-            var soapModel = new SoapModel("", "", "", "", "recon2.04", "recon2.04", 2, 4, 1, "", Guid.NewGuid().ToString());
-            var serverModel = new ServerModel(soapModel);
-            serverModel.UpdateDatabase();
-
-            var sSpeciesType = new SoapSpeciesType("", "", "", "", serverModel.ID, "human", "human");
-            var serSpeciesType = new ServerSpeciesType(sSpeciesType);
-            serSpeciesType.UpdateDatabase();
+            //            //foreach (string role in roles)
+            //            //{
+            //            //    rsr = new SoapReactionSpeciesRole(role);
+            //            //    srvrsr = new ServerReactionSpeciesRole(rsr);
+            //            //    srvrsr.UpdateDatabase();
+            //            //}
 
 
-            var comps = new[]{"x","peroxisome",
-"l","lysosome",
-"c","cytoplasm",
-"e","extracellular space",
-"m","mitochondrion",
-"r","endoplasmic reticulum",
-"n","nucleus",
-"g","Golgi apparatus"};
+            //            ////************************************** prefill RuleType Table **********************************
+            //            //Console.WriteLine("Populating RuleType Table...");
+            //            //string[] ruleType = { "Algebraic Rule", "Assignment Rule", "Rate Rule" };
 
-            var comparts = new Dictionary<string, ServerCompartment>();
-            for (var i = 0; i < 16; i += 2)
-            {
-                var comp = new SoapCompartment(
-              "",
-              "",
-              "",
-              "",
-              serverModel.ID,
-              comps[i],
-              comps[i + 1],
-              Guid.Empty,
-              3,
-              1,
-              Guid.Empty,
-              Guid.Empty,
-              Guid.Empty,
-              false);
-                var scomp = new ServerCompartment(comp);
-                scomp.UpdateDatabase();
-                comparts[comps[i]] = scomp;
-            }
+            //            //SoapRuleType sRuleType;
+            //            //ServerRuleType serRuleType;
 
-            var react = new Dictionary<string, ServerReaction>();
+            //            //foreach (string rule in ruleType)
+            //            //{
+            //            //    sRuleType = new SoapRuleType(rule);
+            //            //    serRuleType = new ServerRuleType(sRuleType);
+            //            //    serRuleType.UpdateDatabase();
+            //            //}
+            //            #endregion
 
-            for (var i = 0; i < metaCount; i++)
-            {
-                Console.Write("\r{0}    ", i);
-                var co = meta[i].Substring(meta[i].IndexOf("[", StringComparison.Ordinal) + 1, 1);
-                var sSpecies = new SoapSpecies(
-                  "",
-                  "",
-                  "",
-                  "",
-                  serverModel.ID,
-                  meta[i],
-                  metaName[i],
-                  serSpeciesType.ID,
-                  comparts[co].ID,
-                  0.0,
-                  0.0,
-                  Guid.Parse("64D77374-9139-403D-AF39-13EF69F972C1"),
-                  false,
-                  false,
-                  1,
-                  false);
+            //            var soapModel = new SoapModel("", "", "", "", "recon2.04", "recon2.04", 2, 4, 1, "", Guid.NewGuid().ToString());
+            //            var serverModel = new ServerModel(soapModel);
+            //            serverModel.UpdateDatabase();
 
-                var serSpecies = new ServerSpecies(sSpecies);
-                serSpecies.UpdateDatabase();
-                for (var j = 0; j < reactCount; j++)
-                {
-                    if (Math.Abs(S[i, j]) < double.Epsilon) continue;
-                    //var reactions = ServerReaction.FindReactionsByIds(serverModel.ID, reacts[j]);
+            //            var sSpeciesType = new SoapSpeciesType("", "", "", "", serverModel.ID, "human", "human");
+            //            var serSpeciesType = new ServerSpeciesType(sSpeciesType);
+            //            serSpeciesType.UpdateDatabase();
 
-                    ServerReaction serReaction;
-                    if (react.ContainsKey(reacts[j]))
-                    {
-                        serReaction = react[reacts[j]];
-                    }
-                    else
-                    {
-                        var sReaction = new SoapReaction(
-                            "",
-                            "",
-                            "",
-                            "",
-                            serverModel.ID,
-                            reacts[j],
-                            reactsName[j],
-                            rev[j],
-                            false,
-                            Guid.Empty);
-                        serReaction = new ServerReaction(sReaction);
-                        serReaction.UpdateDatabase();
-                        react[reacts[j]] = serReaction;
-                    }
 
-                    var sRSpecies = new SoapReactionSpecies(
-                  "",
-                  "",
-                  "",
-                  "",
-                  serReaction.ID,
-                  serSpecies.ID,
-                  S[i, j] > 0 ? Util.ProductId : Util.ReactantId,
-                  Math.Abs(S[i, j]),
-                  Guid.Empty,
-                    reacts[i] + meta[i],
-                     reacts[i] + meta[i]);
-                    var serRSpecies = new ServerReactionSpecies(sRSpecies);
-                    serRSpecies.UpdateDatabase();
+            //            var comps = new[]{"x","peroxisome",
+            //"l","lysosome",
+            //"c","cytoplasm",
+            //"e","extracellular space",
+            //"m","mitochondrion",
+            //"r","endoplasmic reticulum",
+            //"n","nucleus",
+            //"g","Golgi apparatus"};
 
-                }
-            }
+            //            var comparts = new Dictionary<string, ServerCompartment>();
+            //            for (var i = 0; i < 16; i += 2)
+            //            {
+            //                var comp = new SoapCompartment(
+            //              "",
+            //              "",
+            //              "",
+            //              "",
+            //              serverModel.ID,
+            //              comps[i],
+            //              comps[i + 1],
+            //              Guid.Empty,
+            //              3,
+            //              1,
+            //              Guid.Empty,
+            //              Guid.Empty,
+            //              Guid.Empty,
+            //              false);
+            //                var scomp = new ServerCompartment(comp);
+            //                scomp.UpdateDatabase();
+            //                comparts[comps[i]] = scomp;
+            //            }
+
+            //            var react = new Dictionary<string, ServerReaction>();
+
+            //            for (var i = 0; i < metaCount; i++)
+            //            {
+            //                Console.Write("\r{0}    ", i);
+            //                var co = meta[i].Substring(meta[i].IndexOf("[", StringComparison.Ordinal) + 1, 1);
+            //                var sSpecies = new SoapSpecies(
+            //                  "",
+            //                  "",
+            //                  "",
+            //                  "",
+            //                  serverModel.ID,
+            //                  meta[i],
+            //                  metaName[i],
+            //                  serSpeciesType.ID,
+            //                  comparts[co].ID,
+            //                  0.0,
+            //                  0.0,
+            //                  Guid.Parse("64D77374-9139-403D-AF39-13EF69F972C1"),
+            //                  false,
+            //                  false,
+            //                  1,
+            //                  false);
+
+            //                var serSpecies = new ServerSpecies(sSpecies);
+            //                serSpecies.UpdateDatabase();
+            //                for (var j = 0; j < reactCount; j++)
+            //                {
+            //                    if (Math.Abs(S[i, j]) < double.Epsilon) continue;
+            //                    //var reactions = ServerReaction.FindReactionsByIds(serverModel.ID, reacts[j]);
+
+            //                    ServerReaction serReaction;
+            //                    if (react.ContainsKey(reacts[j]))
+            //                    {
+            //                        serReaction = react[reacts[j]];
+            //                    }
+            //                    else
+            //                    {
+            //                        var sReaction = new SoapReaction(
+            //                            "",
+            //                            "",
+            //                            "",
+            //                            "",
+            //                            serverModel.ID,
+            //                            reacts[j],
+            //                            reactsName[j],
+            //                            rev[j],
+            //                            false,
+            //                            Guid.Empty);
+            //                        serReaction = new ServerReaction(sReaction);
+            //                        serReaction.UpdateDatabase();
+            //                        react[reacts[j]] = serReaction;
+            //                    }
+
+            //                    var sRSpecies = new SoapReactionSpecies(
+            //                  "",
+            //                  "",
+            //                  "",
+            //                  "",
+            //                  serReaction.ID,
+            //                  serSpecies.ID,
+            //                  S[i, j] > 0 ? Util.ProductId : Util.ReactantId,
+            //                  Math.Abs(S[i, j]),
+            //                  Guid.Empty,
+            //                    reacts[i] + meta[i],
+            //                     reacts[i] + meta[i]);
+            //                    var serRSpecies = new ServerReactionSpecies(sRSpecies);
+            //                    serRSpecies.UpdateDatabase();
+
+            //                }
+            //            }
 
 
         }
@@ -378,23 +373,23 @@
             var graph = new HyperGraph();
             Console.WriteLine("Loading graph...");
             var count = 0;
-            foreach (var m in ServerModel.Load(Guid.Parse("18B867B4-CBBE-4140-B753-DDDFC0A49445")).GetAllSpecies())
+            foreach (var m in Db.Context.Species.Where(m => m.modelId == Guid.Parse("18B867B4-CBBE-4140-B753-DDDFC0A49445")))
             {
-                graph.AddNode(m.ID, m.SbmlId);
-                foreach (var consumer in m.getAllReactions(Util.Reactant))
+                graph.AddNode(m.id, m.sbmlId);
+                foreach (var consumer in m.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId && rs.speciesId == m.id))
                 {
-                    graph.AddReactant(consumer.ID, consumer.SbmlId, m.ID, m.SbmlId);
+                    graph.AddReactant(consumer.id, consumer.sbmlId, m.id, m.sbmlId);
                 }
 
-                foreach (var producer in m.getAllReactions(Util.Product))
+                foreach (var producer in m.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId && rs.speciesId == m.id))//getAllReactions(Util.Product))
                 {
-                    graph.AddProduct(producer.ID, producer.SbmlId, m.ID, m.SbmlId);
+                    graph.AddProduct(producer.id, producer.sbmlId, m.id, m.sbmlId);
                 }
 
                 Console.Write("\r{0} metabolites  ", count++);
             }
             Console.WriteLine("M:{0}   R:{1}", graph.Nodes.Count, graph.Edges.Count);
-            var deadend = graph.Nodes.Values.Where(n => n.Consumers.Count == 0 || n.Producers.Count == 0).Select(n => n.Label + " " + Util.GetReactionCountSum(n.Id));
+            var deadend = graph.Nodes.Values.Where(n => n.Consumers.Count == 0 || n.Producers.Count == 0).Select(n => n.Label + " " + Db.GetReactionCountSum(n.Id));
             File.WriteAllLines("B:\\deadend2.txt", deadend);
             var lone = graph.Nodes.Values.Count(n => n.Consumers.Count == 0 && n.Producers.Count == 0);
 
@@ -419,18 +414,13 @@
             //TheAlgorithm.DefineBlockedReactions(graph);
         }
 
-        //public static void Main()
-        //{
-        //    var dir = Util.Dir;
-        //}
-
         #region main
 
         /// <summary>
         /// The main.
         /// </summary>
 
-        public static void Main11()
+        public static void Main()
         {
             var p = new TheAlgorithm();
             p.Fba.RemoveConstraints = false;
@@ -440,17 +430,17 @@
                 Console.Clear();
                 Console.SetCursorPosition(0, 0);
 
-                //var it = p.Step(1).First();
                 Console.WriteLine("\n************** ITERATION {0} *************** ", p.Iteration);
                 p.Step();
-                if (p.Iteration >= 8)
-                //if (!p.IsFeasable)
+                //if (p.Iteration >= 8)
+                if (!p.IsFeasable)
                 {
                     //p.Fba.RemoveConstraints = true;
                     //foreach (var str in p.Pathway)
                     //{
                     //    Console.Write(str+" => ");
                     //}
+
                     //if (p.Iteration == 8)
                     //{
                     //    var c = new CyclesFinder();
@@ -459,48 +449,8 @@
                     //}
                     Console.ReadKey();
                 }
-
-                //if (it.Id >= 21)
-                //{
-                //    p.Fba.RemoveConstraints = true;
-                //    Console.ReadKey();
-                //}
-
             }
-            while (true); //count != sm.Edges.Count
-        }
-
-        private static void Init(TheAlgorithm Worker)
-        {
-            var strCon = ConfigurationManager.AppSettings["dbConnectString"];
-            DBWrapper.Instance = new DBWrapper(strCon);
-
-
-            string[] zn =
-            {
-                "ADP", "ATP(4-)",
-                "D-Fructose 6-phosphate", "D-Fructose 1,6-bisphosphate", "Dihydroxyacetone phosphate",
-                "Glyceraldehyde 3-phosphate", "L-threonine", "taurochenodeoxycholate",
-                "D-glucose", "3-Phospho-D-glycerate", "D-Glycerate 2-phosphate", "Phosphoenolpyruvate", "pyruvate",
-                "Prothrombin", "pantetheine"
-            };
-
-            var zlist =
-                (from s in zn select ServerSpecies.AllSpeciesByNameOnly(s) into spec where spec.Length > 0 select spec[0])
-                    .ToList();
-            zlist.Sort((species, serverSpecies) => string.Compare(species.SbmlId, serverSpecies.SbmlId, StringComparison.Ordinal));
-            //var rand = new Random((int)DateTime.UtcNow.ToBinary());
-
-            foreach (var s in zlist)
-            {
-                Worker.Z[s.ID] = (s.ID.GetHashCode() % 2) == 0 ? -1 : 1;//rand.NextDouble() >= 0.5 ? 1 : -1;
-                Console.WriteLine("{0}:{1}", s.SbmlId, Worker.Z[s.ID]);
-            }
-
-            //var id = Guid.Parse("{05954e8b-244a-4b59-b650-315f2c8e0f43}");
-            var id = Guid.Parse("1218e2af-e534-41e6-bc59-e9731c95b182");
-            Worker.Z[id] = (id.GetHashCode() % 2) == 0 ? -1 : 1; //rand.NextDouble() >= 0.5 ? 1 : -1;
-            Console.WriteLine("{0}:{1}", Util.CachedS(id).SbmlId, Worker.Z[id]);
+            while (true); 
         }
 
         #endregion
@@ -510,8 +460,8 @@
 
         public static void Main3()
         {
-            var gen = new NetworkGenerator();
-            gen.Gen2("");
+            //var gen = new NetworkGenerator();
+            //gen.Gen2("");
         }
 
         public static void Main4()
@@ -584,7 +534,7 @@
             {
                 var obj = model.AddObjective(ObjectiveSense.Maximize, vars["b3"]);
                 var isfeas = model.Solve();
-                model.ExportModel(string.Format("{0}{1}model.lp", Util.Dir, vars["b2"]));
+                model.ExportModel(string.Format("{0}{1}model.lp", Core.Dir, vars["b2"]));
                 FVA.SaveResult(graph, isfeas, model, vars, graph.Edges[b2]);
                 //var max = model.GetValue(vars["b2"]);
                 //model.Remove(obj);
