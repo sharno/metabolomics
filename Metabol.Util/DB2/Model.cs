@@ -4,6 +4,7 @@ namespace Metabol.Util.DB2
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     [Table("Model")]
     public partial class Model
@@ -11,20 +12,20 @@ namespace Metabol.Util.DB2
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public Model()
         {
-            this.Compartments = new HashSet<Compartment>();
-            this.CompartmentTypes = new HashSet<CompartmentType>();
-            this.Constraints = new HashSet<Constraint>();
-            this.Events = new HashSet<Event>();
-            this.FunctionDefinitions = new HashSet<FunctionDefinition>();
-            this.InitialAssignments = new HashSet<InitialAssignment>();
-            this.MapModelsPathways = new HashSet<MapModelsPathway>();
-            this.ModelOrganism = new HashSet<ModelOrganism>();
-            this.Parameters = new HashSet<Parameter>();
-            this.Reactions = new HashSet<Reaction>();
-            this.Rules = new HashSet<Rule>();
-            this.SpeciesTypes = new HashSet<SpeciesType>();
-            this.Units = new HashSet<Unit>();
-            this.UnitDefinitions = new HashSet<UnitDefinition>();
+            Compartments = new HashSet<Compartment>();
+            CompartmentTypes = new HashSet<CompartmentType>();
+            Constraints = new HashSet<Constraint>();
+            Events = new HashSet<Event>();
+            FunctionDefinitions = new HashSet<FunctionDefinition>();
+            InitialAssignments = new HashSet<InitialAssignment>();
+            MapModelsPathways = new HashSet<MapModelsPathway>();
+            ModelOrganism = new HashSet<ModelOrganism>();
+            Parameters = new HashSet<Parameter>();
+            Reactions = new HashSet<Reaction>();
+            Rules = new HashSet<Rule>();
+            SpeciesTypes = new HashSet<SpeciesType>();
+            Units = new HashSet<Unit>();
+            UnitDefinitions = new HashSet<UnitDefinition>();
         }
 
         public Guid id { get; set; }

@@ -4,13 +4,14 @@ namespace Metabol.Util.DB2
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     public partial class OLD_external_databases
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public OLD_external_databases()
         {
-            this.OLD_external_database_links = new HashSet<OLD_external_database_links>();
+            OLD_external_database_links = new HashSet<OLD_external_database_links>();
         }
 
         public Guid id { get; set; }

@@ -2,15 +2,17 @@ namespace Metabol.Util.DB2
 {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     public partial class gene_products
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public gene_products()
         {
-            this.gene_encodings = new HashSet<gene_encodings>();
-            this.catalyzes = new HashSet<catalyze>();
+            gene_encodings = new HashSet<gene_encodings>();
+            catalyzes = new HashSet<catalyze>();
         }
 
         public Guid id { get; set; }

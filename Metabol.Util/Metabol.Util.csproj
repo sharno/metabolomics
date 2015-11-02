@@ -68,6 +68,7 @@
   <ItemGroup>
     <Compile Include="Cycle.cs" />
     <Compile Include="CyclesFinder.cs" />
+    <Compile Include="Db.cs" />
     <Compile Include="DB2\AnnotationQualifier.cs" />
     <Compile Include="DB2\attribute_names.cs" />
     <Compile Include="DB2\attribute_values.cs" />
@@ -85,7 +86,9 @@
     <Compile Include="DB2\CompartmentType.cs" />
     <Compile Include="DB2\Constraint.cs" />
     <Compile Include="DB2\Cycle.cs" />
+    <Compile Include="DB2\CycleConnection.cs" />
     <Compile Include="DB2\CycleReaction.cs" />
+    <Compile Include="DB2\C__MigrationHistory.cs" />
     <Compile Include="DB2\DataSource.cs" />
     <Compile Include="DB2\DesignedBy.cs" />
     <Compile Include="DB2\ec_go.cs" />
@@ -118,7 +121,7 @@
     <Compile Include="DB2\MapReactionsProcessEntity.cs" />
     <Compile Include="DB2\MapSbaseGO.cs" />
     <Compile Include="DB2\MapSpeciesMolecularEntity.cs" />
-    <Compile Include="DB2\MetabolicNetworkDbContext.cs" />
+    <Compile Include="DB2\MetabolicNetworkDBContext.cs" />
     <Compile Include="DB2\MetaboliteReactionCount.cs" />
     <Compile Include="DB2\MetaboliteReactionStoichiometry.cs" />
     <Compile Include="DB2\Model.cs" />
@@ -158,13 +161,7 @@
     <Compile Include="DB2\Unit.cs" />
     <Compile Include="DB2\UnitDefinition.cs" />
     <Compile Include="DB2\viewState.cs" />
-    <Compile Include="Db.cs" />
     <Compile Include="HyperGraph.cs" />
-    <Compile Include="Migrations\201510241602271_MetaboliteReaction.cs" />
-    <Compile Include="Migrations\201510241602271_MetaboliteReaction.Designer.cs">
-      <DependentUpon>201510241602271_MetaboliteReaction.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
@@ -173,9 +170,8 @@
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
     <Compile Include="SimpleCycle\Cycle.cs" />
-    <Compile Include="SimpleCycle\CyclesFinder.cs" />
     <Compile Include="SimpleCycle\DFS.cs" />
-    <Compile Include="SimpleCycle\Vertex.cs" />
+    <Compile Include="SimpleCycle\Edge.cs" />
     <Compile Include="Core.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -189,11 +185,7 @@
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Migrations\201510241602271_MetaboliteReaction.resx">
-      <DependentUpon>201510241602271_MetaboliteReaction.cs</DependentUpon>
-    </EmbeddedResource>
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

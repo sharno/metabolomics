@@ -90,16 +90,16 @@ namespace Metabol.Util
             return Nodes.AddOrUpdate(id, Node.Create(id, label, Step, b), (guid, node) => node);
         }
 
-        public void AddReactant(Guid eid, string elabel, Guid nid, string label, bool b)
+        public void AddReactant(Guid eid, string elabel, Guid nid, string label, bool isPseudo)
         {
             var node = Nodes.GetOrAdd(nid, Node.Create(nid, label, Step));
             var e = Edges.GetOrAdd(eid, Edge.Create(eid, Step));
             e.Label = elabel;
             e.AddReactant(node);
-            e.IsPseudo = b;
+            e.IsPseudo = isPseudo;
             try
             {
-                if (!b) node.Weights[eid] = Math.Abs(Db.CachedRs(eid, nid).stoichiometry);
+                if (!isPseudo) node.Weights[eid] = Math.Abs(Db.CachedRs(eid, nid).stoichiometry);
             }
             catch (Exception ex)
             {
@@ -108,16 +108,16 @@ namespace Metabol.Util
             node.UpdatePseudo();
         }
 
-        public void AddProduct(Guid eid, string elabel, Guid nid, string label, bool b)
+        public void AddProduct(Guid eid, string elabel, Guid nid, string label, bool isPseudo)
         {
             var node = Nodes.GetOrAdd(nid, Node.Create(nid, label, Step));
             var e = Edges.GetOrAdd(eid, Edge.Create(eid, Step));
             e.Label = elabel;
             e.AddProduct(node);
-            e.IsPseudo = b;
+            e.IsPseudo = isPseudo;
             try
             {
-                if (!b) node.Weights[eid] = Math.Abs(Db.CachedRs(eid, nid).stoichiometry);
+                if (!isPseudo) node.Weights[eid] = Math.Abs(Db.CachedRs(eid, nid).stoichiometry);
             }
             catch (Exception ex)
             {
@@ -296,6 +296,9 @@ namespace Metabol.Util
 
             [JsonProperty("level")]
             public int Level { get; set; }
+
+            [JsonProperty("isReversible")]
+            public bool IsReversible { get; set; }
 
             [JsonIgnore]
             public Reaction ToServerReaction

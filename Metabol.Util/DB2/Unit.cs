@@ -2,7 +2,9 @@ namespace Metabol.Util.DB2
 {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     [Table("Unit")]
     public partial class Unit
@@ -10,7 +12,7 @@ namespace Metabol.Util.DB2
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public Unit()
         {
-            this.UnitDefinitions = new HashSet<UnitDefinition>();
+            UnitDefinitions = new HashSet<UnitDefinition>();
         }
 
         public Guid id { get; set; }

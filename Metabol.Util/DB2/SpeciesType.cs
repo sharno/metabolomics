@@ -4,6 +4,7 @@ namespace Metabol.Util.DB2
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     [Table("SpeciesType")]
     public partial class SpeciesType
@@ -11,7 +12,7 @@ namespace Metabol.Util.DB2
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public SpeciesType()
         {
-            this.Species = new HashSet<Species>();
+            Species = new HashSet<Species>();
         }
 
         public Guid id { get; set; }

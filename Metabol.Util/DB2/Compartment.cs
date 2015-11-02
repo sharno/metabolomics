@@ -4,6 +4,7 @@ namespace Metabol.Util.DB2
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     [Table("Compartment")]
     public partial class Compartment
@@ -11,8 +12,8 @@ namespace Metabol.Util.DB2
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public Compartment()
         {
-            this.Compartment1 = new HashSet<Compartment>();
-            this.Species = new HashSet<Species>();
+            Compartment1 = new HashSet<Compartment>();
+            Species = new HashSet<Species>();
         }
 
         public Guid id { get; set; }

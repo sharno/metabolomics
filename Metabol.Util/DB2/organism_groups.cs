@@ -4,17 +4,18 @@ namespace Metabol.Util.DB2
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     public partial class organism_groups
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public organism_groups()
         {
-            this.genes = new HashSet<gene>();
-            this.MapModelsPathways = new HashSet<MapModelsPathway>();
-            this.ModelOrganism = new HashSet<ModelOrganism>();
-            this.catalyzes = new HashSet<catalyze>();
-            this.organism_groups1 = new HashSet<organism_groups>();
+            genes = new HashSet<gene>();
+            MapModelsPathways = new HashSet<MapModelsPathway>();
+            ModelOrganism = new HashSet<ModelOrganism>();
+            catalyzes = new HashSet<catalyze>();
+            organism_groups1 = new HashSet<organism_groups>();
         }
 
         public Guid id { get; set; }

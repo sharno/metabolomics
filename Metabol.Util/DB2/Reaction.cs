@@ -2,7 +2,9 @@ namespace Metabol.Util.DB2
 {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     [Table("Reaction")]
     public partial class Reaction
@@ -10,10 +12,9 @@ namespace Metabol.Util.DB2
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public Reaction()
         {
-            this.CycleReactions = new HashSet<CycleReaction>();
-            this.MapReactionECNumbers = new HashSet<MapReactionECNumber>();
-            this.MapReactionsProcessEntities = new HashSet<MapReactionsProcessEntity>();
-            this.ReactionSpecies = new HashSet<ReactionSpecy>();
+            MapReactionECNumbers = new HashSet<MapReactionECNumber>();
+            MapReactionsProcessEntities = new HashSet<MapReactionsProcessEntity>();
+            ReactionSpecies = new HashSet<ReactionSpecy>();
         }
 
         public Guid id { get; set; }
@@ -29,9 +30,6 @@ namespace Metabol.Util.DB2
         public bool fast { get; set; }
 
         public Guid? kineticLawId { get; set; }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<CycleReaction> CycleReactions { get; set; }
 
         public virtual KineticLaw KineticLaw { get; set; }
 

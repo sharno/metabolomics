@@ -9,7 +9,7 @@
 
     public class Db
     {
-        public static readonly MetabolicNetworkDbContext Context = new MetabolicNetworkDbContext();
+        public static readonly MetabolicNetworkDBContext Context = new MetabolicNetworkDBContext();
 
         private static readonly MemoryCache CacheSpecieses = new MemoryCache("species");
         private static readonly MemoryCache CacheReactions = new MemoryCache("reactions");

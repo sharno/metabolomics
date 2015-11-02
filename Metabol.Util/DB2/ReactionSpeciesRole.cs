@@ -1,8 +1,10 @@
 namespace Metabol.Util.DB2
 {
+    using System;
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     [Table("ReactionSpeciesRole")]
     public partial class ReactionSpeciesRole
@@ -10,7 +12,7 @@ namespace Metabol.Util.DB2
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public ReactionSpeciesRole()
         {
-            this.ReactionSpecies = new HashSet<ReactionSpecy>();
+            ReactionSpecies = new HashSet<ReactionSpecy>();
         }
 
         public byte id { get; set; }

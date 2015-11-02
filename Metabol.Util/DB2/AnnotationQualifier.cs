@@ -1,8 +1,10 @@
 namespace Metabol.Util.DB2
 {
+    using System;
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     [Table("AnnotationQualifier")]
     public partial class AnnotationQualifier
@@ -10,11 +12,11 @@ namespace Metabol.Util.DB2
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public AnnotationQualifier()
         {
-            this.MapModelsPathways = new HashSet<MapModelsPathway>();
-            this.MapReactionECNumbers = new HashSet<MapReactionECNumber>();
-            this.MapReactionsProcessEntities = new HashSet<MapReactionsProcessEntity>();
-            this.ModelOrganism = new HashSet<ModelOrganism>();
-            this.MapSpeciesMolecularEntities = new HashSet<MapSpeciesMolecularEntity>();
+            MapModelsPathways = new HashSet<MapModelsPathway>();
+            MapReactionECNumbers = new HashSet<MapReactionECNumber>();
+            MapReactionsProcessEntities = new HashSet<MapReactionsProcessEntity>();
+            ModelOrganism = new HashSet<ModelOrganism>();
+            MapSpeciesMolecularEntities = new HashSet<MapSpeciesMolecularEntity>();
         }
 
         public short id { get; set; }

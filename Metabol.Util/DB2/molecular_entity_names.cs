@@ -3,14 +3,16 @@ namespace Metabol.Util.DB2
     using System;
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
+    using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     public partial class molecular_entity_names
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public molecular_entity_names()
         {
-            this.ec_number_name_lookups = new HashSet<ec_number_name_lookups>();
-            this.entity_name_lookups = new HashSet<entity_name_lookups>();
+            ec_number_name_lookups = new HashSet<ec_number_name_lookups>();
+            entity_name_lookups = new HashSet<entity_name_lookups>();
         }
 
         public Guid id { get; set; }

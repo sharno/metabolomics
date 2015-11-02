@@ -8,7 +8,7 @@ namespace Metabol.Util.SimpleCycle
 {
     class DFS
     {
-        public static void DetectAndCollapseCycles(Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph)
+        public static void DetectAndCollapseCycles(Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph, HyperGraph hypergraph)
         {
             Dictionary<Guid, bool> marked = new Dictionary<Guid, bool>();
             Stack<Guid> stack = new Stack<Guid>();
@@ -29,7 +29,8 @@ namespace Metabol.Util.SimpleCycle
                     if (Search(graph, v, marked, stack, cycle))
                     {
                         findingCycles = true;
-                        Program.recordToDatabase(Program.CollapseCycle(graph, cycle), cycle);
+                        Guid cycleId = Program.CollapseCycle(graph, cycle, hypergraph);
+                        Program.recordToDatabase(cycleId, cycle, graph, hypergraph);
                         break;
                     }
                 }

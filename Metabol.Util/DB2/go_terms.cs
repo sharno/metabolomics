@@ -1,14 +1,17 @@
 namespace Metabol.Util.DB2
 {
+    using System;
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
+    using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     public partial class go_terms
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public go_terms()
         {
-            this.GONodeCodes = new HashSet<GONodeCode>();
+            GONodeCodes = new HashSet<GONodeCode>();
         }
 
         [StringLength(7)]

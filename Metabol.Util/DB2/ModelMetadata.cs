@@ -4,6 +4,7 @@ namespace Metabol.Util.DB2
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     [Table("ModelMetadata")]
     public partial class ModelMetadata
@@ -11,7 +12,7 @@ namespace Metabol.Util.DB2
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public ModelMetadata()
         {
-            this.DesignedBies = new HashSet<DesignedBy>();
+            DesignedBies = new HashSet<DesignedBy>();
         }
 
         public Guid Id { get; set; }

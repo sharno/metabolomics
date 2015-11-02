@@ -507,11 +507,12 @@
         {
             try
             {
-                var cycles = Db.Context.CycleReactions.Where(cr => cr.reactionId == r.id && !cr.isExchange).Select(cr => cr.Cycle);
+                var cycles = Db.Context.CycleReactions.Where(cr => cr.otherId == r.id && !cr.isReaction).Select(cr => cr.Cycle);
                 if (!cycles.Any()) return;
                 foreach (var c in cycles)
                     foreach (var cr in c.CycleReactions)
-                        AddMetabolites(sm, cr.Reaction);
+                        // TODO make sure it's not a cycle
+                        AddMetabolites(sm, Db.Context.Reactions.Find(cr.otherId));
 
             }
             catch (Exception e)

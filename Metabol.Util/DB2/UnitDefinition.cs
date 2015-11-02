@@ -4,6 +4,7 @@ namespace Metabol.Util.DB2
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     [Table("UnitDefinition")]
     public partial class UnitDefinition
@@ -11,11 +12,11 @@ namespace Metabol.Util.DB2
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public UnitDefinition()
         {
-            this.Compartments = new HashSet<Compartment>();
-            this.Parameters = new HashSet<Parameter>();
-            this.Species = new HashSet<Species>();
-            this.Units = new HashSet<Unit>();
-            this.Units1 = new HashSet<Unit>();
+            Compartments = new HashSet<Compartment>();
+            Parameters = new HashSet<Parameter>();
+            Species = new HashSet<Species>();
+            Units = new HashSet<Unit>();
+            Units1 = new HashSet<Unit>();
         }
 
         public Guid id { get; set; }

@@ -4,17 +4,18 @@ namespace Metabol.Util.DB2
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     public partial class pathway
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public pathway()
         {
-            this.MapModelsPathways = new HashSet<MapModelsPathway>();
-            this.pathway_links = new HashSet<pathway_links>();
-            this.pathway_links1 = new HashSet<pathway_links>();
-            this.pathway_processes = new HashSet<pathway_processes>();
-            this.pathway_groups = new HashSet<pathway_groups>();
+            MapModelsPathways = new HashSet<MapModelsPathway>();
+            pathway_links = new HashSet<pathway_links>();
+            pathway_links1 = new HashSet<pathway_links>();
+            pathway_processes = new HashSet<pathway_processes>();
+            pathway_groups = new HashSet<pathway_groups>();
         }
 
         public Guid id { get; set; }

@@ -4,13 +4,14 @@ namespace Metabol.Util.DB2
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     public partial class chromosome
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public chromosome()
         {
-            this.genes = new HashSet<gene>();
+            genes = new HashSet<gene>();
         }
 
         public Guid id { get; set; }

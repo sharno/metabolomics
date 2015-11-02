@@ -1,8 +1,10 @@
 namespace Metabol.Util.DB2
 {
+    using System;
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
 
     [Table("RuleType")]
     public partial class RuleType
@@ -10,7 +12,7 @@ namespace Metabol.Util.DB2
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public RuleType()
         {
-            this.Rules = new HashSet<Rule>();
+            Rules = new HashSet<Rule>();
         }
 
         [StringLength(100)]

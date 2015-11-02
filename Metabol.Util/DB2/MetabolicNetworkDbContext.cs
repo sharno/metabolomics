@@ -1,16 +1,18 @@
 namespace Metabol.Util.DB2
 {
+    using System;
     using System.Data.Entity;
+    using System.ComponentModel.DataAnnotations.Schema;
+    using System.Linq;
 
-    public partial class MetabolicNetworkDbContext : DbContext
+    public partial class MetabolicNetworkDBContext : DbContext
     {
-        public MetabolicNetworkDbContext()
-            : base("name=MetabolicNetwork")
+        public MetabolicNetworkDBContext()
+            : base("name=MetabolicNetworkDBContext3")
         {
         }
-        
-        public virtual DbSet<MetaboliteReactionCount> MetaboliteReactionCount { get; set; }
-        public virtual DbSet<MetaboliteReactionStoichiometry> MetaboliteReactionStoichiometry { get; set; }
+
+        public virtual DbSet<C__MigrationHistory> C__MigrationHistory { get; set; }
         public virtual DbSet<AnnotationQualifier> AnnotationQualifiers { get; set; }
         public virtual DbSet<attribute_names> attribute_names { get; set; }
         public virtual DbSet<attribute_values> attribute_values { get; set; }
@@ -23,6 +25,7 @@ namespace Metabol.Util.DB2
         public virtual DbSet<CompartmentType> CompartmentTypes { get; set; }
         public virtual DbSet<Constraint> Constraints { get; set; }
         public virtual DbSet<Cycle> Cycles { get; set; }
+        public virtual DbSet<CycleConnection> CycleConnections { get; set; }
         public virtual DbSet<CycleReaction> CycleReactions { get; set; }
         public virtual DbSet<DataSource> DataSources { get; set; }
         public virtual DbSet<DesignedBy> DesignedBies { get; set; }
@@ -45,6 +48,8 @@ namespace Metabol.Util.DB2
         public virtual DbSet<MapReactionECNumber> MapReactionECNumbers { get; set; }
         public virtual DbSet<MapReactionsProcessEntity> MapReactionsProcessEntities { get; set; }
         public virtual DbSet<MapSpeciesMolecularEntity> MapSpeciesMolecularEntities { get; set; }
+        public virtual DbSet<MetaboliteReactionCount> MetaboliteReactionCounts { get; set; }
+        public virtual DbSet<MetaboliteReactionStoichiometry> MetaboliteReactionStoichiometries { get; set; }
         public virtual DbSet<Model> Models { get; set; }
         public virtual DbSet<ModelLayout> ModelLayouts { get; set; }
         public virtual DbSet<ModelMetadata> ModelMetadatas { get; set; }
@@ -198,6 +203,11 @@ namespace Metabol.Util.DB2
             modelBuilder.Entity<CompartmentType>()
                 .Property(e => e.name)
                 .IsUnicode(false);
+
+            modelBuilder.Entity<Cycle>()
+                .HasMany(e => e.CycleConnections)
+                .WithRequired(e => e.Cycle)
+                .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<Cycle>()
                 .HasMany(e => e.CycleReactions)
@@ -635,11 +645,6 @@ namespace Metabol.Util.DB2
                 .IsUnicode(false);
 
             modelBuilder.Entity<Reaction>()
-                .HasMany(e => e.CycleReactions)
-                .WithRequired(e => e.Reaction)
-                .WillCascadeOnDelete(false);
-
-            modelBuilder.Entity<Reaction>()
                 .HasMany(e => e.MapReactionECNumbers)
                 .WithRequired(e => e.Reaction)
                 .WillCascadeOnDelete(false);
@@ -788,6 +793,12 @@ namespace Metabol.Util.DB2
             modelBuilder.Entity<Species>()
                 .Property(e => e.name)
                 .IsUnicode(false);
+
+            modelBuilder.Entity<Species>()
+                .HasMany(e => e.CycleConnections)
+                .WithRequired(e => e.Species)
+                .HasForeignKey(e => e.metaboliteId)
+                .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<SpeciesType>()
                 .Property(e => e.sbmlId)
