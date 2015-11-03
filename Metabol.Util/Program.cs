@@ -151,12 +151,12 @@ namespace Metabol.Util
                     if (reactant.Value.Producers.Select(r => r.Id).Except(cycle).Count() != 0 || reactant.Value.Consumers.Select(r => r.Id).Except(cycle).Count() != 0)
                     {
                         reactant.Value.Weights[cycleId] = reactant.Value.Weights[v];
-                        hypergraph.AddReactant(cycleId, cycleId.ToString(), reactant.Key, reactant.Value.Label, true);
+                        hypergraph.AddReactant(cycleId, cycleId.ToString(), reactant.Key, reactant.Value.Label, true, true);
 
                         // TODO if reaction is reversible
                         if (hypergraph.Edges[v].IsReversible)
                         {
-                            hypergraph.AddProduct(cycleId, cycleId.ToString(), reactant.Key, reactant.Value.Label, true);
+                            hypergraph.AddProduct(cycleId, cycleId.ToString(), reactant.Key, reactant.Value.Label, true, true);
                         }
                     }
                 }
@@ -165,12 +165,12 @@ namespace Metabol.Util
                     if (product.Value.Consumers.Select(r => r.Id).Except(cycle).Count() != 0 || product.Value.Producers.Select(r => r.Id).Except(cycle).Count() != 0)
                     {
                         product.Value.Weights[cycleId] = product.Value.Weights[v];
-                        hypergraph.AddProduct(cycleId, cycleId.ToString(), product.Key, product.Value.Label, true);
+                        hypergraph.AddProduct(cycleId, cycleId.ToString(), product.Key, product.Value.Label, true, true);
 
                         // TODO if reaction is reversible
                         if (hypergraph.Edges[v].IsReversible)
                         {
-                            hypergraph.AddReactant(cycleId, cycleId.ToString(), product.Key, product.Value.Label, true);
+                            hypergraph.AddReactant(cycleId, cycleId.ToString(), product.Key, product.Value.Label, true, true);
                         }
                     }
                 }
@@ -210,8 +210,8 @@ namespace Metabol.Util
 
             foreach (var reaction in cycle)
             {
-                bool _isReaction = (Db.Context.Reactions.Find(reaction) != null);
-                cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycleModel.id, otherId = reaction, isReaction = _isReaction });
+//                bool _isReaction = (Db.Context.Reactions.Find(reaction) != null);
+                cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycleModel.id, otherId = reaction, isReaction = !hypergraph.Edges[reaction].IsCycle });
             }
 
             // recording metabolites
@@ -221,15 +221,15 @@ namespace Metabol.Util
 
             foreach (var reversibleMetabolite in reversibleMetabolites)
             {
-                Db.Context.CycleConnections.Add(new CycleConnection() { cycleId = cycleModel.id, metaboliteId = reversibleMetabolite.Key, roleId = Db.ReactantId, stoichiometry = reversibleMetabolite.Value.Weights[cycleId], isReversible = true});
+                Db.Context.CycleConnections.Add(new CycleConnection() { cycleId = cycleId, metaboliteId = reversibleMetabolite.Key, roleId = Db.ReactantId, stoichiometry = reversibleMetabolite.Value.Weights[cycleId], isReversible = true});
             }
             foreach (var reactant in hypergraph.Edges[cycleId].Reactants)
             {
-                Db.Context.CycleConnections.Add(new CycleConnection() { cycleId = cycleModel.id, metaboliteId = reactant.Key, roleId = Db.ReactantId, stoichiometry = reactant.Value.Weights[cycleId], isReversible = false});
+                Db.Context.CycleConnections.Add(new CycleConnection() { cycleId = cycleId, metaboliteId = reactant.Key, roleId = Db.ReactantId, stoichiometry = reactant.Value.Weights[cycleId], isReversible = false});
             }
             foreach (var product in hypergraph.Edges[cycleId].Products)
             {
-                Db.Context.CycleConnections.Add(new CycleConnection() { cycleId = cycleModel.id, metaboliteId = product.Key, roleId = Db.ProductId, stoichiometry = product.Value.Weights[cycleId], isReversible = false});
+                Db.Context.CycleConnections.Add(new CycleConnection() { cycleId = cycleId, metaboliteId = product.Key, roleId = Db.ProductId, stoichiometry = product.Value.Weights[cycleId], isReversible = false});
             }
 
 

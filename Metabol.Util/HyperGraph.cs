@@ -136,6 +136,26 @@ namespace Metabol.Util
             AddReactant(eid, elabel, nid, sbmlId, false);
         }
 
+        public void AddReactant(Guid eid, string elabel, Guid nid, string label, bool isPseudo, bool isCycle)
+        {
+            var node = Nodes.GetOrAdd(nid, Node.Create(nid, label, Step));
+            var e = Edges.GetOrAdd(eid, Edge.Create(eid, Step));
+            e.Label = elabel;
+            e.AddReactant(node);
+            e.IsPseudo = isPseudo;
+            e.IsCycle = isCycle;
+        }
+
+        public void AddProduct(Guid eid, string elabel, Guid nid, string label, bool isPseudo, bool isCycle)
+        {
+            var node = Nodes.GetOrAdd(nid, Node.Create(nid, label, Step));
+            var e = Edges.GetOrAdd(eid, Edge.Create(eid, Step));
+            e.Label = elabel;
+            e.AddProduct(node);
+            e.IsPseudo = isPseudo;
+            e.IsCycle = isCycle;
+        }
+
         //public void AddProductCommon(Guid eid, string p1, Guid nid, string p2)
         //{
         //    var node = Node.Create(nid, p2, Step, true);
@@ -146,17 +166,17 @@ namespace Metabol.Util
         //    node.Weights[eid] = Math.Abs(Util.CachedRs(eid, nid).Stoichiometry);
         //}
 
-        //public void AddReactantCommon(Guid eid, string p1, Guid nid, string p2)
-        //{
-        //    var node = Node.Create(nid, p2, Step, true);
-        //    Nodes.GetOrAdd(node.Id, node);
-        //    var e = Edges.GetOrAdd(eid, Edge.Create(eid, Step));
-        //    e.Label = p1;
-        //    e.AddReactant(node);
-        //    node.Weights[eid] = Util.CachedRs(eid, nid).Stoichiometry;
-        //}
+            //public void AddReactantCommon(Guid eid, string p1, Guid nid, string p2)
+            //{
+            //    var node = Node.Create(nid, p2, Step, true);
+            //    Nodes.GetOrAdd(node.Id, node);
+            //    var e = Edges.GetOrAdd(eid, Edge.Create(eid, Step));
+            //    e.Label = p1;
+            //    e.AddReactant(node);
+            //    node.Weights[eid] = Util.CachedRs(eid, nid).Stoichiometry;
+            //}
 
-        // remove node for cycle detection
+            // remove node for cycle detection
         public void RemoveNode(Guid nid)
         {
             foreach (var consumer in Nodes[nid].Consumers)
@@ -299,6 +319,9 @@ namespace Metabol.Util
 
             [JsonProperty("isReversible")]
             public bool IsReversible { get; set; }
+
+            [JsonProperty("isCycle")]
+            public bool IsCycle { get; set; }
 
             [JsonIgnore]
             public Reaction ToServerReaction
