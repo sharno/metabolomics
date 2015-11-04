@@ -17,6 +17,8 @@ namespace Metabol.Util.DB2
         [Column(Order = 1)]
         public Guid otherId { get; set; }
 
+        [Key]
+        [Column(Order = 2)]
         public bool isReaction { get; set; }
 
         public virtual Cycle Cycle { get; set; }

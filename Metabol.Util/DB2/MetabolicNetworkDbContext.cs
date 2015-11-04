@@ -8,7 +8,7 @@ namespace Metabol.Util.DB2
     public partial class MetabolicNetworkDBContext : DbContext
     {
         public MetabolicNetworkDBContext()
-            : base("name=MetabolicNetworkDBContext3")
+            : base("name=MetabolicNetworkDBContext5")
         {
         }
 
@@ -25,8 +25,6 @@ namespace Metabol.Util.DB2
         public virtual DbSet<CompartmentType> CompartmentTypes { get; set; }
         public virtual DbSet<Constraint> Constraints { get; set; }
         public virtual DbSet<Cycle> Cycles { get; set; }
-        public virtual DbSet<CycleConnection> CycleConnections { get; set; }
-        public virtual DbSet<CycleReaction> CycleReactions { get; set; }
         public virtual DbSet<DataSource> DataSources { get; set; }
         public virtual DbSet<DesignedBy> DesignedBies { get; set; }
         public virtual DbSet<ec_number_name_lookups> ec_number_name_lookups { get; set; }
@@ -91,6 +89,8 @@ namespace Metabol.Util.DB2
         public virtual DbSet<chromosome_bands> chromosome_bands { get; set; }
         public virtual DbSet<chromosomes_pathcase> chromosomes_pathcase { get; set; }
         public virtual DbSet<CompartmentClass> CompartmentClasses { get; set; }
+        public virtual DbSet<CycleConnection> CycleConnections { get; set; }
+        public virtual DbSet<CycleReaction> CycleReactions { get; set; }
         public virtual DbSet<ec_go> ec_go { get; set; }
         public virtual DbSet<ec_go_orig> ec_go_orig { get; set; }
         public virtual DbSet<entity_graph_nodes> entity_graph_nodes { get; set; }

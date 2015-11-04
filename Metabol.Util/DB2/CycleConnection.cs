@@ -17,10 +17,16 @@ namespace Metabol.Util.DB2
         [Column(Order = 1)]
         public Guid metaboliteId { get; set; }
 
+        [Key]
+        [Column(Order = 2)]
         public byte roleId { get; set; }
 
+        [Key]
+        [Column(Order = 3)]
         public double stoichiometry { get; set; }
 
+        [Key]
+        [Column(Order = 4)]
         public bool isReversible { get; set; }
 
         public virtual Cycle Cycle { get; set; }
