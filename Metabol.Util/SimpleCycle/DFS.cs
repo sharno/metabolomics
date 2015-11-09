@@ -18,6 +18,7 @@ namespace Metabol.Util.SimpleCycle
 
             while (findingCycles)
             {
+//                Core.SaveAsDgs(hypergraph.Nodes.First().Value, hypergraph, "C:\\Users\\sharno\\Desktop\\" + count);
                 Console.WriteLine("finding cycle " + count);
                 count ++;
                 findingCycles = false;
@@ -31,6 +32,11 @@ namespace Metabol.Util.SimpleCycle
                         findingCycles = true;
                         Guid cycleId = Program.CollapseCycle(graph, cycle, hypergraph);
                         Program.recordToDatabase(cycleId, cycle, graph, hypergraph);
+
+                        foreach (var reaction in cycle)
+                        {
+                            hypergraph.RemoveReaction(hypergraph.Edges[reaction]);
+                        }
                         break;
                     }
                 }

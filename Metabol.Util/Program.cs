@@ -20,7 +20,7 @@ namespace Metabol.Util
 
     class Program
     {
-        private static List<DB2.Cycle> allCycles = new List<DB2.Cycle>();
+//        private static List<DB2.Cycle> allCycles = new List<DB2.Cycle>();
         private static int count = 0;
 
         public static Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> ConvertFromHypergraph(HyperGraph hyperGraph)
@@ -106,6 +106,25 @@ namespace Metabol.Util
 
         public static Guid CollapseCycle(Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph, List<Guid> cycle, HyperGraph hypergraph)
         {
+            // debugging lines
+            //foreach (var v in cycle)
+            //{
+            //    Console.WriteLine(hypergraph.Edges[v].Label + "    isReversible = " + hypergraph.Edges[v].IsReversible);
+            //    Console.Write("reactants:");
+            //    foreach (var reactant in hypergraph.Edges[v].Reactants)
+            //    {
+            //        Console.Write(reactant.Value.Label + "  ");
+            //    }
+            //    Console.WriteLine();
+            //    Console.Write("products:");
+            //    foreach (var product in hypergraph.Edges[v].Products)
+            //    {
+            //        Console.Write(product.Value.Label + "  ");
+            //    }
+            //    Console.WriteLine();
+            //    Console.WriteLine();
+            //}
+
             Guid cycleId = Guid.NewGuid();
             graph[cycleId] = Tuple.Create(new HashSet<Guid>(), new HashSet<Guid>(), false);
             foreach (var v in cycle)
@@ -135,19 +154,19 @@ namespace Metabol.Util
             // modify hypergraph
             foreach (var v in cycle)
             {
-                //                reactants.UnionWith(
-                //                    hypergraph.Edges[v].Reactants.Where(
-                //                        m => m.Value.Producers.Select(p => p.Id).Except(cycle).Count() != 0).Select(m => m.Key));
-                //                reactants.UnionWith(
-                //                    hypergraph.Edges[v].Reactants.Where(
-                //                        m => m.Value.Consumers.Select(c => c.Id).Except(cycle).Count() != 0).Select(m => m.Key));
-                //
-                //                products.UnionWith(
-                //                    hypergraph.Edges[v].Products.Where(
-                //                        m => m.Value.Consumers.Select(c => c.Id).Except(cycle).Count() != 0).Select(m => m.Key));
-                //                products.UnionWith(
-                //                    hypergraph.Edges[v].Products.Where(
-                //                        m => m.Value.Producers.Select(p => p.Id).Except(cycle).Count() != 0).Select(m => m.Key));
+//                reactants.UnionWith(
+//                    hypergraph.Edges[v].Reactants.Where(
+//                        m => m.Value.Producers.Select(p => p.Id).Except(cycle).Count() != 0).Select(m => m.Key));
+//                reactants.UnionWith(
+//                    hypergraph.Edges[v].Reactants.Where(
+//                        m => m.Value.Consumers.Select(c => c.Id).Except(cycle).Count() != 0).Select(m => m.Key));
+//
+//                products.UnionWith(
+//                    hypergraph.Edges[v].Products.Where(
+//                        m => m.Value.Consumers.Select(c => c.Id).Except(cycle).Count() != 0).Select(m => m.Key));
+//                products.UnionWith(
+//                    hypergraph.Edges[v].Products.Where(
+//                        m => m.Value.Producers.Select(p => p.Id).Except(cycle).Count() != 0).Select(m => m.Key));
 
                 foreach (var reactant in hypergraph.Edges[v].Reactants)
                 {
@@ -180,41 +199,53 @@ namespace Metabol.Util
 
                 // TODO remove this line if all graph is connected
                 hypergraph.Edges.GetOrAdd(cycleId, HyperGraph.Edge.Create(cycleId, 1));
+
+                // removing the reactions of the cycle from hypergraph are moved to recordToDatabase
             }
 
             return cycleId;
         }
 
-        //        public static Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> ConvertFromHypergraphTest(HyperGraph hyperGraph)
-        //        {
-        //            Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph = new Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>>();
-        //
-        //            foreach (var edge in hyperGraph.Edges)
-        //            {
-        //                graph[edge.Key] = Tuple.Create(new HashSet<Guid>(), new HashSet<Guid>(), true);
-        //
-        //                foreach (var product in edge.Value.Products)
-        //                {
-        //                    foreach (var consumer in product.Value.Consumers)
-        //                    {
-        //                        graph[edge.Key].Item2.Add(consumer.Id);
-        //                    }
-        //                }
-        //            }
-        //
-        //            return graph;
-        //        }
+        public static Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> ConvertFromHypergraphTest(HyperGraph hyperGraph)
+        {
+            Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph = new Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>>();
+
+            foreach (var edge in hyperGraph.Edges)
+            {
+                graph[edge.Key] = Tuple.Create(new HashSet<Guid>(), new HashSet<Guid>(), true);
+
+                foreach (var product in edge.Value.Products)
+                {
+                    foreach (var consumer in product.Value.Consumers)
+                    {
+                        graph[edge.Key].Item2.Add(consumer.Id);
+                    }
+                }
+
+                foreach (var reactant in edge.Value.Reactants)
+                {
+                    foreach (var producer in reactant.Value.Producers)
+                    {
+                        graph[edge.Key].Item1.Add(producer.Id);
+                    }
+                }
+            }
+
+            return graph;
+        }
 
         public static void recordToDatabase(Guid cycleId, List<Guid> cycle, Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph, HyperGraph hypergraph)
         {
             var cycleModel = new DB2.Cycle();
             cycleModel.id = cycleId;
+            Db.Context.Database.ExecuteSqlCommand("INSERT INTO Cycle VALUES (@p0)", cycleId);
 
 
             foreach (var reaction in cycle)
             {
                 //                bool _isReaction = (Db.Context.Reactions.Find(reaction) != null);
-                cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycleModel.id, otherId = reaction, isReaction = !hypergraph.Edges[reaction].IsCycle });
+                //                cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycleModel.id, otherId = reaction, isReaction = !hypergraph.Edges[reaction].IsCycle });
+                Db.Context.Database.ExecuteSqlCommand("INSERT INTO CycleReaction(cycleId, otherId,isReaction ) VALUES (@p0, @p1, @p2)", cycleId, reaction, !hypergraph.Edges[reaction].IsCycle);
             }
 
             // recording metabolites
@@ -224,119 +255,84 @@ namespace Metabol.Util
 
             foreach (var reversibleMetabolite in reversibleMetabolites)
             {
-                cycleModel.CycleConnections.Add(new CycleConnection() { cycleId = cycleId, metaboliteId = reversibleMetabolite.Key, roleId = Db.ReactantId, stoichiometry = reversibleMetabolite.Value.Weights[cycleId], isReversible = true });
+                //                cycleModel.CycleConnections.Add(new CycleConnection() { cycleId = cycleId, metaboliteId = reversibleMetabolite.Key, roleId = Db.ReactantId, stoichiometry = reversibleMetabolite.Value.Weights[cycleId], isReversible = true });
+                Db.Context.Database.ExecuteSqlCommand("INSERT INTO CycleConnection (cycleId, metaboliteId, roleId, stoichiometry, isReversible) VALUES (@p0, @p1, @p2, @p3, @p4)", cycleId, reversibleMetabolite.Key, Db.ReactantId, reversibleMetabolite.Value.Weights[cycleId], true);
             }
             foreach (var reactant in hypergraph.Edges[cycleId].Reactants)
             {
-                cycleModel.CycleConnections.Add(new CycleConnection() { cycleId = cycleId, metaboliteId = reactant.Key, roleId = Db.ReactantId, stoichiometry = reactant.Value.Weights[cycleId], isReversible = false });
+                //                cycleModel.CycleConnections.Add(new CycleConnection() { cycleId = cycleId, metaboliteId = reactant.Key, roleId = Db.ReactantId, stoichiometry = reactant.Value.Weights[cycleId], isReversible = false });
+                Db.Context.Database.ExecuteSqlCommand("INSERT INTO CycleConnection (cycleId, metaboliteId, roleId, stoichiometry, isReversible) VALUES (@p0, @p1, @p2, @p3, @p4)", cycleId, reactant.Key, Db.ReactantId, reactant.Value.Weights[cycleId], true);
             }
             foreach (var product in hypergraph.Edges[cycleId].Products)
             {
-                cycleModel.CycleConnections.Add(new CycleConnection() { cycleId = cycleId, metaboliteId = product.Key, roleId = Db.ProductId, stoichiometry = product.Value.Weights[cycleId], isReversible = false });
+                //                cycleModel.CycleConnections.Add(new CycleConnection() { cycleId = cycleId, metaboliteId = product.Key, roleId = Db.ProductId, stoichiometry = product.Value.Weights[cycleId], isReversible = false });
+                Db.Context.Database.ExecuteSqlCommand("INSERT INTO CycleConnection (cycleId, metaboliteId, roleId, stoichiometry, isReversible) VALUES (@p0, @p1, @p2, @p3, @p4)", cycleId, product.Key, Db.ReactantId, product.Value.Weights[cycleId], true);
+
             }
 
-            allCycles.Add(cycleModel);
-            count ++;
-
-            if (count%1000 == 0)
-            {
-                Db.Context.Cycles.AddRange(allCycles);
-                Db.Context.SaveChanges();
-
-                allCycles.Clear();
-            }
+            // removing reactions from hypergraph
+            // this is moved to DFS calling function
+//            foreach (var reaction in cycle)
+//            {
+//                hypergraph.RemoveReaction(hypergraph.Edges[reaction]);
+//            }
         }
 
         static void Main()
         {
+            Console.WriteLine("WARNING: This is going to erase the whole cycle database and record it from scratch, and this is going to take a lot of time");
+            Console.WriteLine("Press any key if you are sure you want to continue ...");
+            Console.ReadKey();
+
+            const int Outliear = 61;
+            var g = new HyperGraph();
+            var count = 0;
+            //.Where(p => Db.GetReactionCountSum(p.id) < Outliear)
+            foreach (var sp in Db.Context.Species.ToList())
             {
-                const int Outliear = 61;
-                var g = new HyperGraph();
-                var count = 0;
-                //.Where(p => Db.GetReactionCountSum(p.id) < Outliear)
-                foreach (var sp in Db.Context.Species.ToList())
+                count++;
+                if (count == 30)
+                    break;
+
+                Console.WriteLine("adding metabolite " + count);
+
+                foreach (var pr in sp.ReactionSpecies
+                    .Where(
+                        rs =>
+                            rs.speciesId == sp.id && rs.roleId == Db.ProductId &&
+                            rs.Reaction.sbmlId != "R_biomass_reaction"))
                 {
-                    count++;
-//                    if (count == 500)
-//                        break;
-
-                    Console.WriteLine("adding metabolite " + count);
-
-                    foreach (var pr in sp.ReactionSpecies
-                        .Where(
-                            rs =>
-                                rs.speciesId == sp.id && rs.roleId == Db.ProductId &&
-                                rs.Reaction.sbmlId != "R_biomass_reaction"))
-                    {
-                        g.AddProduct(pr.reactionId, pr.Reaction.sbmlId, sp.id, sp.sbmlId);
-                        g.Edges[pr.reactionId].IsReversible = pr.Reaction.reversible;
-                    }
-                    foreach (var pr in sp.ReactionSpecies
-                        .Where(
-                            rs =>
-                                rs.speciesId == sp.id && rs.roleId == Db.ReactantId &&
-                                rs.Reaction.sbmlId != "R_biomass_reaction"))
-                    {
-                        g.AddReactant(pr.reactionId, pr.Reaction.sbmlId, sp.id, sp.sbmlId);
-                        g.Edges[pr.reactionId].IsReversible = pr.Reaction.reversible;
-                    }
+                    g.AddProduct(pr.reactionId, pr.Reaction.sbmlId, sp.id, sp.sbmlId);
+                    g.Edges[pr.reactionId].IsReversible = pr.Reaction.reversible;
                 }
-
-                Console.WriteLine("loaded the whole network");
-
-                // var reactions = "";
-                //g.Edges.Values.Select(TheAlgorithm.ToReaction).ToDictionary(e => e.Id);
-                //var fba = new Fba();
-                //fba.Solve(reactions, Z, g);
-                //Console.ReadKey();
-
+                foreach (var pr in sp.ReactionSpecies
+                    .Where(
+                        rs =>
+                            rs.speciesId == sp.id && rs.roleId == Db.ReactantId &&
+                            rs.Reaction.sbmlId != "R_biomass_reaction"))
                 {
-                    // delete all entries from DB
-                    Db.Context.Database.ExecuteSqlCommand("TRUNCATE TABLE CycleReaction");
-                    Db.Context.Database.ExecuteSqlCommand("TRUNCATE TABLE CycleConnection");
-                    Db.Context.Database.ExecuteSqlCommand("DELETE FROM Cycle");
-//                    Db.Context.CycleReactions.RemoveRange(Db.Context.CycleReactions.Where(e => true));
-//                    Db.Context.CycleConnections.RemoveRange(Db.Context.CycleConnections.Where(e => true));
-//                    Db.Context.Cycles.RemoveRange(Db.Context.Cycles.Where(e => true));
-//                    Db.Context.SaveChanges();
-                    Console.WriteLine("deleted DB entries");
+                    g.AddReactant(pr.reactionId, pr.Reaction.sbmlId, sp.id, sp.sbmlId);
+                    g.Edges[pr.reactionId].IsReversible = pr.Reaction.reversible;
                 }
-
-
-                Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph = ConvertFromHypergraph(g);
-                DFS.DetectAndCollapseCycles(graph, g);
-                Db.Context.Cycles.AddRange(allCycles);
-                Db.Context.SaveChanges();
-
-
-                //                List<List<Guid>> cycles = SimpleCycle.CyclesFinder.Find(ConvertFromHypergraph(g));
-                //                Console.WriteLine("Number of cycles: " + cycles.Count);
-
-                //using (var context = new CycleReactionModel())
-                {
-                    // delete all entries from DB
-                    //                    DbCache.MnContext.CycleReactions.RemoveRange(context.CycleReactions.Where(e => true));
-                    //                    DbCache.MnContext.Cycles.RemoveRange(context.Cycles.Where(e => true));
-                    //                    DbCache.MnContext.SaveChanges();
-                    //
-                    //
-                    //                    foreach (var cycle in cycles)
-                    //                    {
-                    //                        var cycleModel = new DB2.Cycle();
-                    //                        cycleModel.id = Guid.NewGuid();
-                    //
-                    //                        foreach (var reaction in cycle)
-                    //                        {
-                    //                            cycleModel.CycleReactions.Add(new CycleReaction() { cycleId = cycleModel.id, reactionId = reaction.Id, isExchange = false });
-                    //                        }
-                    //                        DbCache.MnContext.Cycles.Add(cycleModel);
-                    //                    }
-                    //                    DbCache.MnContext.SaveChanges();
-                }
-
-                Console.WriteLine("finished saving to DB");
-                Console.ReadKey();
             }
+
+            Console.WriteLine("loaded the whole network");
+                
+
+            // delete all entries from DB
+            Db.Context.Database.ExecuteSqlCommand("TRUNCATE TABLE CycleReaction");
+            Db.Context.Database.ExecuteSqlCommand("TRUNCATE TABLE CycleConnection");
+            Db.Context.Database.ExecuteSqlCommand("DELETE FROM Cycle");
+            Console.WriteLine("deleted DB entries");
+
+
+            Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph = ConvertFromHypergraph(g);
+            DFS.DetectAndCollapseCycles(graph, g);
+
+                
+
+            Console.WriteLine("finished saving to DB");
+            Console.ReadKey();
         }
 
         static void Main2()
@@ -358,6 +354,7 @@ namespace Metabol.Util
             //    ServerReaction.Load(Guid.Parse("EEFDAEF0-455F-49EC-915B-1B483DF23D39")),
             //    ServerReaction.Load(Guid.Parse("6D7FF530-F6BF-45C2-90FC-9409E68C3590"))
             //};
+            Species s1 = Db.Context.Species.Find("");
 
             //foreach (var reaction in rs)
             //{
@@ -373,57 +370,54 @@ namespace Metabol.Util
             //Util.SaveAsDgs(graf.Nodes.First().Value, graf, "C:\\Users\\sharno\\Desktop\\");
         }
 
-        static void Main3()
+        static void MainTest()
         {
-            var a = Guid.NewGuid();
-            var b = Guid.NewGuid();
-            var c = Guid.NewGuid();
-            var d = Guid.NewGuid();
-            var e = Guid.NewGuid();
+            var m1 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1");
+            var m2 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
+            var m3 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3");
+            var m4 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4");
 
-            var v1 = Guid.NewGuid();
-            var v2 = Guid.NewGuid();
-            var v3 = Guid.NewGuid();
-            var v4 = Guid.NewGuid();
+            var A = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaA");
+            var B = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaB");
+            var C = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaC");
+            var D = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaD");
             var v5 = Guid.NewGuid();
 
-            var graph = new HyperGraph();
-            graph.AddNode(a, "A");
-            graph.AddNode(b, "B");
-            graph.AddNode(c, "C");
-            graph.AddNode(d, "D");
+            var g = new HyperGraph();
+            g.AddNode(m1, "m1");
+            g.AddNode(m2, "m2");
 
-            graph.AddReactant(v1, "v1", a, "A");
-            graph.AddProduct(v1, "v1", b, "B");
+            g.AddReactant(A, "A", m4, "m4");
+            g.AddProduct(A, "A", m1, "m1");
+            g.AddProduct(A, "A", m2, "m2");
+            g.AddProduct(A, "A", m3, "m3");
 
-            graph.AddReactant(v1, "v1", a, "A");
-            graph.AddProduct(v1, "v1", c, "C");
+            g.AddReactant(B, "B", m1, "m1");
+            g.AddProduct(B, "B", m2, "m2");
+            g.AddProduct(B, "B", m3, "m3");
+            g.AddProduct(B, "B", m4, "m4");
 
-            graph.AddReactant(v2, "v2", b, "B");
-            graph.AddProduct(v2, "v2", a, "A");
+            g.AddReactant(C, "C", m2, "m2");
+            g.AddProduct(C, "C", m3, "m3");
+            g.AddProduct(C, "C", m4, "m4");
+            g.AddProduct(C, "C", m1, "m1");
 
-            graph.AddReactant(v2, "v2", c, "C");
-            graph.AddProduct(v2, "v2", a, "A");
+            g.AddReactant(D, "D", m3, "m3");
+            g.AddProduct(D, "D", m1, "m1");
+            g.AddProduct(D, "D", m4, "m4");
+            g.AddProduct(D, "D", m2, "m2");
 
-            //            graph.AddReactant(v4, "v4", d, "D");
-            //            graph.AddProduct(v4, "v4", a, "A");
-            //
-            //            graph.AddReactant(v5, "v5", a, "A");
-            //            graph.AddProduct(v5, "v5", c, "C");
+            foreach (var node in g.Nodes)
+            {
+                foreach (var edge in g.Edges)
+                {
+                    node.Value.Weights[edge.Key] = 1;
+                }
+            }
 
-
-            //            List<List<Guid>> l = SimpleCycle.CyclesFinder.Find(ConvertFromHypergraphTest(graph));
-
-
-            //            foreach (var cycle in l)
-            //            {
-            //                Console.WriteLine("cycle:");
-            //                foreach (var edge in cycle.ToArray())
-            //                {
-            //                    Console.WriteLine(graph.Edges[edge].Label);
-            //                }
-            //            }
-            //            Console.ReadKey();
+            Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph = ConvertFromHypergraphTest(g);
+            DFS.DetectAndCollapseCycles(graph, g);
+            
         }
 
 

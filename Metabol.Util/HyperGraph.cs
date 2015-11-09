@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace Metabol.Util
@@ -154,6 +155,21 @@ namespace Metabol.Util
             e.AddProduct(node);
             e.IsPseudo = isPseudo;
             e.IsCycle = isCycle;
+        }
+
+        public void RemoveReaction(Edge reaction)
+        {
+            foreach (var reactant in reaction.Reactants)
+            {
+                reactant.Value.Consumers.RemoveWhere(c => c.Id == reaction.Id);
+            }
+            foreach (var product in reaction.Products)
+            {
+                product.Value.Producers.RemoveWhere(p => p.Id == reaction.Id);
+            }
+
+            Edge _;
+            Edges.TryRemove(reaction.Id, out _);
         }
 
         //public void AddProductCommon(Guid eid, string p1, Guid nid, string p2)
