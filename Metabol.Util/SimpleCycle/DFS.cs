@@ -8,7 +8,7 @@ namespace Metabol.Util.SimpleCycle
 {
     class DFS
     {
-        public static void DetectAndCollapseCycles(Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph, HyperGraph hypergraph)
+        public static void DetectAndCollapseCycles(Graph graph, HyperGraph hypergraph)
         {
             Dictionary<Guid, bool> marked = new Dictionary<Guid, bool>();
             Stack<Guid> stack = new Stack<Guid>();
@@ -18,20 +18,20 @@ namespace Metabol.Util.SimpleCycle
 
             while (findingCycles)
             {
-//                Core.SaveAsDgs(hypergraph.Nodes.First().Value, hypergraph, "C:\\Users\\sharno\\Desktop\\" + count);
+                Core.SaveAsDgsTest(hypergraph.Nodes.First().Value, hypergraph, "C:\\Users\\sharno\\Desktop\\" + count);
                 Console.WriteLine("finding cycle " + count);
                 count ++;
                 findingCycles = false;
                 marked.Clear();
                 stack.Clear();
                 cycle.Clear();
-                foreach (var v in graph.Keys)
+                foreach (var v in graph.Nodes.Values)
                 {
-                    if (Search(graph, v, marked, stack, cycle))
+                    if (Search(graph, v, new Edge(null, null, false), marked, stack, cycle))
                     {
                         findingCycles = true;
                         Guid cycleId = Program.CollapseCycle(graph, cycle, hypergraph);
-                        Program.recordToDatabase(cycleId, cycle, graph, hypergraph);
+//                        Program.recordToDatabase(cycleId, cycle, graph, hypergraph);
 
                         foreach (var reaction in cycle)
                         {
@@ -43,18 +43,44 @@ namespace Metabol.Util.SimpleCycle
             }
         }
 
-        public static bool Search(Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph, Guid v, Dictionary<Guid, bool> marked, Stack<Guid> stack, List<Guid> cycle)
+        public static bool Search(Graph graph, Node v, Edge edgeComingFrom, Dictionary<Guid, bool> marked, Stack<Guid> stack, List<Guid> cycle)
         {
-            marked[v] = true;
-            stack.Push(v);
-            foreach (var w in graph[v].Item2)
+            marked[v.Id] = true;
+            stack.Push(v.Id);
+
+            // follow all next edges plus previous reversible ones but not the one we came from
+            HashSet<Edge> edges = new HashSet<Edge>();
+            foreach (var edge in v.Next)
             {
+                if (!edge.Equals(edgeComingFrom) 
+                    && edge.Destination is Reaction && ((Reaction)edge.Destination).CurrentDirection != Reaction.Backward 
+                    && v is Reaction && ((Reaction)v).CurrentDirection != Reaction.Backward)
+                {
+                    edges.Add(edge);
+                }
+            }
+            foreach (var edge in v.Previous)
+            {
+                if (!edge.Equals(edgeComingFrom) 
+                    && edge.IsReversible
+                    && edge.Destination is Reaction && ((Reaction)edge.Destination).CurrentDirection != Reaction.Forward
+                    && v is Reaction && ((Reaction)v).CurrentDirection != Reaction.Forward)
+                {
+                    edges.Add(edge);
+                }
+            }
+
+            foreach (var w in edges /*v.Next.Union(v.Previous.Where(edge => edge.IsReversible)).Where(edge => !edge.Equals(edgeComingFrom))*/)
+            {
+                // explore next node but not the same one (take reversibility into account)
+                Node nodeToExplore = w.Destination.Equals(v) ? w.Source : w.Destination;
+                
                 // detect a cycle
-                if (marked.ContainsKey(w))
+                if (marked.ContainsKey(nodeToExplore.Id))
                 {
                     Guid c = stack.Pop();
                     cycle.Add(c);
-                    while (w != c)
+                    while (w.Destination.Id != c)
                     {
                         c = stack.Pop();
                         cycle.Add(c);
@@ -62,13 +88,29 @@ namespace Metabol.Util.SimpleCycle
                     return true;
                 }
 
-                if (Search(graph, w, marked, stack, cycle))
+                // assign direction to the to be visited reaction
+                if (nodeToExplore is Reaction && ((Reaction)nodeToExplore).IsReversible)
+                {
+                    ((Reaction) nodeToExplore).CurrentDirection = w.Destination.Equals(nodeToExplore)
+                        ? Reaction.Forward
+                        : Reaction.Backward;
+                }
+
+                // explore next node and return if a cycle found
+                if (Search(graph, nodeToExplore, w, marked, stack, cycle))
                 {
                     return true;
                 }
             }
+
+            // assign direction to the to be visited reaction
+            if (v is Reaction && ((Reaction)v).IsReversible)
+            {
+                ((Reaction)v).CurrentDirection = Reaction.Undecided;
+            }
+
             stack.Pop();
-            marked.Remove(v);
+            marked.Remove(v.Id);
             return false;
         }
     }

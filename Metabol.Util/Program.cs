@@ -20,136 +20,48 @@ namespace Metabol.Util
 
     class Program
     {
-//        private static List<DB2.Cycle> allCycles = new List<DB2.Cycle>();
         private static int count = 0;
 
-        public static Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> ConvertFromHypergraph(HyperGraph hyperGraph)
+        public static Graph ConvertFromHypergraph(HyperGraph hyperGraph)
         {
-            var graph = new Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>>();
+            var graph = new Graph();
 
             foreach (var edge in hyperGraph.Edges)
             {
-                // Item1 is coming in edges, Item2 is going out edges
-                graph[edge.Key] = Tuple.Create(new HashSet<Guid>(), new HashSet<Guid>(), true);
-
-
-                // 1. recording going out edges
-                foreach (var product in edge.Value.Products)
-                {
-                    foreach (var consumer in product.Value.Consumers)
-                    {
-                        graph[edge.Key].Item2.Add(consumer.Id);
-                    }
-                    // if one of the producers of the product is a reversible reaction
-                    foreach (var producer in product.Value.Producers)
-                    {
-                        if (producer.ToServerReaction.reversible)
-                        {
-                            graph[edge.Key].Item2.Add(producer.Id);
-                        }
-                    }
-                }
-                // if it's a reversible reaction
-                if (edge.Value.ToServerReaction.reversible)
-                {
-                    foreach (var reactant in edge.Value.Reactants)
-                    {
-                        foreach (var consumer in reactant.Value.Consumers)
-                        {
-                            graph[edge.Key].Item2.Add(consumer.Id);
-                        }
-                    }
-                }
-
-
-                // 2. recording coming in edges
-                foreach (var reactant in edge.Value.Reactants)
-                {
-                    foreach (var producer in reactant.Value.Producers)
-                    {
-                        graph[edge.Key].Item1.Add(producer.Id);
-                    }
-                    // if one of the consumers of the reactant is a reversible reaction
-                    foreach (var consumer in reactant.Value.Consumers)
-                    {
-                        if (consumer.ToServerReaction.reversible)
-                        {
-                            graph[edge.Key].Item1.Add(consumer.Id);
-                        }
-                    }
-                }
-                // if it's a reversible reaction
-                if (edge.Value.ToServerReaction.reversible)
-                {
-                    foreach (var product in edge.Value.Products)
-                    {
-                        foreach (var producer in product.Value.Producers)
-                        {
-                            graph[edge.Key].Item1.Add(producer.Id);
-                        }
-                    }
-                }
-
-                // no self loops
-                graph[edge.Key].Item1.Remove(edge.Key);
-                graph[edge.Key].Item2.Remove(edge.Key);
+                graph.CreateNewReaction(edge.Key, edge.Value.IsReversible);
             }
 
-            foreach (var key in graph.Keys)
+            foreach (var edge in hyperGraph.Edges)
             {
-                Console.WriteLine(hyperGraph.Edges[key].Label);
-                Console.WriteLine(graph[key].Item2.Count);
+                graph.AddEdgesToReaction(edge.Value);
             }
 
             return graph;
         }
 
-        public static Guid CollapseCycle(Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph, List<Guid> cycle, HyperGraph hypergraph)
+        public static Guid CollapseCycle(Graph graph, List<Guid> cycle, HyperGraph hypergraph)
         {
             // debugging lines
-            //foreach (var v in cycle)
-            //{
-            //    Console.WriteLine(hypergraph.Edges[v].Label + "    isReversible = " + hypergraph.Edges[v].IsReversible);
-            //    Console.Write("reactants:");
-            //    foreach (var reactant in hypergraph.Edges[v].Reactants)
-            //    {
-            //        Console.Write(reactant.Value.Label + "  ");
-            //    }
-            //    Console.WriteLine();
-            //    Console.Write("products:");
-            //    foreach (var product in hypergraph.Edges[v].Products)
-            //    {
-            //        Console.Write(product.Value.Label + "  ");
-            //    }
-            //    Console.WriteLine();
-            //    Console.WriteLine();
-            //}
-
-            Guid cycleId = Guid.NewGuid();
-            graph[cycleId] = Tuple.Create(new HashSet<Guid>(), new HashSet<Guid>(), false);
             foreach (var v in cycle)
             {
-                foreach (var comingIn in graph[v].Item1)
+                Console.WriteLine("reaction " + hypergraph.Edges[v].Label + "    isReversible = " + hypergraph.Edges[v].IsReversible);
+                Console.Write("reactants:");
+                foreach (var reactant in hypergraph.Edges[v].Reactants)
                 {
-                    graph[comingIn].Item2.Remove(v);
-                    graph[comingIn].Item2.Add(cycleId);
+                    Console.Write(reactant.Value.Label + "  ");
                 }
-
-                foreach (var goingOut in graph[v].Item2)
+                Console.WriteLine();
+                Console.Write("products:");
+                foreach (var product in hypergraph.Edges[v].Products)
                 {
-                    graph[goingOut].Item1.Remove(v);
-                    graph[goingOut].Item1.Add(cycleId);
+                    Console.Write(product.Value.Label + "  ");
                 }
-
-                graph[cycleId].Item1.UnionWith(graph[v].Item1.Except(cycle));
-                graph[cycleId].Item2.UnionWith(graph[v].Item2.Except(cycle));
-
-                // no self loops
-                graph[cycleId].Item1.Remove(cycleId);
-                graph[cycleId].Item2.Remove(cycleId);
-
-                graph.Remove(v);
+                Console.WriteLine();
+                Console.WriteLine();
             }
+
+            Guid cycleId = graph.CollapseCycle(cycle);
+            
 
             // modify hypergraph
             foreach (var v in cycle)
@@ -206,33 +118,33 @@ namespace Metabol.Util
             return cycleId;
         }
 
-        public static Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> ConvertFromHypergraphTest(HyperGraph hyperGraph)
-        {
-            Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph = new Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>>();
-
-            foreach (var edge in hyperGraph.Edges)
-            {
-                graph[edge.Key] = Tuple.Create(new HashSet<Guid>(), new HashSet<Guid>(), true);
-
-                foreach (var product in edge.Value.Products)
-                {
-                    foreach (var consumer in product.Value.Consumers)
-                    {
-                        graph[edge.Key].Item2.Add(consumer.Id);
-                    }
-                }
-
-                foreach (var reactant in edge.Value.Reactants)
-                {
-                    foreach (var producer in reactant.Value.Producers)
-                    {
-                        graph[edge.Key].Item1.Add(producer.Id);
-                    }
-                }
-            }
-
-            return graph;
-        }
+//        public static Graph ConvertFromHypergraphTest(HyperGraph hyperGraph)
+//        {
+//            Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph = new Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>>();
+//
+//            foreach (var edge in hyperGraph.Edges)
+//            {
+//                graph[edge.Key] = Tuple.Create(new HashSet<Guid>(), new HashSet<Guid>(), true);
+//
+//                foreach (var product in edge.Value.Products)
+//                {
+//                    foreach (var consumer in product.Value.Consumers)
+//                    {
+//                        graph[edge.Key].Item2.Add(consumer.Id);
+//                    }
+//                }
+//
+//                foreach (var reactant in edge.Value.Reactants)
+//                {
+//                    foreach (var producer in reactant.Value.Producers)
+//                    {
+//                        graph[edge.Key].Item1.Add(producer.Id);
+//                    }
+//                }
+//            }
+//
+//            return graph;
+//        }
 
         public static void recordToDatabase(Guid cycleId, List<Guid> cycle, Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph, HyperGraph hypergraph)
         {
@@ -278,7 +190,7 @@ namespace Metabol.Util
 //            }
         }
 
-        static void Main()
+        static void Main0()
         {
             Console.WriteLine("WARNING: This is going to erase the whole cycle database and record it from scratch, and this is going to take a lot of time");
             Console.WriteLine("Press any key if you are sure you want to continue ...");
@@ -326,7 +238,7 @@ namespace Metabol.Util
             Console.WriteLine("deleted DB entries");
 
 
-            Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph = ConvertFromHypergraph(g);
+            Graph graph = ConvertFromHypergraph(g);
             DFS.DetectAndCollapseCycles(graph, g);
 
                 
@@ -370,42 +282,150 @@ namespace Metabol.Util
             //Util.SaveAsDgs(graf.Nodes.First().Value, graf, "C:\\Users\\sharno\\Desktop\\");
         }
 
-        static void MainTest()
+        static void Main()
         {
+            Test4();
+        }
+
+        static void TestRealData()
+        {
+            Console.WriteLine("Testing on real data");
+
+            var g = new HyperGraph();
+            var count = 0;
+            foreach (var sp in Db.Context.Species.ToList())
+            {
+                count++;
+                if (count == 30)
+                    break;
+
+                Console.WriteLine("adding metabolite " + count);
+
+                foreach (var pr in sp.ReactionSpecies
+                    .Where(
+                        rs =>
+                            rs.speciesId == sp.id && rs.roleId == Db.ProductId &&
+                            rs.Reaction.sbmlId != "R_biomass_reaction"))
+                {
+                    g.AddProduct(pr.reactionId, pr.Reaction.sbmlId, sp.id, sp.sbmlId);
+                    g.Edges[pr.reactionId].IsReversible = pr.Reaction.reversible;
+                }
+                foreach (var pr in sp.ReactionSpecies
+                    .Where(
+                        rs =>
+                            rs.speciesId == sp.id && rs.roleId == Db.ReactantId &&
+                            rs.Reaction.sbmlId != "R_biomass_reaction"))
+                {
+                    g.AddReactant(pr.reactionId, pr.Reaction.sbmlId, sp.id, sp.sbmlId);
+                    g.Edges[pr.reactionId].IsReversible = pr.Reaction.reversible;
+                }
+            }
+
+            Console.WriteLine("loaded the whole network");
+
+
+            Graph graph = ConvertFromHypergraph(g);
+            DFS.DetectAndCollapseCycles(graph, g);
+
+            Console.WriteLine("finished all");
+            Console.ReadKey();
+        }
+
+        static void Test1()
+        {
+            //var m1 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1");
+            //var m2 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
+            //var m3 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3");
+            //var m4 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4");
+
+            //var A = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaA");
+            //var B = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaB");
+            //var C = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaC");
+            //var D = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaD");
+            //var v5 = Guid.NewGuid();
+
+            //var g = new HyperGraph();
+            //g.AddNode(m1, "m1");
+            //g.AddNode(m2, "m2");
+            //g.AddNode(m3, "m3");
+            //g.AddNode(m4, "m4");
+
+            //g.AddReactant(A, "A", m2, "m2");
+            //g.AddProduct(A, "A", m1, "m1");
+            //g.AddProduct(A, "A", m3, "m3");
+            //g.AddProduct(A, "A", m4, "m4");
+
+            //g.AddReactant(B, "B", m1, "m1");
+            //g.AddProduct(B, "B", m2, "m2");
+            //g.AddProduct(B, "B", m3, "m3");
+            //g.AddProduct(B, "B", m4, "m4");
+
+            //g.AddReactant(C, "C", m3, "m3");
+            //g.AddProduct(C, "C", m4, "m4");
+            //g.AddProduct(C, "C", m1, "m1");
+            //g.AddProduct(C, "C", m2, "m2");
+
+            //g.AddReactant(D, "D", m4, "m4");
+            //g.AddProduct(D, "D", m1, "m1");
+            //g.AddProduct(D, "D", m2, "m2");
+            //g.AddProduct(D, "D", m3, "m3");
+
             var m1 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1");
             var m2 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
             var m3 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3");
             var m4 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4");
+            var m5 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa5");
+            var m6 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa6");
+            var m7 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa7");
+            var m8 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa8");
+            var m9 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa9");
+            var m10 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa10");
 
             var A = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaA");
             var B = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaB");
             var C = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaC");
             var D = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaD");
+            var E = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaE");
+            var F = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaF");
             var v5 = Guid.NewGuid();
 
             var g = new HyperGraph();
             g.AddNode(m1, "m1");
             g.AddNode(m2, "m2");
-
-            g.AddReactant(A, "A", m4, "m4");
+            g.AddNode(m3, "m3");
+            g.AddNode(m4, "m4");
+            g.AddNode(m5, "m5");
+            g.AddNode(m6, "m6");
+            g.AddNode(m7, "m7");
+            g.AddNode(m8, "m8");
+            g.AddNode(m9, "m9");
+            g.AddNode(m10, "m10");
+            
+            g.AddReactant(A, "A", m2, "m2");
+            g.AddReactant(A, "A", m9, "m9");
+            g.AddReactant(A, "A", m7, "m7");
             g.AddProduct(A, "A", m1, "m1");
-            g.AddProduct(A, "A", m2, "m2");
-            g.AddProduct(A, "A", m3, "m3");
+            g.AddProduct(A, "A", m8, "m8");
 
             g.AddReactant(B, "B", m1, "m1");
+            g.AddReactant(B, "B", m4, "m4");
             g.AddProduct(B, "B", m2, "m2");
             g.AddProduct(B, "B", m3, "m3");
-            g.AddProduct(B, "B", m4, "m4");
 
-            g.AddReactant(C, "C", m2, "m2");
-            g.AddProduct(C, "C", m3, "m3");
+            g.AddReactant(C, "C", m3, "m3");
+            g.AddReactant(C, "C", m6, "m6");
             g.AddProduct(C, "C", m4, "m4");
-            g.AddProduct(C, "C", m1, "m1");
+            g.AddProduct(C, "C", m5, "m5");
+            g.AddProduct(C, "C", m10, "m10");
 
-            g.AddReactant(D, "D", m3, "m3");
-            g.AddProduct(D, "D", m1, "m1");
-            g.AddProduct(D, "D", m4, "m4");
-            g.AddProduct(D, "D", m2, "m2");
+            g.AddReactant(D, "D", m5, "m5");
+            g.AddReactant(D, "D", m8, "m8");
+            g.AddProduct(D, "D", m7, "m7");
+            g.AddProduct(D, "D", m6, "m6");
+
+            g.AddProduct(E, "E", m9, "m9");
+
+            g.AddReactant(F, "F", m10, "m10");
 
             foreach (var node in g.Nodes)
             {
@@ -415,9 +435,132 @@ namespace Metabol.Util
                 }
             }
 
-            Dictionary<Guid, Tuple<HashSet<Guid>, HashSet<Guid>, bool>> graph = ConvertFromHypergraphTest(g);
+            Graph graph = ConvertFromHypergraph(g);
             DFS.DetectAndCollapseCycles(graph, g);
-            
+            Console.ReadKey();
+        }
+
+
+        static void Test2()
+        {
+            var m1 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1");
+            var m2 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
+
+            var A = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaA");
+            var B = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaB");
+
+            var g = new HyperGraph();
+            g.AddNode(m1, "m1");
+            g.AddNode(m2, "m2");
+
+            g.AddReactant(A, "A", m1, "m1");
+            g.AddProduct(A, "A", m2, "m2");
+
+            g.AddReactant(B, "B", m1, "m1");
+            g.AddReactant(B, "B", m2, "m2");
+            g.Edges[B].IsReversible = true;
+
+            foreach (var node in g.Nodes)
+            {
+                foreach (var edge in g.Edges)
+                {
+                    node.Value.Weights[edge.Key] = 1;
+                }
+            }
+
+            Graph graph = ConvertFromHypergraph(g);
+            DFS.DetectAndCollapseCycles(graph, g);
+            Console.ReadKey();
+        }
+
+        static void Test4()
+        {
+            var m1 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1");
+            var m2 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
+            var m3 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3");
+            var m4 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4");
+            var m5 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa5");
+            var m6 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa6");
+            var m7 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa7");
+            var m8 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa8");
+            var m9 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa9");
+            var m10 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa10");
+
+            var A = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaA");
+            var B = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaB");
+            var C = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaC");
+            var D = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaD");
+            var E = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaE");
+            var F = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaF");
+
+            var g = new HyperGraph();
+            g.AddNode(m1, "m1");
+            g.AddNode(m2, "m2");
+            g.AddNode(m3, "m3");
+
+            g.AddReactant(A, "A", m1, "m1");
+            g.AddProduct(A, "A", m2, "m2");
+            g.Edges[A].IsReversible = true;
+
+            g.AddReactant(B, "B", m1, "m1");
+            g.AddReactant(B, "B", m3, "m3");
+            g.Edges[B].IsReversible = true;
+
+
+            g.AddProduct(E, "E", m1, "m1");
+            g.Edges[A].IsReversible = true;
+
+            g.AddReactant(C, "C", m1, "m1");
+            g.AddReactant(C, "C", m3, "m3");
+
+            g.AddProduct(D, "D", m1, "m1");
+            g.AddReactant(D, "D", m3, "m3");
+
+            foreach (var node in g.Nodes)
+            {
+                foreach (var edge in g.Edges)
+                {
+                    node.Value.Weights[edge.Key] = 1;
+                }
+            }
+
+            Graph graph = ConvertFromHypergraph(g);
+            DFS.DetectAndCollapseCycles(graph, g);
+            Console.ReadKey();
+        }
+
+        static void Test3()
+        {
+            var m1 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1");
+            var m2 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
+            var m3 = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3");
+
+            var A = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaA");
+            var B = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaB");
+
+            var g = new HyperGraph();
+            g.AddNode(m1, "m1");
+            g.AddNode(m2, "m2");
+
+            g.AddReactant(A, "A", m1, "m1");
+            g.AddProduct(A, "A", m2, "m2");
+            g.Edges[A].IsReversible = true;
+
+            g.AddProduct(B, "B", m1, "m1");
+            g.AddProduct(B, "B", m3, "m3");
+            g.Edges[B].IsReversible = true;
+
+            foreach (var node in g.Nodes)
+            {
+                foreach (var edge in g.Edges)
+                {
+                    node.Value.Weights[edge.Key] = 1;
+                }
+            }
+
+            Graph graph = ConvertFromHypergraph(g);
+            DFS.DetectAndCollapseCycles(graph, g);
+            Console.ReadKey();
         }
 
 
