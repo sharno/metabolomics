@@ -18,11 +18,11 @@
         public static readonly Dictionary<Guid, dynamic> AllReactionCache2 = new Dictionary<Guid, dynamic>();
         public static readonly Dictionary<Guid, dynamic> AllStoichiometryCache2 = new Dictionary<Guid, dynamic>();
 
-        public const byte ProductId = 2;
-
         public const byte ReactantId = 1;
+        public const byte ProductId = 2;
+        public const byte ReversibleId = 3;
 
-        public const byte ModifierId = 3;
+        //public const byte ModifierId = 3;
 
         private static dynamic InvolvedReactionCount(Guid id)
         {

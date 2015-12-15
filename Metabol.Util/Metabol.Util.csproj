@@ -169,13 +169,8 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
-    <Compile Include="SimpleCycle\Cycle.cs" />
     <Compile Include="SimpleCycle\DFS.cs" />
-    <Compile Include="SimpleCycle\Edge.cs" />
-    <Compile Include="SimpleCycle\Graph.cs" />
-    <Compile Include="SimpleCycle\Node.cs" />
     <Compile Include="Core.cs" />
-    <Compile Include="SimpleCycle\Reaction.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

@@ -29,11 +29,6 @@ namespace Metabol.Util
         [JsonProperty("step")]
         public int Step { get; set; }
 
-        public bool HasCycle { get; set; }
-
-        //private readonly ConcurrentDictionary<Guid, int> idMap = new ConcurrentDictionary<Guid, int>();
-        //private int idGen;
-
         [JsonIgnore]
         public int LastLevel
         {
@@ -42,15 +37,21 @@ namespace Metabol.Util
 
         [JsonProperty("nodes")]
         public ConcurrentDictionary<Guid, Node> Nodes { get; protected set; }
+
         public HashSet<Guid> CommonMetabolites { get; protected set; }
         public ConcurrentDictionary<Guid, HashSet<Guid>> PseudoPath { get; protected set; }
 
         [JsonProperty("edges")]
         public ConcurrentDictionary<Guid, Edge> Edges { get; protected set; }
 
+        [JsonProperty("cycles")]
+        public ConcurrentDictionary<Guid, Cycle> Cycles { get; protected set; }
+
+
         public HyperGraph()
         {
             Edges = new ConcurrentDictionary<Guid, Edge>();
+            Cycles = new ConcurrentDictionary<Guid, Cycle>();
             Nodes = new ConcurrentDictionary<Guid, Node>();
             PseudoPath = new ConcurrentDictionary<Guid, HashSet<Guid>>();
             CommonMetabolites = new HashSet<Guid>();
@@ -91,6 +92,50 @@ namespace Metabol.Util
             return Nodes.AddOrUpdate(id, Node.Create(id, label, Step, b), (guid, node) => node);
         }
 
+        private static int count = 0;
+        public void AddSpecies(Species species)
+        {
+            count ++;
+            Console.WriteLine("adding species" + count);
+            var metabolite = Nodes.GetOrAdd(species.id, Node.Create(species.id, species.sbmlId, Step));
+
+            var producers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId && rs.Reaction.sbmlId != "R_biomass_reaction");
+            var consumers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId && rs.Reaction.sbmlId != "R_biomass_reaction");
+
+            foreach (var producer in producers)
+            {
+                var reaction = Edges.GetOrAdd(producer.reactionId, new Edge(producer.reactionId, producer.sbmlId, Step));
+                AddProduct(reaction, metabolite, producer.stoichiometry);
+            }
+            foreach (var consumer in consumers)
+            {
+                var reaction = Edges.GetOrAdd(consumer.reactionId, Edge.Create(consumer.reactionId, Step));
+                AddReactant(reaction, metabolite, consumer.stoichiometry);
+            }
+        }
+
+        public void AddReactant(HyperGraph.Edge reaction, HyperGraph.Node metabolite, double weight)
+        {
+            metabolite = Nodes.GetOrAdd(metabolite.Id, metabolite);
+            reaction = Edges.GetOrAdd(reaction.Id, reaction);
+
+            metabolite.Consumers.Add(reaction);
+            reaction.Reactants[metabolite.Id] = metabolite;
+
+            metabolite.Weights[reaction.Id] = weight;
+        }
+
+        public void AddReactant(HyperGraph.Cycle cycle, HyperGraph.Node metabolite, double weight)
+        {
+            metabolite = Nodes.GetOrAdd(metabolite.Id, metabolite);
+            cycle = Cycles.GetOrAdd(cycle.Id, cycle);
+
+            metabolite.Consumers.Add(cycle);
+            cycle.Reactants[metabolite.Id] = metabolite;
+
+            metabolite.Weights[cycle.Id] = weight;
+        }
+
         public void AddReactant(Guid eid, string elabel, Guid nid, string label, bool isPseudo)
         {
             var node = Nodes.GetOrAdd(nid, Node.Create(nid, label, Step));
@@ -107,6 +152,28 @@ namespace Metabol.Util
                 Console.WriteLine(ex);
             }
             node.UpdatePseudo();
+        }
+
+        public void AddProduct(HyperGraph.Edge reaction, HyperGraph.Node metabolite, double weight)
+        {
+            metabolite = Nodes.GetOrAdd(metabolite.Id, metabolite);
+            reaction = Edges.GetOrAdd(reaction.Id, reaction);
+
+            metabolite.Producers.Add(reaction);
+            reaction.Products[metabolite.Id] = metabolite;
+
+            metabolite.Weights[reaction.Id] = weight;
+        }
+
+        public void AddProduct(HyperGraph.Cycle cycle, HyperGraph.Node metabolite, double weight)
+        {
+            metabolite = Nodes.GetOrAdd(metabolite.Id, metabolite);
+            cycle = Cycles.GetOrAdd(cycle.Id, cycle);
+
+            metabolite.Producers.Add(cycle);
+            cycle.Products[metabolite.Id] = metabolite;
+
+            metabolite.Weights[cycle.Id] = weight;
         }
 
         public void AddProduct(Guid eid, string elabel, Guid nid, string label, bool isPseudo)
@@ -144,7 +211,7 @@ namespace Metabol.Util
             e.Label = elabel;
             e.AddReactant(node);
             e.IsPseudo = isPseudo;
-            e.IsCycle = isCycle;
+            // TODO remove is cycle
         }
 
         public void AddProduct(Guid eid, string elabel, Guid nid, string label, bool isPseudo, bool isCycle)
@@ -154,9 +221,12 @@ namespace Metabol.Util
             e.Label = elabel;
             e.AddProduct(node);
             e.IsPseudo = isPseudo;
-            e.IsCycle = isCycle;
+            // TODO remove is cycle
         }
 
+        // region of removals
+        #region removal of reaction or cycle or node
+        
         public void RemoveReaction(Edge reaction)
         {
             foreach (var reactant in reaction.Reactants)
@@ -172,27 +242,21 @@ namespace Metabol.Util
             Edges.TryRemove(reaction.Id, out _);
         }
 
-        //public void AddProductCommon(Guid eid, string p1, Guid nid, string p2)
-        //{
-        //    var node = Node.Create(nid, p2, Step, true);
-        //    Nodes.GetOrAdd(node.Id, node);
-        //    var e = Edges.GetOrAdd(eid, Edge.Create(eid, Step));
-        //    e.Label = p1;
-        //    e.AddProduct(node);
-        //    node.Weights[eid] = Math.Abs(Util.CachedRs(eid, nid).Stoichiometry);
-        //}
+        public void RemoveCycle(Cycle cycle)
+        {
+            foreach (var reactant in cycle.Reactants)
+            {
+                reactant.Value.Consumers.RemoveWhere(c => c.Id == cycle.Id);
+            }
+            foreach (var product in cycle.Products)
+            {
+                product.Value.Producers.RemoveWhere(p => p.Id == cycle.Id);
+            }
 
-            //public void AddReactantCommon(Guid eid, string p1, Guid nid, string p2)
-            //{
-            //    var node = Node.Create(nid, p2, Step, true);
-            //    Nodes.GetOrAdd(node.Id, node);
-            //    var e = Edges.GetOrAdd(eid, Edge.Create(eid, Step));
-            //    e.Label = p1;
-            //    e.AddReactant(node);
-            //    node.Weights[eid] = Util.CachedRs(eid, nid).Stoichiometry;
-            //}
+            Cycle _;
+            Cycles.TryRemove(cycle.Id, out _);
+        }
 
-            // remove node for cycle detection
         public void RemoveNode(Guid nid)
         {
             foreach (var consumer in Nodes[nid].Consumers)
@@ -220,6 +284,7 @@ namespace Metabol.Util
 
             // TODO check pseudo and stoichiometry
         }
+        #endregion
 
         public void Clear()
         {
@@ -235,94 +300,54 @@ namespace Metabol.Util
             }
         }
 
-        #region json
-
-        //public IEnumerable<dynamic> JsonNodes(Dictionary<Guid, int> z)
-        //{
-        //    // "name": "Glucose", "type": "m", "isBorder": 1, "concentration": 10.1, 'change': '+'
-        //    var lastLevel = LastLevel;
-        //    var result = new List<object>();
-
-        //    foreach (var node in Nodes.Where(node => node.Flux.Level == lastLevel))
-        //    {
-        //        var ch = "0";
-        //        if (z.ContainsKey(node.Key))
-        //            ch = z[node.Key] > 0 ? "+" : z[node.Key] < 0 ? "-" : "0";
-
-        //        dynamic n = new
-        //        {
-        //            id = idGen,
-        //            name = node.Flux.Label,
-        //            type = "m",
-        //            isBorder = node.Flux.IsBorder ? 1 : 0,
-        //            concentration = 10.0,
-        //            change = ch
-        //        };
-        //        idMap[node.Key] = idGen;
-        //        idGen++;
-        //        //yield return n;
-        //        result.Add(n);
-        //    }
-
-        //    // { "name": "Pyruvate xxx", "type": "r", "V": 9 }
-        //    foreach (var node in Edges.Where(node => node.Flux.Level == lastLevel))
-        //    {
-        //        dynamic n = new
-        //        {
-        //            id = idGen,
-        //            name = node.Flux.Label,
-        //            type = "r",
-        //            V = 1.0
-        //        };
-        //        idMap[node.Key] = idGen;
-        //        idGen++;
-        //        //yield return n;
-        //        result.Add(n);
-        //    }
-        //    return result;
-        //}
-
-        //public IEnumerable<dynamic> JsonLinks()
-        //{
-        //    // { "source": 0, "target": 3, "role": "s" }
-        //    // { "source": 3, "target": 4, "role": "p" }
-        //    var lastLevel = LastLevel;
-        //    var result = new List<dynamic>();
-
-        //    foreach (var link in Edges.Where(node => node.Flux.Level == lastLevel))
-        //    {
-        //        foreach (var node in link.Flux.Reactants.Values)
-        //        {
-        //            dynamic n = new { source = idMap[node.Id], target = idMap[link.Flux.Id], role = "s" };
-        //            //yield return n;
-        //            result.Add(n);
-        //        }
-
-        //        foreach (var node in link.Flux.Products.Values)
-        //        {
-        //            dynamic n = new { source = idMap[link.Flux.Id], target = idMap[node.Id], role = "p" };
-        //            //yield return n;
-        //            result.Add(n);
-        //        }
-        //    }
-        //    return result;
-
-        //}
-
-        #endregion
-
-        public class Edge : IComparable<Edge>
+        public abstract class Entity : IComparable<Entity>
         {
-            #region Properties
-
             [JsonProperty("id")]
-            public readonly Guid Id;
-
-            [JsonProperty("isPseudo")]
-            public bool IsPseudo { get; set; }
+            public Guid Id;
 
             [JsonProperty("label")]
-            public string Label { get; set; }
+            public string Label;
+
+            public abstract Dictionary<Guid, Entity> Next { get; }
+            public abstract Dictionary<Guid, Entity> Previous { get; }
+
+            int IComparable<Entity>.CompareTo(Entity other)
+            {
+                return other.Id.CompareTo(Id);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is Entity && ((Entity)obj).Id.Equals(Id);
+            }
+
+            public override int GetHashCode()
+            {
+                return Id.GetHashCode();
+            }
+
+            public override string ToString()
+            {
+                return Label;
+            }
+        }
+
+        public class Cycle : Edge
+        {
+            public Dictionary<Guid, Edge> InterfaceReactions = new Dictionary<Guid, Edge>();
+
+            public Cycle()
+            {
+                Id = Guid.NewGuid();
+                Label = "cycle";
+            }
+        }
+
+        public class Edge : Entity
+        {
+            #region Properties
+            [JsonProperty("isPseudo")]
+            public bool IsPseudo { get; set; }
 
             [JsonProperty("value")]
             public double Flux { get; set; }
@@ -336,42 +361,48 @@ namespace Metabol.Util
             [JsonProperty("isReversible")]
             public bool IsReversible { get; set; }
 
-            [JsonProperty("isCycle")]
-            public bool IsCycle { get; set; }
-
-            [JsonIgnore]
-            public Reaction ToServerReaction
-            {
-                get
-                {
-                    return Db.CachedR(Id);
-                }
-            }
-
             [JsonProperty("inputNodes")]
-            public Dictionary<Guid, Node> Reactants { get; set; }
+            public Dictionary<Guid, Node> Reactants = new Dictionary<Guid, Node>();
 
             [JsonProperty("outputNodes")]
-            public Dictionary<Guid, Node> Products { get; set; }
+            public Dictionary<Guid, Node> Products = new Dictionary<Guid, Node>();
+
+            public override Dictionary<Guid, Entity> Next
+            {
+                get { return Products.ToDictionary(e => e.Key, e => (Entity)e.Value); }
+            }
+
+            public override Dictionary<Guid, Entity> Previous
+            {
+                get { return Reactants.ToDictionary(e => e.Key, e => (Entity)e.Value); }
+            }
 
             [JsonProperty("updatePseudo")]
             public HashSet<Guid> UpdatePseudo { get; set; }
 
             public HashSet<Guid> Reactions { get; set; }
-            //public HashSet<Guid> InitReactions { get; set; }
             #endregion
+
+            public Edge()
+            {
+                Id = new Guid();
+            }
 
             public Edge(Guid id, int i)
             {
-                Products = new Dictionary<Guid, Node>();
-                Reactants = new Dictionary<Guid, Node>();
                 UpdatePseudo = new HashSet<Guid>();
                 Reactions = new HashSet<Guid>();
-                //InitReactions = new HashSet<Guid>();
 
                 Id = id;
                 Level = i;
                 this.PreFlux = double.NegativeInfinity;
+            }
+
+            public Edge(Guid id, string label, int level)
+            {
+                Id = id;
+                Label = label;
+                Level = level;
             }
 
             public static Edge Create(Guid id, int i)
@@ -514,43 +545,12 @@ namespace Metabol.Util
 
                 return bu.ToString();
             }
-
-            #region Override
-
-            public int CompareTo(Edge other)
-            {
-                return Id.CompareTo(other.Id);
-            }
-
-            public override string ToString()
-            {
-                return Label;
-            }
-
-            public override bool Equals(object obj)
-            {
-                return obj is Edge && ((Edge)obj).Id.Equals(Id);
-            }
-
-            public override int GetHashCode()
-            {
-                return Id.GetHashCode();
-            }
-
-            #endregion
         }
 
-        public class Node : IComparable<Node>
+        public class Node : Entity
         {
             #region Properties
-
-            [JsonProperty("id")]
-            public readonly Guid Id;
-
             public Guid RealId;
-
-            [JsonProperty("label")]
-            public string Label;
 
             [JsonProperty("isCommon")]
             public bool IsCommon;
@@ -560,6 +560,16 @@ namespace Metabol.Util
 
             [JsonProperty("producerEdge")]
             public HashSet<Edge> Producers = new HashSet<Edge>();
+
+            public override Dictionary<Guid, Entity> Next
+            {
+                get { return Consumers.ToDictionary(e => e.Id, e => (Entity)e); }
+            }
+
+            public override Dictionary<Guid, Entity> Previous
+            {
+                get { return Producers.ToDictionary(e => e.Id, e => (Entity)e); }
+            }
 
             [JsonProperty("level")]
             public int Level { get; set; }
@@ -654,25 +664,26 @@ namespace Metabol.Util
 
             #endregion
 
-            public Node(Guid id, string label, int i)
+            public Node(Guid id, string label, int level)
             {
                 Label = label;
                 Id = id;
-                Level = i;
+                Level = level;
                 Weights = new Dictionary<Guid, double>();
                 //PseudoConsumerVars = new HashSet<string>();
                 //PseudoProducerVars = new HashSet<string>();
 
-                try
-                {
-                    ReactionCount = Db.GetReactionCount(id);
-                    Db.GetStoichiometry(id);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                }
+                //try
+                //{
+                //    ReactionCount = Db.GetReactionCount(id);
+                //    Db.GetStoichiometry(id);
+                //}
+                //catch (Exception e)
+                //{
+                //    Console.WriteLine(e);
+                //}
             }
+            
 
             private Node(Guid id, string label, int lastLevel, bool common)
                 : this(id, label, lastLevel)
@@ -762,31 +773,6 @@ namespace Metabol.Util
                 r.Remove(this);
                 return r;
             }
-
-            #region override
-            public int CompareTo(Node other)
-            {
-                return other.Id.CompareTo(Id);
-            }
-
-            public override string ToString()
-            {
-                return Label;
-            }
-
-            public override int GetHashCode()
-            {
-                return Id.GetHashCode();
-            }
-
-            public override bool Equals(object obj)
-            {
-                return obj is Node && ((Node)obj).Id.Equals(Id);
-            }
-            #endregion
-
-
-
         }
 
     }

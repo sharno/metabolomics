@@ -3,84 +3,110 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Metabol.Util.DB2;
 
 namespace Metabol.Util.SimpleCycle
 {
     class DFS
     {
-        public static void DetectAndCollapseCycles(Graph graph, HyperGraph hypergraph)
+        public static Dictionary<HyperGraph.Cycle, List<HyperGraph.Entity>> DetectAndCollapseCycles(HyperGraph hypergraph)
         {
+            Dictionary<HyperGraph.Cycle, List<HyperGraph.Entity>> cycles = new Dictionary<HyperGraph.Cycle, List<HyperGraph.Entity>>();
+
             Dictionary<Guid, bool> marked = new Dictionary<Guid, bool>();
-            Stack<Guid> stack = new Stack<Guid>();
-            List<Guid> cycle = new List<Guid>();
+            Stack<HyperGraph.Entity> stack = new Stack<HyperGraph.Entity>();
+            List<HyperGraph.Entity> cycle = new List<HyperGraph.Entity>();
             bool findingCycles = true;
             int count = 0;
 
             while (findingCycles)
             {
-                Core.SaveAsDgsTest(hypergraph.Nodes.First().Value, hypergraph, "C:\\Users\\sharno\\Desktop\\" + count);
+                //Core.SaveAsDgsTest(hypergraph.Nodes.First().Value, hypergraph, "C:\\Users\\sharno\\Desktop\\" + count);
                 Console.WriteLine("finding cycle " + count);
-                count ++;
+                count++;
                 findingCycles = false;
                 marked.Clear();
                 stack.Clear();
-                cycle.Clear();
-                foreach (var v in graph.Nodes.Values)
+                cycle = new List<HyperGraph.Entity>();
+                foreach (var v in hypergraph.Nodes.Values)
                 {
-                    if (Search(graph, v, new Edge(null, null, false), marked, stack, cycle))
+                    if (Search(hypergraph, v, new HyperGraph.Edge(Guid.NewGuid(), 0), marked, stack, cycle))
                     {
                         findingCycles = true;
-                        Guid cycleId = Program.CollapseCycle(graph, cycle, hypergraph);
-//                        Program.recordToDatabase(cycleId, cycle, graph, hypergraph);
-
-                        foreach (var reaction in cycle)
-                        {
-                            hypergraph.RemoveReaction(hypergraph.Edges[reaction]);
-                        }
+                        var cycleReaction = Program.CollapseCycle(cycle, hypergraph);
+                        cycles.Add(cycleReaction, cycle);
                         break;
                     }
                 }
             }
+            return cycles;
         }
 
-        public static bool Search(Graph graph, Node v, Edge edgeComingFrom, Dictionary<Guid, bool> marked, Stack<Guid> stack, List<Guid> cycle)
+        public static bool Search(HyperGraph hypergraph, HyperGraph.Entity v, HyperGraph.Entity entityComingFrom, Dictionary<Guid, bool> marked, Stack<HyperGraph.Entity> stack, List<HyperGraph.Entity> cycle)
         {
             marked[v.Id] = true;
-            stack.Push(v.Id);
+            stack.Push(v);
 
-            // follow all next edges plus previous reversible ones but not the one we came from
-            HashSet<Edge> edges = new HashSet<Edge>();
-            foreach (var edge in v.Next)
+            // getting valid entities to explore in the hypergraph
+            HashSet<HyperGraph.Entity> entitiesToExpore = new HashSet<HyperGraph.Entity>();
+            if (v is HyperGraph.Node)
             {
-                if (!edge.Equals(edgeComingFrom) 
-                    && edge.Destination is Reaction && ((Reaction)edge.Destination).CurrentDirection != Reaction.Backward 
-                    && v is Reaction && ((Reaction)v).CurrentDirection != Reaction.Backward)
+                entitiesToExpore.UnionWith(v.Next.Values.Where(e => !e.Equals(entityComingFrom)));
+                entitiesToExpore.UnionWith(v.Previous.Values.Where(e => ((HyperGraph.Edge)e).IsReversible && !e.Equals(entityComingFrom)));
+            }
+            // cycle has to come before Edge because it's inheriting from edge
+            else if (v is HyperGraph.Cycle)
+            {
+                // next here is only for metabolites
+                entitiesToExpore.UnionWith(v.Next.Values.Where(e => !e.Equals(entityComingFrom)));
+
+                // for next reactions
+                foreach (var interfaceReaction in ((HyperGraph.Cycle)v).InterfaceReactions.Values)
                 {
-                    edges.Add(edge);
+                    if (interfaceReaction.IsReversible)
+                    {
+                        if (interfaceReaction.Previous.ContainsKey(entityComingFrom.Id))
+                        {
+                            entitiesToExpore.UnionWith(interfaceReaction.Next.Values.Where(e => !e.Equals(entityComingFrom)));
+                        }
+                        else
+                        {
+                            entitiesToExpore.UnionWith(interfaceReaction.Previous.Values.Where(e => !e.Equals(entityComingFrom)));
+                        }
+                    }
+                    else
+                    {
+                        entitiesToExpore.UnionWith(interfaceReaction.Next.Values.Where(e => !e.Equals(entityComingFrom)));
+                    }
                 }
             }
-            foreach (var edge in v.Previous)
+            else if (v is HyperGraph.Edge)
             {
-                if (!edge.Equals(edgeComingFrom) 
-                    && edge.IsReversible
-                    && edge.Destination is Reaction && ((Reaction)edge.Destination).CurrentDirection != Reaction.Forward
-                    && v is Reaction && ((Reaction)v).CurrentDirection != Reaction.Forward)
+                if (((HyperGraph.Edge)v).IsReversible)
                 {
-                    edges.Add(edge);
+                    if (v.Previous.ContainsKey(entityComingFrom.Id))
+                    {
+                        entitiesToExpore.UnionWith(v.Next.Values.Where(e => !e.Equals(entityComingFrom)));
+                    }
+                    else
+                    {
+                        entitiesToExpore.UnionWith(v.Previous.Values.Where(e => !e.Equals(entityComingFrom)));
+                    }
+                }
+                else
+                {
+                    entitiesToExpore.UnionWith(v.Next.Values.Where(e => !e.Equals(entityComingFrom)));
                 }
             }
 
-            foreach (var w in edges /*v.Next.Union(v.Previous.Where(edge => edge.IsReversible)).Where(edge => !edge.Equals(edgeComingFrom))*/)
+            foreach (var w in entitiesToExpore)
             {
-                // explore next node but not the same one (take reversibility into account)
-                Node nodeToExplore = w.Destination.Equals(v) ? w.Source : w.Destination;
-                
                 // detect a cycle
-                if (marked.ContainsKey(nodeToExplore.Id))
+                if (marked.ContainsKey(w.Id))
                 {
-                    Guid c = stack.Pop();
+                    HyperGraph.Entity c = stack.Pop();
                     cycle.Add(c);
-                    while (w.Destination.Id != c)
+                    while (w.Id != c.Id)
                     {
                         c = stack.Pop();
                         cycle.Add(c);
@@ -88,27 +114,12 @@ namespace Metabol.Util.SimpleCycle
                     return true;
                 }
 
-                // assign direction to the to be visited reaction
-                if (nodeToExplore is Reaction && ((Reaction)nodeToExplore).IsReversible)
-                {
-                    ((Reaction) nodeToExplore).CurrentDirection = w.Destination.Equals(nodeToExplore)
-                        ? Reaction.Forward
-                        : Reaction.Backward;
-                }
-
                 // explore next node and return if a cycle found
-                if (Search(graph, nodeToExplore, w, marked, stack, cycle))
+                if (Search(hypergraph, w, v, marked, stack, cycle))
                 {
                     return true;
                 }
             }
-
-            // assign direction to the to be visited reaction
-            if (v is Reaction && ((Reaction)v).IsReversible)
-            {
-                ((Reaction)v).CurrentDirection = Reaction.Undecided;
-            }
-
             stack.Pop();
             marked.Remove(v.Id);
             return false;

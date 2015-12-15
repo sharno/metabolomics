@@ -164,7 +164,7 @@
                 .Select(@t => @t.node.ToDgs(@t.type)));
 
             lines.Add("#Hyperedges");
-            foreach (var edge in graph.Edges.Values)
+            foreach (var edge in graph.Edges.Values.Union(graph.Cycles.Values))
             {
                 var type = EdgeType.None;
                 if (edge.Level == maxLevel)
