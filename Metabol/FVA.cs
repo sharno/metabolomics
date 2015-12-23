@@ -28,7 +28,7 @@ namespace Metabol
             var UpperBound = 1000;
             var LowerBound = -1000;
             foreach (var edge in graph.Edges.Values)
-                if (!edge.IsPseudo && edge.ToServerReaction.reversible)
+                if (!edge.IsPseudo && edge.IsReversible)
                     vars[edge.Label] = model.NumVar(LowerBound, UpperBound, NumVarType.Float, edge.Label);
                 else
                     vars[edge.Label] = model.NumVar(0, UpperBound, NumVarType.Float, edge.Label);

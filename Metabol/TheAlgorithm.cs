@@ -170,8 +170,13 @@
                 Z[s.id] = (s.id.GetHashCode() % 2) == 0 ? -1 : 1;//rand.NextDouble() >= 0.5 ? 1 : -1;
                 Console.WriteLine("{0}:{1}", s.sbmlId, Z[s.id]);
             }
-            //dag_hs[e]
-            var id = Guid.Parse("47ae0af5-9f7d-443d-b0d5-064e4707e8b5");// Guid.Parse("817069E0-5D9D-4FEB-B66A-BE5E79C1822B");//Guid.Parse("64893C3E-331F-4B24-8CA8-61D9D3D39D03");
+            //ak2g_hs[c]
+            //var id = Guid.Parse("47ae0af5-9f7d-443d-b0d5-064e4707e8b5");
+
+            //creat[c]
+            var id = Guid.Parse("1B81D656-115E-4477-B205-026001CF2847");
+
+            // Guid.Parse("817069E0-5D9D-4FEB-B66A-BE5E79C1822B");//Guid.Parse("64893C3E-331F-4B24-8CA8-61D9D3D39D03");
             Z[id] = (id.GetHashCode() % 2) == 0 ? -1 : 1;
 
             //var strCon = ConfigurationManager.AppSettings["dbConnectString"];
@@ -252,7 +257,7 @@
 
         public void RemoveExchangeReaction(HyperGraph sm, HyperGraph.Node m2)
         {
-            // remove producer exchange reaction of  non-produced-border metabolite            
+            // remove producer exchange reaction of  non-produced-border metabolite
             //dont remove producer exchange reaction if producer exchange reaction is only producer reaction
             var removeox = !m2.IsProducedBorder && m2.Producers.Any(edge => edge.IsPseudo)
                            && m2.Producers.Count(edge => !edge.IsPseudo) != 0;
@@ -480,17 +485,22 @@
 
             foreach (var r in sp.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId).Select(rs => rs.Reaction))
             {
-                sm.AddProduct(r.id, r.sbmlId, sp.id, sp.sbmlId);
-                AddCycleReactions(sm, r);
-                AddMetabolites(sm, r);
+                if (!AddCycleFromReaction(sm, r))
+                {
+                    sm.AddProduct(r.id, r.sbmlId, sp.id, sp.sbmlId);
+                    AddMetabolites(sm, r);
+                }
             }
 
             foreach (var r in sp.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId).Select(rs => rs.Reaction))
             {
-                sm.AddReactant(r.id, r.sbmlId, sp.id, sp.sbmlId);
-                AddCycleReactions(sm, r);
-                AddMetabolites(sm, r);
+                if (!AddCycleFromReaction(sm, r))
+                {
+                    sm.AddReactant(r.id, r.sbmlId, sp.id, sp.sbmlId);
+                    AddMetabolites(sm, r);
+                }
             }
+
 
             // add exchange reaction to lonely(metabol. with only input or output reactions) metabolites   
             foreach (var lon in sm.Nodes.Values.Where(n => n.IsLonely))
@@ -503,23 +513,103 @@
             }
         }
 
-        private static void AddCycleReactions(HyperGraph sm, Reaction r)
+        private static bool AddCycleFromReaction(HyperGraph hyperGraph, Reaction reaction)
         {
-            try
-            {
-                var cycles = Db.Context.CycleReactions.Where(cr => cr.otherId == r.id && !cr.isReaction).Select(cr => cr.Cycle);
-                if (!cycles.Any()) return;
-                foreach (var c in cycles)
-                    foreach (var cr in c.CycleReactions)
-                        // TODO make sure it's not a cycle
-                        AddMetabolites(sm, Db.Context.Reactions.Find(cr.otherId));
+            var cycle = Db.Context.CycleReactions.SingleOrDefault(cr => cr.otherId == reaction.id);
+            if (cycle == null) return false;
 
-            }
-            catch (Exception e)
+            var cycleReaction = new HyperGraph.Cycle(Db.Context.Cycles.Find(cycle.cycleId));
+
+            var products = Db.Context.CycleConnections.Where(cc => cc.cycleId == cycle.cycleId && cc.roleId == Db.ProductId);
+            var reactants = Db.Context.CycleConnections.Where(cc => cc.cycleId == cycle.cycleId && cc.roleId == Db.ReactantId);
+            var reversibles = Db.Context.CycleConnections.Where(cc => cc.cycleId == cycle.cycleId && cc.roleId == Db.ReversibleId);
+
+            foreach (var product in products)
             {
-                Console.WriteLine(e);
+                var m = new HyperGraph.Node(product.Species, hyperGraph.LastLevel);
+                hyperGraph.AddProduct(cycleReaction, m, 1);
+            }
+
+            foreach (var reactant in reactants)
+            {
+                var m = new HyperGraph.Node(reactant.Species, hyperGraph.LastLevel);
+                hyperGraph.AddReactant(cycleReaction, m, 1);
+            }
+
+            foreach (var reversible in reversibles)
+            {
+                var m = new HyperGraph.Node(reversible.Species, hyperGraph.LastLevel);
+                hyperGraph.AddProduct(cycleReaction, m, 1);
+                hyperGraph.AddReactant(cycleReaction, m, 1);
+            }
+
+            return true;
+        }
+
+        private static void AddCycleFromMetabolite(HyperGraph hyperGraph, Species sp)
+        {
+            // get cycles connected to this metabolite
+            var cycleConnections = Db.Context.CycleConnections.Where(cc => cc.metaboliteId == sp.id);
+            if (!cycleConnections.Any()) return;
+            foreach (var cycleConnection in cycleConnections)
+            {
+                var cycle = Db.Context.Cycles.Find(cycleConnection.cycleId);
+                foreach (var connection in cycle.CycleConnections)
+                {
+                    foreach (var cycleReaction in connection.Cycle.CycleReactions)
+                    {
+                        if (cycleReaction.isReaction)
+                        {
+                            var reaction = Db.Context.Reactions.Find(cycleReaction.otherId);
+                            hyperGraph.AddReaction(reaction);
+                        }
+                        else
+                        {
+                            var innerCycleDb = Db.Context.Cycles.Find(cycleReaction.otherId);
+                            var innerCycle = new HyperGraph.Cycle(innerCycleDb);
+                            foreach (var innerCycleConnection in innerCycleDb.CycleConnections)
+                            {
+                                // todo change level value to real step number
+                                if (innerCycleConnection.roleId == Db.ProductId)
+                                {
+                                    var m = HyperGraph.Node.Create(innerCycleConnection.metaboliteId, innerCycleConnection.Species.sbmlId, 0);
+                                    hyperGraph.AddProduct(innerCycle, m, 1);
+                                }
+                                else if (innerCycleConnection.roleId == Db.ReactantId)
+                                {
+                                    var m = HyperGraph.Node.Create(innerCycleConnection.metaboliteId, innerCycleConnection.Species.sbmlId, 0);
+                                    hyperGraph.AddReactant(innerCycle, m, 1);
+                                }
+                                else
+                                {
+                                    var m = HyperGraph.Node.Create(innerCycleConnection.metaboliteId, innerCycleConnection.Species.sbmlId, 0);
+                                    hyperGraph.AddProduct(innerCycle, m, 1);
+                                    hyperGraph.AddReactant(innerCycle, m, 1);
+                                }
+                            }
+                        }
+
+                    }
+                }
             }
         }
+
+        //private static void AddCycleReactions(HyperGraph sm, Reaction r)
+        //{
+        //    try
+        //    {
+        //        var cycles = Db.Context.CycleReactions.Where(cr => cr.otherId == r.id && !cr.isReaction).Select(cr => cr.Cycle);
+        //        if (!cycles.Any()) return;
+        //        foreach (var c in cycles)
+        //            foreach (var cr in c.CycleReactions)
+        //                // TODO make sure it's not a cycle
+        //                AddMetabolites(sm, Db.Context.Reactions.Find(cr.otherId));
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Console.WriteLine(e);
+        //    }
+        //}
 
         private static void AddMetabolites(HyperGraph sm, Reaction reaction)
         {

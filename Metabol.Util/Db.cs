@@ -99,6 +99,7 @@
 
         public static int TotalReactions(Guid id)
         {
+            InvolvedReactionCount(id);
             var sum = AllReactionCache2[id].Consumers + AllReactionCache2[id].Producers;
             //if sum==0, k is probably Modifier
             return sum == 0 ? Int32.MaxValue : sum;

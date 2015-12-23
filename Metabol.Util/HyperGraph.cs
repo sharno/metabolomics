@@ -95,7 +95,7 @@ namespace Metabol.Util
         private static int count = 0;
         public void AddSpecies(Species species)
         {
-            count ++;
+            count++;
             Console.WriteLine("adding species" + count);
             var metabolite = Nodes.GetOrAdd(species.id, Node.Create(species.id, species.sbmlId, Step));
 
@@ -114,6 +114,26 @@ namespace Metabol.Util
             }
         }
 
+        public void AddReaction(Reaction reaction)
+        {
+            var r = Edges.GetOrAdd(reaction.id, Edge.Create(reaction.id, Step));
+
+            var products = reaction.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId);
+            var reactants = reaction.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId);
+
+            foreach (var product in products)
+            {
+                var m = Nodes.GetOrAdd(product.id, new Node(product.Species, Step));
+                AddProduct(r, m, product.stoichiometry);
+            }
+
+            foreach (var reactant in reactants)
+            {
+                var m = Nodes.GetOrAdd(reactant.id, new Node(reactant.Species, Step));
+                AddReactant(r, m, reactant.stoichiometry);
+            }
+        }
+
         public void AddReactant(HyperGraph.Edge reaction, HyperGraph.Node metabolite, double weight)
         {
             metabolite = Nodes.GetOrAdd(metabolite.Id, metabolite);
@@ -129,6 +149,8 @@ namespace Metabol.Util
         {
             metabolite = Nodes.GetOrAdd(metabolite.Id, metabolite);
             cycle = Cycles.GetOrAdd(cycle.Id, cycle);
+            // todo remove this line when expanding and FBAing
+            Edges.GetOrAdd(cycle.Id, cycle);
 
             metabolite.Consumers.Add(cycle);
             cycle.Reactants[metabolite.Id] = metabolite;
@@ -169,6 +191,8 @@ namespace Metabol.Util
         {
             metabolite = Nodes.GetOrAdd(metabolite.Id, metabolite);
             cycle = Cycles.GetOrAdd(cycle.Id, cycle);
+            // todo remove this line when expanding and FBAing
+            Edges.GetOrAdd(cycle.Id, cycle);
 
             metabolite.Producers.Add(cycle);
             cycle.Products[metabolite.Id] = metabolite;
@@ -183,14 +207,15 @@ namespace Metabol.Util
             e.Label = elabel;
             e.AddProduct(node);
             e.IsPseudo = isPseudo;
-            try
-            {
-                if (!isPseudo) node.Weights[eid] = Math.Abs(Db.CachedRs(eid, nid).stoichiometry);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
+            if (!isPseudo) node.Weights[eid] = Math.Abs(Db.Context.ReactionSpecies.Single(rs => rs.reactionId == eid && rs.speciesId == nid).stoichiometry);
+            //try
+            //{
+            //    if (!isPseudo) node.Weights[eid] = Math.Abs(Db.CachedRs(eid, nid).stoichiometry);
+            //}
+            //catch (Exception ex)
+            //{
+            //    Console.WriteLine(ex);
+            //}
             node.UpdatePseudo();
         }
 
@@ -226,7 +251,7 @@ namespace Metabol.Util
 
         // region of removals
         #region removal of reaction or cycle or node
-        
+
         public void RemoveReaction(Edge reaction)
         {
             foreach (var reactant in reaction.Reactants)
@@ -341,6 +366,12 @@ namespace Metabol.Util
                 Id = Guid.NewGuid();
                 Label = "cycle";
             }
+
+            public Cycle(DB2.Cycle cycle)
+            {
+                Id = cycle.id;
+                Label = "cycle_" + cycle.id;
+            }
         }
 
         public class Edge : Entity
@@ -378,9 +409,8 @@ namespace Metabol.Util
             }
 
             [JsonProperty("updatePseudo")]
-            public HashSet<Guid> UpdatePseudo { get; set; }
-
-            public HashSet<Guid> Reactions { get; set; }
+            public HashSet<Guid> UpdatePseudo = new HashSet<Guid>();
+            public HashSet<Guid> Reactions = new HashSet<Guid>();
             #endregion
 
             public Edge()
@@ -390,9 +420,6 @@ namespace Metabol.Util
 
             public Edge(Guid id, int i)
             {
-                UpdatePseudo = new HashSet<Guid>();
-                Reactions = new HashSet<Guid>();
-
                 Id = id;
                 Level = i;
                 this.PreFlux = double.NegativeInfinity;
@@ -648,7 +675,7 @@ namespace Metabol.Util
             }
 
             [JsonProperty("weights")]
-            public Dictionary<Guid, double> Weights { get; set; }
+            public Dictionary<Guid, double> Weights = new Dictionary<Guid, double>();
 
             [JsonProperty("removedConsumerEx")]
             public Edge RemovedConsumerExchange { get; set; }
@@ -664,12 +691,29 @@ namespace Metabol.Util
 
             #endregion
 
+            public Node(Species species, int level)
+            {
+                Id = species.id;
+                Label = species.sbmlId;
+                Level = level;
+                ReactionCount = new
+                {
+                    Consumers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ReactantId),
+                    Producers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ProductId)
+                };
+            }
+
             public Node(Guid id, string label, int level)
             {
                 Label = label;
                 Id = id;
                 Level = level;
-                Weights = new Dictionary<Guid, double>();
+                Species species = Db.Context.Species.Find(Id);
+                ReactionCount = new
+                {
+                    Consumers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ReactantId),
+                    Producers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ProductId)
+                };
                 //PseudoConsumerVars = new HashSet<string>();
                 //PseudoProducerVars = new HashSet<string>();
 
@@ -683,10 +727,10 @@ namespace Metabol.Util
                 //    Console.WriteLine(e);
                 //}
             }
-            
+
 
             private Node(Guid id, string label, int lastLevel, bool common)
-                : this(id, label, lastLevel)
+                    : this(id, label, lastLevel)
             {
                 Id = Guid.NewGuid();
                 RealId = id;

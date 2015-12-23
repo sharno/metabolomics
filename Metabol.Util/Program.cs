@@ -26,7 +26,7 @@ namespace Metabol.Util
             // debugging lines
             foreach (var v in cycle)
             {
-                Console.WriteLine("Entity " + v.Label);
+                Console.WriteLine("Entity " + v.Label + " " + v.Id);
                 //                Console.Write("prev:");
                 //                foreach (var prev in v.Previous)
                 //                {
@@ -193,10 +193,10 @@ namespace Metabol.Util
             Console.WriteLine("Press any key if you are sure you want to continue ...");
             Console.ReadKey();
 
-            const int Outliear = 61;
+            const int Outlier = 61;
             var count = 0;
 
-            var g = ConstructHyperGraphFromSpecies(Db.Context.Species.ToList());
+            var g = ConstructHyperGraphFromSpecies(Db.Context.Species.Where(s => s.ReactionSpecies.Count < Outlier));
 
             Console.WriteLine("loaded the whole network");
 
@@ -302,12 +302,15 @@ namespace Metabol.Util
             //                    g.Edges[pr.reactionId].IsReversible = pr.Reaction.reversible;
             //                }
             //            }
-            var g = ConstructHyperGraphFromSpecies(Db.Context.Species.ToList());
+            int outlier = 61;
+            var g = ConstructHyperGraphFromSpecies(Db.Context.Species.Where(s => s.ReactionSpecies.Count < outlier));
 
             Console.WriteLine("loaded the whole network");
 
 
-            DFS.DetectAndCollapseCycles(g);
+            var cycles = DFS.DetectAndCollapseCycles(g);
+            var ms = cycles.SelectMany(c => c.Key.Products.Values).Union(cycles.SelectMany(c => c.Key.Reactants.Values)).Union(cycles.SelectMany(c => c.Key.InterfaceReactions.Values).SelectMany(r => r.Products.Values)).Union(cycles.SelectMany(c => c.Key.InterfaceReactions.Values).SelectMany(r => r.Reactants.Values));
+            var t = ms.ToDictionary(e=> e, e=>ms.Count(a => a.Equals(e)));
 
             Console.WriteLine("finished all");
             Console.ReadKey();

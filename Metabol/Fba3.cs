@@ -36,7 +36,7 @@
 
             foreach (var edge in sm.Edges.Values)
             {
-                if (!edge.IsPseudo && edge.ToServerReaction.reversible)
+                if (!edge.IsPseudo && edge.IsReversible)
                 {
                     vars[edge.Label] = model.NumVar(LowerBound, UpperBound, NumVarType.Float, edge.Label);
                     continue;
@@ -263,7 +263,16 @@
 
             if (reaction.Products.ContainsKey(metabolite.Id))
             {
-                coefficient = metabolite.Weights[reaction.Id];//reaction.Products[metabolite.Id].Stoichiometry;
+                if (reaction is HyperGraph.Cycle)
+                {
+                    coefficient = 1;
+                }
+                else
+                {
+                    coefficient = metabolite.Weights[reaction.Id];
+                }
+
+                //reaction.Products[metabolite.Id].Stoichiometry;
                 if (Math.Abs(coefficient) < double.Epsilon && reaction.IsPseudo)
                 {
                     coefficient = 1;
@@ -272,7 +281,15 @@
 
             if (reaction.Reactants.ContainsKey(metabolite.Id))
             {
-                coefficient = -1 * metabolite.Weights[reaction.Id];//(-1 * reaction.Reactants[metabolite.Id].Stoichiometry);
+                if (reaction is HyperGraph.Cycle)
+                {
+                    coefficient = 1;
+                }
+                else
+                {
+                    coefficient = -1 * metabolite.Weights[reaction.Id];
+                }
+                //(-1 * reaction.Reactants[metabolite.Id].Stoichiometry);
                 if (Math.Abs(coefficient) < double.Epsilon && reaction.IsPseudo)
                 {
                     coefficient = -1;
