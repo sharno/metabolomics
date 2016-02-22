@@ -7,8 +7,7 @@ using System.Text;
 
 namespace Metabol.Util
 {
-    using Metabol.Util.DB2;
-
+    using DB2;
     using Newtonsoft.Json;
 
     public enum NodeType
@@ -32,7 +31,13 @@ namespace Metabol.Util
         [JsonIgnore]
         public int LastLevel
         {
-            get { return Math.Max(Edges.Values.Select(v => v.Level).Max(), Nodes.Values.Select(n => n.Level).Max()); }
+            get
+            {
+                if (Edges.Any() && Nodes.Any())
+                    return Math.Max(Edges.Values.Select(v => v.Level).Max(), Nodes.Values.Select(n => n.Level).Max());
+                else
+                    return 0;
+            }
         }
 
         [JsonProperty("nodes")]
@@ -104,12 +109,12 @@ namespace Metabol.Util
 
             foreach (var producer in producers)
             {
-                var reaction = Edges.GetOrAdd(producer.reactionId, new Edge(producer.reactionId, producer.sbmlId, Step));
+                var reaction = Edges.GetOrAdd(producer.reactionId, new Edge(producer.reactionId, producer.Reaction.sbmlId, Step));
                 AddProduct(reaction, metabolite, producer.stoichiometry);
             }
             foreach (var consumer in consumers)
             {
-                var reaction = Edges.GetOrAdd(consumer.reactionId, Edge.Create(consumer.reactionId, Step));
+                var reaction = Edges.GetOrAdd(consumer.reactionId, new Edge(consumer.reactionId, consumer.Reaction.sbmlId, Step));
                 AddReactant(reaction, metabolite, consumer.stoichiometry);
             }
         }
@@ -167,7 +172,7 @@ namespace Metabol.Util
             e.IsPseudo = isPseudo;
             try
             {
-                if (!isPseudo) node.Weights[eid] = Math.Abs(Db.CachedRs(eid, nid).stoichiometry);
+                if (!isPseudo) node.Weights[eid] = Math.Abs(Db.Context.ReactionSpecies.Single(rs => rs.reactionId == eid && rs.speciesId == nid).stoichiometry);
             }
             catch (Exception ex)
             {
@@ -280,27 +285,41 @@ namespace Metabol.Util
 
             Cycle _;
             Cycles.TryRemove(cycle.Id, out _);
+
+            Edge _2;
+            Edges.TryRemove(cycle.Id, out _2);
         }
 
         public void RemoveNode(Guid nid)
         {
-            foreach (var consumer in Nodes[nid].Consumers)
-            {
-                consumer.Reactants.Remove(nid);
-                if (consumer.Reactants.Count == 0 && consumer.Products.Count == 0)
-                {
-                    Edge ingoredEdge;
-                    Edges.TryRemove(consumer.Id, out ingoredEdge);
-                }
-            }
+            //foreach (var consumer in Nodes[nid].Consumers)
+            //{
+            //    consumer.Reactants.Remove(nid);
+            //    if (consumer.Reactants.Count == 0 && consumer.Products.Count == 0)
+            //    {
+            //        Edge ingoredEdge;
+            //        Edges.TryRemove(consumer.Id, out ingoredEdge);
+            //    }
+            //}
 
-            foreach (var producer in Nodes[nid].Producers)
+            //foreach (var producer in Nodes[nid].Producers)
+            //{
+            //    producer.Products.Remove(nid);
+            //    if (producer.Reactants.Count == 0 && producer.Products.Count == 0)
+            //    {
+            //        Edge ingoredEdge;
+            //        Edges.TryRemove(producer.Id, out ingoredEdge);
+            //    }
+            //}
+
+            foreach (var reaction in Nodes[nid].Producers.Union(Nodes[nid].Consumers))
             {
-                producer.Products.Remove(nid);
-                if (producer.Reactants.Count == 0 && producer.Products.Count == 0)
+                reaction.Products.Remove(nid);
+                reaction.Reactants.Remove(nid);
+                if (reaction.Reactants.Count == 0 && reaction.Products.Count == 0)
                 {
                     Edge ingoredEdge;
-                    Edges.TryRemove(producer.Id, out ingoredEdge);
+                    Edges.TryRemove(reaction.Id, out ingoredEdge);
                 }
             }
 
@@ -360,6 +379,7 @@ namespace Metabol.Util
         public class Cycle : Edge
         {
             public Dictionary<Guid, Edge> InterfaceReactions = new Dictionary<Guid, Edge>();
+            public HashSet<Edge> InsideReactions = new HashSet<Edge>();
 
             public Cycle()
             {
@@ -371,6 +391,14 @@ namespace Metabol.Util
             {
                 Id = cycle.id;
                 Label = "cycle_" + cycle.id;
+
+                foreach (var cycleReaction in cycle.CycleReactions)
+                {
+                    if (cycleReaction.isReaction)
+                    {
+                        InsideReactions.Add(new Edge(cycleReaction.otherId, 0));
+                    }
+                }
             }
         }
 
@@ -604,6 +632,9 @@ namespace Metabol.Util
             [JsonProperty("reactionCount")]
             public readonly dynamic ReactionCount;
 
+            public HashSet<Guid> RealConsumers;
+            public HashSet<Guid> RealProducers;
+
             [JsonProperty("isExtended")]
             public bool IsExtended { get; set; }
 
@@ -612,7 +643,7 @@ namespace Metabol.Util
             {
                 get
                 {
-                    return Db.CachedS(Id);
+                    return Db.Context.Species.Find(Id);
                 }
             }
 
@@ -633,6 +664,10 @@ namespace Metabol.Util
             {
                 get
                 {
+                    // it could be just if the metabolite was extended before or not
+                    //return !IsExtended;
+
+                    // compare database and in memory number of producers and consumers
                     return IsConsumedBorder || IsProducedBorder;
                 }
             }
@@ -642,7 +677,8 @@ namespace Metabol.Util
             {
                 get
                 {
-                    return ReactionCount.Consumers != this.Consumers.Count(e => !e.IsPseudo);
+                    IEnumerable<Guid> hiddenConsumers = new HashSet<Guid>(this.Consumers.Where(c => c is Cycle).SelectMany(c => ((Cycle)c).InsideReactions).Select(r => r.Id)).Intersect(RealConsumers);
+                    return ReactionCount.Consumers != this.Consumers.Count(e => !e.IsPseudo && !(e is Cycle)) + hiddenConsumers.Count();
                 }
             }
 
@@ -651,7 +687,8 @@ namespace Metabol.Util
             {
                 get
                 {
-                    return ReactionCount.Producers != this.Producers.Count(e => !e.IsPseudo);
+                    IEnumerable<Guid> hiddenProducers = new HashSet<Guid>(this.Producers.Where(c => c is Cycle).SelectMany(c => ((Cycle)c).InsideReactions).Select(r => r.Id)).Intersect(RealProducers);
+                    return ReactionCount.Producers != this.Producers.Count(e => !e.IsPseudo && !(e is Cycle)) + hiddenProducers.Count();
                 }
             }
 
@@ -701,6 +738,8 @@ namespace Metabol.Util
                     Consumers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ReactantId),
                     Producers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ProductId)
                 };
+                RealConsumers = new HashSet<Guid>(species.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId).Select(c => c.reactionId));
+                RealProducers = new HashSet<Guid>(species.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId).Select(c => c.reactionId));
             }
 
             public Node(Guid id, string label, int level)
@@ -714,6 +753,8 @@ namespace Metabol.Util
                     Consumers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ReactantId),
                     Producers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ProductId)
                 };
+                RealConsumers = new HashSet<Guid>(species.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId).Select(c => c.reactionId));
+                RealProducers = new HashSet<Guid>(species.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId).Select(c => c.reactionId));
                 //PseudoConsumerVars = new HashSet<string>();
                 //PseudoProducerVars = new HashSet<string>();
 
@@ -759,7 +800,7 @@ namespace Metabol.Util
                     var wsum = this.Consumers.Count == 1
                           ? 0
                           : this.Consumers.Where(edge => !edge.IsPseudo).Sum(edge => Weights[edge.Id]);
-                    Weights[im.Id] = Db.GetStoichiometry(Id).Consumers - wsum;
+                    Weights[im.Id] = Db.InvolvedReactionStoch(Id).Consumers - wsum;
                 }
 
                 if (io != null)
@@ -768,7 +809,7 @@ namespace Metabol.Util
                           ? 0
                           : this.Producers.Where(edge => !edge.IsPseudo).Sum(edge => Weights[edge.Id]);
 
-                    Weights[io.Id] = Db.GetStoichiometry(Id).Producers - wsum;
+                    Weights[io.Id] = Db.InvolvedReactionStoch(Id).Producers - wsum;
                 }
             }
 

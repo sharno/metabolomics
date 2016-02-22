@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Metabol.Util.DB2;
 
 namespace Metabol.Util.SimpleCycle
 {
@@ -21,7 +21,7 @@ namespace Metabol.Util.SimpleCycle
 
             while (findingCycles)
             {
-                //Core.SaveAsDgsTest(hypergraph.Nodes.First().Value, hypergraph, "C:\\Users\\sharno\\Desktop\\" + count);
+                SaveAsDgs(hypergraph.Nodes.Last().Value, hypergraph, "C:\\Users\\sharno\\Desktop\\model2\\" + count);
                 Console.WriteLine("finding cycle " + count);
                 count++;
                 findingCycles = false;
@@ -33,7 +33,7 @@ namespace Metabol.Util.SimpleCycle
                     if (Search(hypergraph, v, new HyperGraph.Edge(Guid.NewGuid(), 0), marked, stack, cycle))
                     {
                         findingCycles = true;
-                        var cycleReaction = Program.CollapseCycle(cycle, hypergraph);
+                        var cycleReaction = CollapseCycle(cycle, hypergraph);
                         cycles.Add(cycleReaction, cycle);
                         break;
                     }
@@ -41,6 +41,7 @@ namespace Metabol.Util.SimpleCycle
             }
             return cycles;
         }
+
 
         public static bool Search(HyperGraph hypergraph, HyperGraph.Entity v, HyperGraph.Entity entityComingFrom, Dictionary<Guid, bool> marked, Stack<HyperGraph.Entity> stack, List<HyperGraph.Entity> cycle)
         {
@@ -52,7 +53,7 @@ namespace Metabol.Util.SimpleCycle
             if (v is HyperGraph.Node)
             {
                 entitiesToExpore.UnionWith(v.Next.Values.Where(e => !e.Equals(entityComingFrom)));
-                entitiesToExpore.UnionWith(v.Previous.Values.Where(e => ((HyperGraph.Edge)e).IsReversible && !e.Equals(entityComingFrom)));
+                entitiesToExpore.UnionWith(v.Previous.Values.Where(e => !e.Equals(entityComingFrom)));
             }
             // cycle has to come before Edge because it's inheriting from edge
             else if (v is HyperGraph.Cycle)
@@ -63,39 +64,25 @@ namespace Metabol.Util.SimpleCycle
                 // for next reactions
                 foreach (var interfaceReaction in ((HyperGraph.Cycle)v).InterfaceReactions.Values)
                 {
-                    if (interfaceReaction.IsReversible)
+                    if (interfaceReaction.Previous.ContainsKey(entityComingFrom.Id))
                     {
-                        if (interfaceReaction.Previous.ContainsKey(entityComingFrom.Id))
-                        {
-                            entitiesToExpore.UnionWith(interfaceReaction.Next.Values.Where(e => !e.Equals(entityComingFrom)));
-                        }
-                        else
-                        {
-                            entitiesToExpore.UnionWith(interfaceReaction.Previous.Values.Where(e => !e.Equals(entityComingFrom)));
-                        }
+                        entitiesToExpore.UnionWith(interfaceReaction.Next.Values.Where(e => !e.Equals(entityComingFrom)));
                     }
                     else
                     {
-                        entitiesToExpore.UnionWith(interfaceReaction.Next.Values.Where(e => !e.Equals(entityComingFrom)));
+                        entitiesToExpore.UnionWith(interfaceReaction.Previous.Values.Where(e => !e.Equals(entityComingFrom)));
                     }
                 }
             }
             else if (v is HyperGraph.Edge)
             {
-                if (((HyperGraph.Edge)v).IsReversible)
+                if (v.Previous.ContainsKey(entityComingFrom.Id))
                 {
-                    if (v.Previous.ContainsKey(entityComingFrom.Id))
-                    {
-                        entitiesToExpore.UnionWith(v.Next.Values.Where(e => !e.Equals(entityComingFrom)));
-                    }
-                    else
-                    {
-                        entitiesToExpore.UnionWith(v.Previous.Values.Where(e => !e.Equals(entityComingFrom)));
-                    }
+                    entitiesToExpore.UnionWith(v.Next.Values.Where(e => !e.Equals(entityComingFrom)));
                 }
                 else
                 {
-                    entitiesToExpore.UnionWith(v.Next.Values.Where(e => !e.Equals(entityComingFrom)));
+                    entitiesToExpore.UnionWith(v.Previous.Values.Where(e => !e.Equals(entityComingFrom)));
                 }
             }
 
@@ -123,6 +110,142 @@ namespace Metabol.Util.SimpleCycle
             stack.Pop();
             marked.Remove(v.Id);
             return false;
+        }
+
+
+        public static HyperGraph.Cycle CollapseCycle(List<HyperGraph.Entity> cycle, HyperGraph hypergraph)
+        {
+            // debugging lines
+            foreach (var v in cycle)
+            {
+                Console.WriteLine("Entity " + v.Label + " " + v.Id);
+                //                Console.Write("prev:");
+                //                foreach (var prev in v.Previous)
+                //                {
+                //                    Console.Write(prev.Value.Label + "  ");
+                //                }
+                //                Console.WriteLine();
+                //                Console.Write("next:");
+                //                foreach (var nxt in v.Next)
+                //                {
+                //                    Console.Write(nxt.Value.Label + "  ");
+                //                }
+                //                Console.WriteLine();
+                //                Console.WriteLine();
+            }
+            Console.WriteLine();
+
+
+            HyperGraph.Cycle cycleReaction = new HyperGraph.Cycle();
+
+            // modify hypergraph
+            // TODO add weights if needed
+            foreach (var v in cycle)
+            {
+                if (v is HyperGraph.Node)
+                {
+                    // if this metabolite have any outside connection it should be added with 2 edges as it's consumed and produced inside the cycle
+                    if (v.Next.Values.Union(v.Previous.Values).Any(e => !cycle.Contains(e)))
+                    {
+                        hypergraph.AddProduct(cycleReaction, (HyperGraph.Node)v, 1/*((HyperGraph.Node)v).Weights[((HyperGraph.Node)v).Producers.First().Id]*/);
+                        hypergraph.AddReactant(cycleReaction, (HyperGraph.Node)v, 1/*((HyperGraph.Node)v).Weights[((HyperGraph.Node)v).Consumers.First().Id] */);
+                    }
+                    else
+                    {
+                        hypergraph.RemoveNode(v.Id);
+                    }
+                }
+                // cycle should come first because it's a child of edge
+                else if (v is HyperGraph.Cycle)
+                {
+                    // for separate metabolites
+                    var outsideReactants = v.Previous.Values.Except(cycle);
+                    var outsideProducts = v.Next.Values.Except(cycle);
+
+                    foreach (var outsideProduct in outsideProducts)
+                    {
+                        hypergraph.AddProduct(cycleReaction, (HyperGraph.Node)outsideProduct, 1);
+                    }
+                    foreach (var outsideReactant in outsideReactants)
+                    {
+                        hypergraph.AddReactant(cycleReaction, (HyperGraph.Node)outsideReactant, 1);
+                    }
+
+
+                    // for inside reactions
+                    foreach (var reaction in ((HyperGraph.Cycle)v).InterfaceReactions.Values)
+                    {
+                        if (reaction.Products.Union(reaction.Reactants).Any(m => !cycle.Contains(m.Value)))
+                        {
+                            foreach (var e in cycle)
+                            {
+                                reaction.Products.Remove(e.Id);
+                                reaction.Reactants.Remove(e.Id);
+                            }
+
+                            cycleReaction.InterfaceReactions.Add(reaction.Id, reaction);
+                        }
+                    }
+
+                    hypergraph.RemoveCycle((HyperGraph.Cycle)v);
+                }
+                else if (v is HyperGraph.Edge)
+                {
+                    var outsideReactants = v.Previous.Values.Except(cycle);
+                    var outsideProducts = v.Next.Values.Except(cycle);
+
+                    foreach (var outsideProduct in outsideProducts)
+                    {
+                        hypergraph.AddProduct(cycleReaction, (HyperGraph.Node)outsideProduct, ((HyperGraph.Node)outsideProduct).Weights[v.Id]);
+                    }
+                    foreach (var outsideReactant in outsideReactants)
+                    {
+                        hypergraph.AddReactant(cycleReaction, (HyperGraph.Node)outsideReactant, ((HyperGraph.Node)outsideReactant).Weights[v.Id]);
+                    }
+
+                    if (((HyperGraph.Edge)v).IsReversible)
+                    {
+                        foreach (var outsideProduct in outsideProducts)
+                        {
+                            hypergraph.AddReactant(cycleReaction, (HyperGraph.Node)outsideProduct, ((HyperGraph.Node)outsideProduct).Weights[v.Id]);
+                        }
+                        foreach (var outsideReactant in outsideReactants)
+                        {
+                            hypergraph.AddProduct(cycleReaction, (HyperGraph.Node)outsideReactant, ((HyperGraph.Node)outsideReactant).Weights[v.Id]);
+                        }
+                    }
+
+                    hypergraph.RemoveReaction((HyperGraph.Edge)v);
+                }
+            }
+
+            return cycleReaction;
+        }
+
+
+        public static void SaveAsDgs(HyperGraph.Node mi, HyperGraph graph, string dir)
+        {
+            var file = dir + graph.Step + "graph.dgs";
+            var maxLevel = graph.LastLevel;
+
+            var lines = new List<string> { "DGS004", "\"Metabolic Network\" 0 0", "#Nodes" };
+            lines.Add(mi.ToDgs(NodeType.Selected));
+            lines.AddRange(graph.Nodes.Values
+                .Where(n => n.Id != mi.Id)
+                .Select(node => new { node, type = node.IsBorder ? NodeType.Border : NodeType.None })
+                .Select(@t => @t.node.ToDgs(@t.type)));
+
+            lines.Add("#Hyperedges");
+            foreach (var edge in graph.Edges.Values)
+            {
+                var type = EdgeType.None;
+                if (edge.Level == maxLevel)
+                    type = EdgeType.New;
+
+                lines.Add(edge.ToDgs(type));
+            }
+
+            File.AppendAllLines(file, lines);
         }
     }
 }

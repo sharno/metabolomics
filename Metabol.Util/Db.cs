@@ -1,4 +1,6 @@
-﻿namespace Metabol.Util
+﻿using EFCache;
+
+namespace Metabol.Util
 {
     using System;
     using System.Collections.Generic;
@@ -10,10 +12,6 @@
     public class Db
     {
         public static readonly MetabolicNetworkDBContext Context = new MetabolicNetworkDBContext();
-
-        private static readonly MemoryCache CacheSpecieses = new MemoryCache("species");
-        private static readonly MemoryCache CacheReactions = new MemoryCache("reactions");
-        private static readonly MemoryCache CacheReactionsSpecies = new MemoryCache("reactionspecies");
 
         public static readonly Dictionary<Guid, dynamic> AllReactionCache2 = new Dictionary<Guid, dynamic>();
         public static readonly Dictionary<Guid, dynamic> AllStoichiometryCache2 = new Dictionary<Guid, dynamic>();
@@ -30,31 +28,19 @@
             var species = Context.Species.Single(s => s.id == id);
             var product = species.ReactionSpecies.Count(rs => rs.roleId == ProductId);
             var reactant = species.ReactionSpecies.Count(rs => rs.roleId == ReactantId);
-            //MnContext.MetaboliteReactionCount.Add(new MetaboliteReactionCount
-            //{
-            //    id = Guid.NewGuid(),
-            //    consumerCount = reactant,
-            //    producerCount = product,
-            //    speciesId = id,
-            //});
-            //MnContext.SaveChanges();
+
             AllReactionCache2[id] = new { Consumers = reactant, Producers = product };
             return AllReactionCache2[id];
         }
 
-        private static dynamic InvolvedReactionStoch(Guid id)
+        public static dynamic InvolvedReactionStoch(Guid id)
         {
             if (AllStoichiometryCache2.ContainsKey(id)) return AllStoichiometryCache2[id];
             var rsum = Context.ReactionSpecies.Where(r => r.speciesId == id && r.roleId == ReactantId).ToList().Sum(e => e.stoichiometry);
             var psum = Context.ReactionSpecies.Where(r => r.speciesId == id && r.roleId == ProductId).ToList().Sum(e => e.stoichiometry);
-            //MnContext.MetaboliteReactionStoichiometry.Add(new MetaboliteReactionStoichiometry
-            //{
-            //    id = Guid.NewGuid(),
-            //    consumerStoch = rsum,
-            //    producerStoch = psum,
-            //    speciesId = id,
-            //});
-            //MnContext.SaveChanges();
+
+            rsum += Context.CycleConnections.Where(cc => cc.metaboliteId == id && (cc.roleId == ReactantId || cc.roleId == ReversibleId)).ToList().Sum(cc => cc.stoichiometry);
+            psum += Context.CycleConnections.Where(cc => cc.metaboliteId == id && (cc.roleId == ProductId || cc.roleId == ReversibleId)).ToList().Sum(cc => cc.stoichiometry);
 
             AllStoichiometryCache2[id] = new { Consumers = rsum, Producers = psum };
             return AllStoichiometryCache2[id];
@@ -62,39 +48,17 @@
 
         public static Reaction CachedR(Guid id)
         {
-            if (CacheReactions.Contains(id.ToString()))
-                return (Reaction)CacheReactions.Get(id.ToString());
-
-            var policy = new CacheItemPolicy { SlidingExpiration = TimeSpan.FromHours(6) };
-            var ss = Context.Reactions.Single(r => r.id == id);
-            CacheReactions.Add(id.ToString(), ss, policy);
-            return ss;
+            return Context.Reactions.Find(id);
         }
 
         public static Species CachedS(Guid id)
         {
-            if (CacheSpecieses.Contains(id.ToString()))
-                return (Species)CacheSpecieses.Get(id.ToString());
-
-            var policy = new CacheItemPolicy { SlidingExpiration = TimeSpan.FromHours(6) };
-            var ss = Context.Species.Single(s => s.id == id);
-            CacheSpecieses.Add(id.ToString(), ss, policy);
-            return ss;
+            return Context.Species.Find(id);
         }
 
         public static ReactionSpecy CachedRs(Guid rid, Guid sid)
         {
-            var key = rid.ToString() + sid;
-            if (CacheReactionsSpecies.Contains(key))
-                return (ReactionSpecy)CacheReactionsSpecies.Get(key);
-
-            foreach (var ss in Context.ReactionSpecies.Where(r => r.reactionId == rid))//GetAllReactionsSpeciesForOneReaction(rid)
-            {
-                var policy = new CacheItemPolicy { SlidingExpiration = TimeSpan.FromHours(6) };
-                CacheReactionsSpecies.Add(rid.ToString() + ss.speciesId, ss, policy);
-            }
-
-            return (ReactionSpecy)CacheReactionsSpecies.Get(key);
+            return Context.ReactionSpecies.Single(rs => rs.reactionId == rid && rs.speciesId == sid);
         }
 
         public static int TotalReactions(Guid id)
@@ -113,24 +77,6 @@
         public static dynamic GetReactionCount(Guid id)
         {
             return InvolvedReactionCount(id);
-        }
-
-        public static dynamic GetStoichiometry(Guid id)
-        {
-            dynamic rval;
-
-            try
-            {
-                rval = InvolvedReactionStoch(id);
-
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-            return rval;
-
         }
     }
 }

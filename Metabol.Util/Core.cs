@@ -128,7 +128,7 @@
 
         public static void SaveAsDgs(HyperGraph.Node mi, HyperGraph graph, string dir)
         {
-            var file = dir + graph.LastLevel + "graph.dgs";
+            var file = dir + graph.Step + "graph.dgs";
             var maxLevel = graph.LastLevel;
 
             var lines = new List<string> { "DGS004", "\"Metabolic Network\" 0 0", "#Nodes" };

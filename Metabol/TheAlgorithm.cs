@@ -63,6 +63,80 @@
         //    init = true;
         //}
 
+        public void Start()
+        {
+            if (init) return;
+            //Db.Context.Species.ToList();
+            //Db.Context.Reactions.ToList();
+            //Db.Context.ReactionSpecies.ToList();
+            //Db.Context.Cycles.ToList();
+            //Db.Context.CycleConnections.ToList();
+            //Db.Context.CycleReactions.ToList();
+            //Console.WriteLine("loaded cache");
+
+            string[] zn =
+            {
+                "D-Fructose",
+                "Glyceraldehyde", "L-threonine", "taurochenodeoxycholate",
+                "D-glucose", "3-Phospho-D-glycerate", "pyruvate"
+            };
+
+            var zlist = new List<Species>();
+            foreach (var s in zn)
+            {
+                zlist.AddRange(Db.Context.Species.Where(mm => mm.name.ToLower().Contains(s.ToLower())));
+            }
+
+            //zlist.Sort((species, serverSpecies) => string.Compare(species.SbmlId, serverSpecies.SbmlId, StringComparison.Ordinal));
+            //var rand = new Random((int)DateTime.UtcNow.ToBinary());
+
+            foreach (var s in zlist)
+            {
+                Z[s.id] = (s.id.GetHashCode() % 2) == 0 ? -1 : 1;//rand.NextDouble() >= 0.5 ? 1 : -1;
+                Console.WriteLine("{0}:{1}", s.sbmlId, Z[s.id]);
+            }
+            //ak2g_hs[c]
+            //var id = Guid.Parse("47ae0af5-9f7d-443d-b0d5-064e4707e8b5");
+
+            //creat[c]
+            //var id = Guid.Parse("1B81D656-115E-4477-B205-026001CF2847");
+
+            //577F7B2F-B654-4719-80F9-012095E07E6D	CE2180[l]
+            var id = Guid.Parse("577F7B2F-B654-4719-80F9-012095E07E6D");
+
+
+            //var id = Guid.Parse("0EDB6D23-7802-4F31-839F-28F9911FE819");
+
+            // Guid.Parse("817069E0-5D9D-4FEB-B66A-BE5E79C1822B");//Guid.Parse("64893C3E-331F-4B24-8CA8-61D9D3D39D03");
+            Z[id] = (id.GetHashCode() % 2) == 0 ? -1 : 1;
+
+            //var strCon = ConfigurationManager.AppSettings["dbConnectString"];
+            //DBWrapper.Instance = new DBWrapper(strCon);
+
+            //var reconId = Guid.Parse("c7b42b40-ccd9-42f3-b6bd-9a4111fcbec5");
+            //1. Among a user-provided set of observed metabolite changes Z,
+            //  let m be the metabolite with the least total number of producer and consumer reactions in the respective metabolic network M
+            //var m = Util.CachedS(Z.Keys.OrderBy(Util.GetReactionCountSum).First()); //e => Z[e] > 0
+            var m = Db.CachedS(id);
+            //Fba.M = m;
+            //2. Let S(m) be a subnetwork of the whole metabolic network M. 
+            //Initialize S(m) so that iteration contains only m
+            Sm.AddNode(m.id, m.sbmlId);
+            //HyperGraph.Step++;
+            //3. Extend S(m) with a subset K of m’s consumers and producers such that K has not been used before to extend the current subnetwork. 
+            //HashSet<ServerSpecies> K = new HashSet<ServerSpecies>();
+            var ex = ExtendGraph(m.id, Sm);
+            //ex.Wait(int.MaxValue);
+
+            ////If there is no such qualifying subset K, then record the current hypothesis and exit
+            //if (sm.Edges.Count == 0)
+            //{
+            //    Environment.Exit(1);
+            //}
+
+            init = true;
+        }
+
         public void Step()
         {
             if (!init) return;
@@ -145,67 +219,6 @@
             init = true;
         }
 
-        public void Start()
-        {
-            if (init) return;
-
-            string[] zn =
-            {
-                "D-Fructose",
-                "Glyceraldehyde", "L-threonine", "taurochenodeoxycholate",
-                "D-glucose", "3-Phospho-D-glycerate", "pyruvate"
-            };
-
-            var zlist = new List<Species>();
-            foreach (var s in zn)
-            {
-                zlist.AddRange(Db.Context.Species.Where(mm => mm.name.ToLower().Contains(s.ToLower())));
-            }
-
-            //zlist.Sort((species, serverSpecies) => string.Compare(species.SbmlId, serverSpecies.SbmlId, StringComparison.Ordinal));
-            //var rand = new Random((int)DateTime.UtcNow.ToBinary());
-
-            foreach (var s in zlist)
-            {
-                Z[s.id] = (s.id.GetHashCode() % 2) == 0 ? -1 : 1;//rand.NextDouble() >= 0.5 ? 1 : -1;
-                Console.WriteLine("{0}:{1}", s.sbmlId, Z[s.id]);
-            }
-            //ak2g_hs[c]
-            //var id = Guid.Parse("47ae0af5-9f7d-443d-b0d5-064e4707e8b5");
-
-            //creat[c]
-            var id = Guid.Parse("1B81D656-115E-4477-B205-026001CF2847");
-
-            // Guid.Parse("817069E0-5D9D-4FEB-B66A-BE5E79C1822B");//Guid.Parse("64893C3E-331F-4B24-8CA8-61D9D3D39D03");
-            Z[id] = (id.GetHashCode() % 2) == 0 ? -1 : 1;
-
-            //var strCon = ConfigurationManager.AppSettings["dbConnectString"];
-            //DBWrapper.Instance = new DBWrapper(strCon);
-
-            //var reconId = Guid.Parse("c7b42b40-ccd9-42f3-b6bd-9a4111fcbec5");
-            //1. Among a user-provided set of observed metabolite changes Z,
-            //  let m be the metabolite with the least total number of producer and consumer reactions in the respective metabolic network M
-            //var m = Util.CachedS(Z.Keys.OrderBy(Util.GetReactionCountSum).First()); //e => Z[e] > 0
-            var m = Db.CachedS(id);
-            //Fba.M = m;
-            //2. Let S(m) be a subnetwork of the whole metabolic network M. 
-            //Initialize S(m) so that iteration contains only m
-            Sm.AddNode(m.id, m.sbmlId);
-            //HyperGraph.Step++;
-            //3. Extend S(m) with a subset K of m’s consumers and producers such that K has not been used before to extend the current subnetwork. 
-            //HashSet<ServerSpecies> K = new HashSet<ServerSpecies>();
-            var ex = ExtendGraph(m.id, Sm);
-            //ex.Wait(int.MaxValue);
-
-            ////If there is no such qualifying subset K, then record the current hypothesis and exit
-            //if (sm.Edges.Count == 0)
-            //{
-            //    Environment.Exit(1);
-            //}
-
-            init = true;
-        }
-
         public void Start1()
         {
             if (init) return;
@@ -257,20 +270,38 @@
 
         public void RemoveExchangeReaction(HyperGraph sm, HyperGraph.Node m2)
         {
+            if (m2.IsExtended)
+            {
+                if (m2.Producers.Count(e => !e.IsPseudo) != 0)
+                {
+                    foreach (var reaction in m2.Producers.Where(e => e.IsPseudo).ToList())
+                    {
+                        sm.RemoveReaction(reaction);
+                    }
+                }
+
+                if (m2.Consumers.Count(e => !e.IsPseudo) != 0)
+                {
+                    foreach (var reaction in m2.Consumers.Where(e => e.IsPseudo).ToList())
+                    {
+                        sm.RemoveReaction(reaction);
+                    }
+                }
+            }
             // remove producer exchange reaction of  non-produced-border metabolite
             //dont remove producer exchange reaction if producer exchange reaction is only producer reaction
-            var removeox = !m2.IsProducedBorder && m2.Producers.Any(edge => edge.IsPseudo)
-                           && m2.Producers.Count(edge => !edge.IsPseudo) != 0;
+            //var removeox = !m2.IsProducedBorder && m2.Producers.Any(edge => edge.IsPseudo)
+            //               && m2.Producers.Count(edge => !edge.IsPseudo) != 0;
 
-            foreach (var ps in Sm.Edges.Values.Where(e => e.IsPseudo))
-                ps.Reactions.ExceptWith(Sm.Edges.Keys);
-            if (removeox)
-            {
-                var outex = m2.Producers.First(s => s.IsPseudo);
-                m2.RemovedProducerExchange = outex;
-                m2.Producers.Remove(outex);
-                HyperGraph.Edge ee1;
-                sm.Edges.TryRemove(outex.Id, out ee1);
+            //foreach (var ps in Sm.Edges.Values.Where(e => e.IsPseudo))
+            //    ps.Reactions.ExceptWith(Sm.Edges.Keys);
+            //if (removeox)
+            //{
+            //    var outex = m2.Producers.First(s => s.IsPseudo);
+            //    m2.RemovedProducerExchange = outex;
+            //    m2.Producers.Remove(outex);
+            //    HyperGraph.Edge ee1;
+            //    sm.Edges.TryRemove(outex.Id, out ee1);
                 //if (ee1.Reactants.Values.Any(n => n.IsPseudo))
                 //{
                 //    foreach (var id in ee1.Reactants.Where(n => n.Value.IsPseudo))
@@ -279,21 +310,21 @@
                 //        sm.Nodes.TryRemove(id.Key, out b);
                 //    }
                 //}
-            }
+            //}
 
             // remove consumer exchange reaction of  non-consumed-border metabolite 
             //dont remove consumer exchange reaction if consumer exchange reaction is only consumer reaction
-            var removeix = !m2.IsConsumedBorder && m2.Consumers.Any(edge => edge.IsPseudo)
-                           && m2.Consumers.Count(edge => !edge.IsPseudo) != 0;
+            //var removeix = !m2.IsConsumedBorder && m2.Consumers.Any(edge => edge.IsPseudo)
+            //               && m2.Consumers.Count(edge => !edge.IsPseudo) != 0;
 
-            if (removeix)
-            {
-                var inex = m2.Consumers.First(s => s.IsPseudo);
-                m2.RemovedConsumerExchange = inex;
-                m2.Consumers.Remove(inex);
+            //if (removeix)
+            //{
+            //    var inex = m2.Consumers.First(s => s.IsPseudo);
+            //    m2.RemovedConsumerExchange = inex;
+            //    m2.Consumers.Remove(inex);
 
-                HyperGraph.Edge e;
-                sm.Edges.TryRemove(inex.Id, out e);
+            //    HyperGraph.Edge e;
+            //    sm.Edges.TryRemove(inex.Id, out e);
                 //if (e.Products.Values.Any(n => n.IsPseudo))
                 //{
                 //    foreach (var id in e.Products.Where(n => n.Value.IsPseudo))
@@ -302,7 +333,7 @@
                 //        sm.Nodes.TryRemove(id.Key, out b);
                 //    }
                 //}
-            }
+            //}
         }
 
         public void UpdateNeighbore(HyperGraph sm, HyperGraph.Node m2)
@@ -438,24 +469,41 @@
             await Task.Delay(TimeSpan.Zero);
         }
 
-        public static async Task DefineExReactionLonely(HyperGraph.Node m, HyperGraph sm)
+        public static void DefineExReactionLonely(HyperGraph.Node m, HyperGraph sm)
         {
-            if (!m.IsLonely)
+            if (m.IsExtended) return;
+
+            if (m.Consumers.Count == 0)
             {
-                return;
+                sm.AddReactant(Guid.NewGuid(), string.Format("exr_{0}_cons", m.Label), m.Id, m.Label, true);
             }
 
             if (m.Producers.Count == 0)
             {
                 sm.AddProduct(Guid.NewGuid(), string.Format("exr_{0}_prod", m.Label), m.Id, m.Label, true);
             }
-            else if (m.Consumers.Count == 0)
-            {
-                sm.AddReactant(Guid.NewGuid(), string.Format("exr_{0}_cons", m.Label), m.Id, m.Label, true);
-            }
 
-            await Task.Delay(TimeSpan.Zero);
+            //if ()
         }
+        //public static async Task DefineExReactionLonely(HyperGraph.Node m, HyperGraph sm)
+        //{
+        //    if (!m.IsLonely)
+        //    {
+        //        return;c
+        //    }
+
+        //    if (m.Producers.Count == 0)
+        //    {
+        //        sm.AddProduct(Guid.NewGuid(), string.Format("exr_{0}_prod", m.Label), m.Id, m.Label, true);
+        //    }
+        //    else if (m.Consumers.Count == 0)
+        //    {
+        //        sm.AddReactant(Guid.NewGuid(), string.Format("exr_{0}_cons", m.Label), m.Id, m.Label, true);
+        //    }
+
+        //    await Task.Delay(TimeSpan.Zero);
+        //}
+
 
         public static HashSet<HyperGraph.Node> GetBorderMetabolites(HyperGraph sm)
         {
@@ -481,7 +529,6 @@
         {
             var sp = Db.Context.Species.Single(s => s.id == mid);
             //Pathway.AddLast(sp.sbmlId);
-            sm.Nodes[mid].IsExtended = true;
 
             foreach (var r in sp.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId).Select(rs => rs.Reaction))
             {
@@ -504,13 +551,18 @@
 
             // add exchange reaction to lonely(metabol. with only input or output reactions) metabolites   
             foreach (var lon in sm.Nodes.Values.Where(n => n.IsLonely))
-                await DefineExReactionLonely(lon, sm);
+            {
+                DefineExReactionLonely(lon, sm);
+                RemoveExchangeReaction(sm, lon);
+            }
 
             foreach (var node in sm.Nodes[sp.id].AllNeighborNodes()) //.Where(node => !node.IsBorder)
             {
                 if (node.IsBorder) UpdateNeighbore(sm, node);
                 RemoveExchangeReaction(sm, node);
             }
+
+            sm.Nodes[mid].IsExtended = true;
         }
 
         private static bool AddCycleFromReaction(HyperGraph hyperGraph, Reaction reaction)
@@ -526,19 +578,19 @@
 
             foreach (var product in products)
             {
-                var m = new HyperGraph.Node(product.Species, hyperGraph.LastLevel);
+                var m = new HyperGraph.Node(product.Species, hyperGraph.Step);
                 hyperGraph.AddProduct(cycleReaction, m, 1);
             }
 
             foreach (var reactant in reactants)
             {
-                var m = new HyperGraph.Node(reactant.Species, hyperGraph.LastLevel);
+                var m = new HyperGraph.Node(reactant.Species, hyperGraph.Step);
                 hyperGraph.AddReactant(cycleReaction, m, 1);
             }
 
             foreach (var reversible in reversibles)
             {
-                var m = new HyperGraph.Node(reversible.Species, hyperGraph.LastLevel);
+                var m = new HyperGraph.Node(reversible.Species, hyperGraph.Step);
                 hyperGraph.AddProduct(cycleReaction, m, 1);
                 hyperGraph.AddReactant(cycleReaction, m, 1);
             }
@@ -624,11 +676,11 @@
                     .Select(rs => rs.Species).ToList();
 
                 foreach (var meta in reactants
-                    .Where(p => Db.GetReactionCountSum(p.id) < CommonMetabolite && p.boundaryCondition == false))
+                    /*.Where(p => Db.GetReactionCountSum(p.id) < CommonMetabolite && p.boundaryCondition == false)*/)
                     sm.AddReactant(reaction.id, reaction.sbmlId, meta.id, meta.sbmlId);
 
                 foreach (var meta in products
-                    .Where(p => Db.GetReactionCountSum(p.id) < CommonMetabolite && p.boundaryCondition == false))
+                    /*.Where(p => Db.GetReactionCountSum(p.id) < CommonMetabolite && p.boundaryCondition == false)*/)
                     sm.AddProduct(reaction.id, reaction.sbmlId, meta.id, meta.sbmlId);
             }
             catch (Exception e)
