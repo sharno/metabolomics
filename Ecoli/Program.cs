@@ -11,16 +11,14 @@ namespace Ecoli
         static void Main(string[] args)
         {
             var p = new TheAlgorithm();
-            p.Fba.RemoveConstraints = false;
             p.Start();
             do
             {
                 Console.Clear();
                 Console.SetCursorPosition(0, 0);
 
-                Console.WriteLine("\n************** ITERATION {0} *************** ", p.Iteration);
+                Console.WriteLine("\n************** ITERATION {0} *************** ", p.Sm.Step);
                 p.Step();
-                //if (p.Iteration >= 8)
                 if (!p.IsFeasable)
                 {
                     Console.ReadKey();
