@@ -245,12 +245,12 @@ namespace Ecoli
         {
             if (node.IsProducedBorder && !node.Producers.Any(s => s.IsPseudo))
             {
-                sm.AddProduct(Guid.NewGuid(), $"exr_{node.Label}_prod", false, true, node.Id, node.Label);
+                sm.AddProduct(Guid.NewGuid(), $"_exr_{node.Label}_prod", false, true, node.Id, node.Label);
             }
 
             if (node.IsConsumedBorder && !node.Consumers.Any(s => s.IsPseudo))
             {
-                sm.AddReactant(Guid.NewGuid(), $"exr_{node.Label}_cons", false, true, node.Id, node.Label);
+                sm.AddReactant(Guid.NewGuid(), $"_exr_{node.Label}_cons", false, true, node.Id, node.Label);
             }
         }
 
@@ -305,6 +305,33 @@ namespace Ecoli
                     sm.AddReactant(cycle, new HyperGraph.Node(metabolite.id, metabolite.sbmlId, sm.LastLevel));
                 }
             }
+
+            // fix direction of reactions with changed boundaries
+            foreach (var edge in sm.Edges.Values.Where(edge => edge.LowerBound < 0 && Math.Abs(edge.UpperBound) < double.Epsilon))
+            {
+                foreach (var product in edge.Products.Values)
+                {
+                    product.Producers.Remove(edge);
+                    product.Consumers.Add(edge);
+                    product.Weights[edge.Id] = -product.Weights[edge.Id];
+                }
+                foreach (var reactant in edge.Reactants.Values)
+                {
+                    reactant.Consumers.Remove(edge);
+                    reactant.Producers.Add(edge);
+                    reactant.Weights[edge.Id] = - reactant.Weights[edge.Id];
+                }
+
+                var temp = edge.Reactants;
+                edge.Reactants = edge.Products;
+                edge.Products = temp;
+
+                edge.UpperBound = - edge.LowerBound;
+                edge.LowerBound = 0;
+
+                edge.IsReversible = false;
+            }
+
 
             // Define exchange reactions for all border metabolites in S(m).
             // add exchange reaction to lonely(metabol. with only input or output reactions) metabolites   

@@ -306,6 +306,7 @@ namespace Ecoli.Util
             public Dictionary<Guid, Edge> InterfaceReactions = new Dictionary<Guid, Edge>();
             public HashSet<Edge> InsideReactions = new HashSet<Edge>();
             public Dictionary<Guid, double> Fluxes = new Dictionary<Guid, double>();
+            public Dictionary<Guid, double> PreFluxes = new Dictionary<Guid, double>();
 
             public Cycle()
             {
@@ -347,6 +348,12 @@ namespace Ecoli.Util
             [JsonProperty("isReversible")]
             public bool IsReversible { get; set; }
 
+            [JsonProperty("lowerBound")]
+            public double LowerBound;
+
+            [JsonProperty("upperBound")]
+            public double UpperBound;
+
             [JsonProperty("inputNodes")]
             public Dictionary<Guid, Node> Reactants = new Dictionary<Guid, Node>();
 
@@ -376,6 +383,17 @@ namespace Ecoli.Util
                 IsReversible = isReversible;
                 IsPseudo = isPseudo;
                 Level = level;
+
+                if (isPseudo) return;
+                var rb = Db.Context.ReactionBounds.Single(e => e.reactionId == id);
+                LowerBound = rb.lowerBound;
+                UpperBound = rb.upperBound;
+                var rbf = Db.Context.ReactionBoundFixes.SingleOrDefault(e => e.reactionId == id);
+                if (rbf != null)
+                {
+                    LowerBound = rbf.lowerbound;
+                    UpperBound = rbf.upperbound;
+                }
             }
 
             public Edge AddReactant(Node node)
@@ -520,7 +538,8 @@ namespace Ecoli.Util
                     HashSet<Guid> separate = new HashSet<Guid>(Consumers.Union(Producers).Where(r => !r.IsPseudo && !(r is Cycle)).Select(r => r.Id));
                     var remainingConsumers = RealConsumers.Except(separate.Union(shared));
                     var remainingProducers = RealProducers.Except(separate.Union(shared));
-                    return remainingConsumers.Count() != 0 || remainingProducers.Any(p => Db.Context.Reactions.Find(p).reversible);
+                    // reaction bound fixes are only blocking or reversing the reaction so, normal reactions shouldn't be considered as normal
+                    return remainingConsumers.Any(c => !Db.Context.ReactionBoundFixes.Any(e => c == e.reactionId)) || remainingProducers.Any(p => Db.Context.Reactions.Find(p).reversible /*&& !Db.Context.ReactionBoundFixes.Any(e => p == e.reactionId)*/);
                 }
             }
 
@@ -555,7 +574,8 @@ namespace Ecoli.Util
                     HashSet<Guid> separate = new HashSet<Guid>(Consumers.Union(Producers).Where(r => !r.IsPseudo && !(r is Cycle)).Select(r => r.Id));
                     var remainingConsumers = RealConsumers.Except(separate.Union(shared));
                     var remainingProducers = RealProducers.Except(separate.Union(shared));
-                    return remainingProducers.Count() != 0 || remainingConsumers.Any(p => Db.Context.Reactions.Find(p).reversible);
+                    // reaction bound fixes are only blocking or reversing the reaction so, normal reactions shouldn't be considered as normal
+                    return remainingProducers.Any(p => !Db.Context.ReactionBoundFixes.Any(e => p == e.reactionId)) || remainingConsumers.Any(c => Db.Context.Reactions.Find(c).reversible /*&& !Db.Context.ReactionBoundFixes.Any(e => c == e.reactionId)*/);
                 }
             }
 

@@ -13,6 +13,7 @@ namespace Ecoli.Util.DB
         public Cycle()
         {
             CycleConnections = new HashSet<CycleConnection>();
+            cycleInterfaceMetabolitesRatios = new HashSet<cycleInterfaceMetabolitesRatio>();
             CycleReactions = new HashSet<CycleReaction>();
         }
 
@@ -20,6 +21,9 @@ namespace Ecoli.Util.DB
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<CycleConnection> CycleConnections { get; set; }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<cycleInterfaceMetabolitesRatio> cycleInterfaceMetabolitesRatios { get; set; }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<CycleReaction> CycleReactions { get; set; }

@@ -1,4 +1,6 @@
-﻿namespace Ecoli
+﻿using System.Text.RegularExpressions;
+
+namespace Ecoli
 {
     using System;
     using System.Collections.Generic;
@@ -33,6 +35,11 @@
             const double cycleIrreversibleLowerBound = 0.0;
 
             sm.Edges.Values.ToList().ForEach(e => e.PreFlux = e.Flux);
+            sm.Cycles.Values.ToList().ForEach(c => c.Fluxes.Keys.ToList().ForEach(m => c.PreFluxes[m] = c.Fluxes[m]));
+            foreach (var cycle in sm.Cycles)
+            {
+                var f = cycle.Value.PreFluxes;
+            }
 
             foreach (var edge in sm.Edges.Values)
             {
@@ -51,7 +58,7 @@
                             m =>
                                 cycleMetabolitesVars[edge.Id][m.Key] =
                                     model.NumVar(cycleIrreversibleLowerBound, cycleUpperBound, NumVarType.Float,
-                                        edge.Label + "_irrev_" + m.Value.Label));
+                                        edge.Label + /*"_irrev"*/"_" + m.Value.Label));
 
                     // make it reversible bounds for shared products and reactants
                     cycle.Reactants.Intersect(cycle.Products).ToList()
@@ -59,7 +66,7 @@
                             m =>
                                 cycleMetabolitesVars[edge.Id][m.Key] =
                                     model.NumVar(cycleReversibleLowerBound, cycleUpperBound, NumVarType.Float,
-                                        edge.Label + "_rev_" + m.Value.Label));
+                                        edge.Label + /*"_rev*/"_" + m.Value.Label));
 
 
                     // add atom numbers constraints to link metabolites of the cycle reaction
@@ -151,7 +158,17 @@
                 {
                     // TODO get reaction bounds from database with the construction of reactions
                     var reactionBounds = Db.Context.ReactionBounds.Single(rb => rb.reactionId == edge.Id);
-                    vars[edge.Id] = model.NumVar(reactionBounds.lowerBound, reactionBounds.upperBound, NumVarType.Float, edge.Label);
+                    var fixedbounds = Db.Context.ReactionBoundFixes.SingleOrDefault(rbf => rbf.reactionId == edge.Id);
+                    if (fixedbounds != null)
+                    {
+                        vars[edge.Id] = model.NumVar(fixedbounds.lowerbound, fixedbounds.upperbound, NumVarType.Float,
+                            edge.Label);
+                    }
+                    else
+                    {
+                        vars[edge.Id] = model.NumVar(reactionBounds.lowerBound, reactionBounds.upperBound,
+                            NumVarType.Float, edge.Label);
+                    }
                 }
             }
 
@@ -168,20 +185,42 @@
                     .ToList()
                     .ForEach(d => d.Value.Flux = model.GetValue(vars[d.Value.Id]));
 
-                cycleMetabolitesVars.Keys.ToList().ForEach(c => cycleMetabolitesVars[c].Keys.ToList().ForEach(m => sm.Cycles[c].Fluxes[m] = model.GetValue(cycleMetabolitesVars[c][m])));
+                cycleMetabolitesVars.Keys
+                    .ToList()
+                    .ForEach(c => cycleMetabolitesVars[c].Keys.ToList().ForEach(m => sm.Cycles[c].Fluxes[m] = model.GetValue(cycleMetabolitesVars[c][m])));
             }
             else
             {
-                Debug(sm.Step);
+                var reactionsFluxes = new Dictionary<string, double>();
+                sm.Edges.Where(e => !(e.Value is HyperGraph.Cycle) && !e.Value.RecentlyAdded)
+                    .ToList()
+                    .ForEach(e => reactionsFluxes[e.Value.Label] = e.Value.PreFlux);
+                sm.Cycles
+                    .ToList()
+                    .ForEach(c => c.Value.Fluxes.Keys.ToList()
+                    .ForEach(m => reactionsFluxes[$"{c.Value.Label}_{sm.Nodes[m].Label}"] = c.Value.PreFluxes[m]));
+                reactionsFluxes.Keys.Where(f => f.StartsWith("EX_")).ToList().ForEach(f =>
+                {
+                    reactionsFluxes["_" + f] = reactionsFluxes[f];
+                    reactionsFluxes.Remove(f);
+                });
+                Debug(sm.Step, reactionsFluxes);
                 sm.Edges.ToList().ForEach(d => d.Value.Flux = 0);
             }
 
             sm.Edges.Values.ToList().ForEach(e => e.RecentlyAdded = false);
             var list = sm.Edges.ToList().Select(d => $"{d.Value.Label}:{d.Value.Flux}").ToList();
+            list.AddRange(cycleMetabolitesVars.Keys.ToList().SelectMany(c => cycleMetabolitesVars[c].Keys.ToList().Select(
+                m =>
+                {
+                    if (isfeas) return $"{sm.Cycles[c].Label}_{sm.Nodes[m].Label}:{model.GetValue(cycleMetabolitesVars[c][m])}";
+                    else return $"{sm.Cycles[c].Label}_{sm.Nodes[m].Label}:0";
+                })));
             list.Sort((decision, decision1) => string.Compare(decision, decision1, StringComparison.Ordinal));
             File.WriteAllLines($"{Core.Dir}{sm.Step}result.txt", list);
 
             var status = model.GetCplexStatus();
+            
             Console.WriteLine(status);
 
             return isfeas;
@@ -289,38 +328,46 @@
             {
                 if (!ReactionsConstraintsDictionary.ContainsKey(reaction.Key))
                 {
-                    ReactionsConstraintsDictionary[reaction.Key] = Tuple.Create(reaction.Value.Flux*(1 - Change), reaction.Value.Flux * (1 + Change));
+                    var ub = Math.Max(reaction.Value.Flux*(1 - Change), reaction.Value.Flux*(1 + Change));
+                    var lb = Math.Min(reaction.Value.Flux*(1 - Change), reaction.Value.Flux*(1 + Change));
+                    ReactionsConstraintsDictionary[reaction.Key] = Tuple.Create(lb, ub);
                 }
                 Constraints.Add(model.AddGe(vars[reaction.Value.Id], ReactionsConstraintsDictionary[reaction.Key].Item1, $"{reaction.Value.Label}_lb"));
                 Constraints.Add(model.AddLe(vars[reaction.Value.Id], ReactionsConstraintsDictionary[reaction.Key].Item2, $"{reaction.Value.Label}_ub"));
             }
 
-            foreach (var cycle in sm.Cycles)
-            {
-                foreach (var m in cycle.Value.Fluxes)
-                {
-                    Constraints.Add(model.AddGe(cycleMetabolitesVars[cycle.Key][m.Key], m.Value * (1 - Change), $"{cycle.Value.Label}_{sm.Nodes[m.Key].Label}lb"));
-                    Constraints.Add(model.AddLe(cycleMetabolitesVars[cycle.Key][m.Key], m.Value * (1 + Change), $"{cycle.Value.Label}_{sm.Nodes[m.Key].Label}_ub"));
-                }
-            }
+            // adding cycles to metabolites constraints
+            //foreach (var cycle in sm.Cycles)
+            //{
+            //    foreach (var m in cycle.Value.Fluxes)
+            //    {
+            //        var ub = Math.Max(m.Value * (1 - Change), m.Value * (1 + Change));
+            //        var lb = Math.Min(m.Value * (1 - Change), m.Value * (1 + Change));
+            //        Constraints.Add(model.AddGe(cycleMetabolitesVars[cycle.Key][m.Key], lb, $"{cycle.Value.Label}_{sm.Nodes[m.Key].Label}lb"));
+            //        Constraints.Add(model.AddLe(cycleMetabolitesVars[cycle.Key][m.Key], ub, $"{cycle.Value.Label}_{sm.Nodes[m.Key].Label}_ub"));
+            //    }
+            //}
 
             foreach (var constraint in sm.ExchangeConstraints)
             {
                 var expr = model.LinearNumExpr();
                 expr.AddTerms(constraint.Item1.Select(r => vars[r]).ToArray(), constraint.Item2.ToArray());
-                Constraints.Add(model.AddGe(expr, constraint.Item3 * (1 - Change), $"Exchange_{sm.Edges[constraint.Item1[0]].Label}_lb"));
-                Constraints.Add(model.AddGe(expr, constraint.Item3 * (1 + Change), $"Exchange_{sm.Edges[constraint.Item1[0]].Label}_ub"));
+                var ub = Math.Max(constraint.Item3 * (1 - Change), constraint.Item3 * (1 + Change));
+                var lb = Math.Min(constraint.Item3 * (1 - Change), constraint.Item3 * (1 + Change));
+                Constraints.Add(model.AddGe(expr, lb, $"Exchange_{sm.Edges[constraint.Item1[0]].Label}_lb"));
+                Constraints.Add(model.AddLe(expr, ub, $"Exchange_{sm.Edges[constraint.Item1[0]].Label}_ub"));
             }
         }
 
 
-        public static void Debug(int step)
+        public static void Debug(int step, IDictionary<string, double> prevals)
         {
-            var model = new Cplex();
-            model.ImportModel($"{Core.Dir}{step}model.lp");
+            var model = new Cplex { Name = "FBA" };
             model.SetParam(Cplex.Param.Preprocessing.Presolve, false);
-            var m = model.GetLPMatrixEnumerator();
+            model.ImportModel($"{Core.Dir}{step}model.lp");
 
+
+            var m = model.GetLPMatrixEnumerator();
             m.MoveNext();
             var mat = (CpxLPMatrix)m.Current;
 
@@ -330,6 +377,9 @@
 
             if (File.Exists($"{Core.Dir}debug.txt"))
                 File.Delete($"{Core.Dir}debug.txt");
+
+            if (File.Exists($"{Core.Dir}debug_val.txt"))
+                File.Delete($"{Core.Dir}debug_val.txt");
 
             for (var i = 0; i < ranges.Length; i++)
             {
@@ -351,11 +401,41 @@
                 model2.AddObjective(obj.Sense, (CpxQLExpr)obj.Expr.MakeClone(cloner));
 
                 model2.Solve();
-                File.AppendAllLines($"{Core.Dir}debug.txt", new[] {$"removing {ranges[i].Name}: {model2.GetStatus()}"});
+                File.AppendAllLines($"{Core.Dir}debug.txt", new[] { string.Format("{0}:{1}", ranges[i].Name, model2.GetStatus()) });
 
                 model2.EndModel();
+
+                var ex = Regex.Replace(ranges[i].Expr.ToString(), "#\\d+|\\(|\\)|", "");
+                var evars = (from str in (from e in ex.Split('+', '-')
+                                          select Regex.Replace(e, "\\d+\\*", "").Trim())
+                             where !string.IsNullOrEmpty(str)
+                             select str).ToList();
+
+                var ex1 = evars.Where(prevals.ContainsKey)
+                    .Aggregate(ex + "", (current, var) => current.Replace(var, string.Format("{0}({1})", var, prevals[var])));
+
+                var ex2 = evars.Where(prevals.ContainsKey)
+                  .Aggregate(ex + "", (current, var) => current.Replace(var, string.Format("{0}", prevals[var])));
+
+                if (Math.Abs(ranges[i].LB - ranges[i].UB) <= double.Epsilon)
+                {
+                    ex1 = string.Format("{0}=={1}", ex1, ranges[i].LB);
+                    ex2 = string.Format("{0}=={1}", ex2, ranges[i].LB);
+                }
+                else if (Math.Abs(ranges[i].LB - double.MinValue) < double.Epsilon)
+                {
+                    ex1 = string.Format("{0}<={1}", ex1, ranges[i].UB);
+                    ex2 = string.Format("{0}<={1}", ex2, ranges[i].UB);
+
+                }
+                else if (Math.Abs(ranges[i].UB - double.MaxValue) < double.Epsilon)
+                {
+                    ex1 = string.Format("{0}>={1}", ex1, ranges[i].LB);
+                    ex2 = string.Format("{0}>={1}", ex2, ranges[i].LB);
+                }
+
+                File.AppendAllLines($"{Core.Dir}debug_val.txt", new[] { string.Format("{0}|{1}", ex2, ex1) });
             }
         }
-
     }
 }

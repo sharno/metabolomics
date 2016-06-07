@@ -8,7 +8,7 @@ namespace Ecoli.Util.DB
     public partial class EcoliCoreModel : DbContext
     {
         public EcoliCoreModel()
-            : base("name=EcoliCoreModel4")
+            : base("name=EcoliCoreModel")
         {
         }
 
@@ -73,6 +73,7 @@ namespace Ecoli.Util.DB
         public virtual DbSet<protein> proteins { get; set; }
         public virtual DbSet<Reaction> Reactions { get; set; }
         public virtual DbSet<ReactionBound> ReactionBounds { get; set; }
+        public virtual DbSet<ReactionBoundFix> ReactionBoundFixes { get; set; }
         public virtual DbSet<ReactionSpecy> ReactionSpecies { get; set; }
         public virtual DbSet<ReactionSpeciesRole> ReactionSpeciesRoles { get; set; }
         public virtual DbSet<rna_types> rna_types { get; set; }
@@ -92,6 +93,7 @@ namespace Ecoli.Util.DB
         public virtual DbSet<chromosomes_pathcase> chromosomes_pathcase { get; set; }
         public virtual DbSet<CompartmentClass> CompartmentClasses { get; set; }
         public virtual DbSet<CycleConnection> CycleConnections { get; set; }
+        public virtual DbSet<cycleInterfaceMetabolitesRatio> cycleInterfaceMetabolitesRatios { get; set; }
         public virtual DbSet<CycleReaction> CycleReactions { get; set; }
         public virtual DbSet<ec_go> ec_go { get; set; }
         public virtual DbSet<ec_go_orig> ec_go_orig { get; set; }
@@ -208,6 +210,11 @@ namespace Ecoli.Util.DB
 
             modelBuilder.Entity<Cycle>()
                 .HasMany(e => e.CycleConnections)
+                .WithRequired(e => e.Cycle)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Cycle>()
+                .HasMany(e => e.cycleInterfaceMetabolitesRatios)
                 .WithRequired(e => e.Cycle)
                 .WillCascadeOnDelete(false);
 
@@ -665,6 +672,10 @@ namespace Ecoli.Util.DB
                 .WithRequired(e => e.Reaction)
                 .WillCascadeOnDelete(false);
 
+            modelBuilder.Entity<Reaction>()
+                .HasOptional(e => e.ReactionBoundFix)
+                .WithRequired(e => e.Reaction);
+
             modelBuilder.Entity<ReactionSpecy>()
                 .Property(e => e.sbmlId)
                 .IsUnicode(false);
@@ -814,6 +825,18 @@ namespace Ecoli.Util.DB
                 .HasMany(e => e.CycleConnections)
                 .WithRequired(e => e.Species)
                 .HasForeignKey(e => e.metaboliteId)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Species>()
+                .HasMany(e => e.cycleInterfaceMetabolitesRatios)
+                .WithRequired(e => e.Species)
+                .HasForeignKey(e => e.metabolite1)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Species>()
+                .HasMany(e => e.cycleInterfaceMetabolitesRatios1)
+                .WithRequired(e => e.Species1)
+                .HasForeignKey(e => e.metabolite2)
                 .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<SpeciesType>()

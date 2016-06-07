@@ -17,6 +17,8 @@ namespace Ecoli.Util.DB
             MetaboliteReactionStoichiometries = new HashSet<MetaboliteReactionStoichiometry>();
             ReactionSpecies = new HashSet<ReactionSpecy>();
             CycleConnections = new HashSet<CycleConnection>();
+            cycleInterfaceMetabolitesRatios = new HashSet<cycleInterfaceMetabolitesRatio>();
+            cycleInterfaceMetabolitesRatios1 = new HashSet<cycleInterfaceMetabolitesRatio>();
         }
 
         public Guid id { get; set; }
@@ -70,5 +72,11 @@ namespace Ecoli.Util.DB
         public virtual SpeciesType SpeciesType { get; set; }
 
         public virtual UnitDefinition UnitDefinition { get; set; }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<cycleInterfaceMetabolitesRatio> cycleInterfaceMetabolitesRatios { get; set; }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<cycleInterfaceMetabolitesRatio> cycleInterfaceMetabolitesRatios1 { get; set; }
     }
 }

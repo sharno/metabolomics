@@ -47,6 +47,8 @@ namespace Ecoli.Util.DB
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<ReactionBound> ReactionBounds { get; set; }
 
+        public virtual ReactionBoundFix ReactionBoundFix { get; set; }
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<ReactionSpecy> ReactionSpecies { get; set; }
     }
