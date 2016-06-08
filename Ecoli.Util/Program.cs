@@ -59,13 +59,13 @@ namespace Ecoli.Util
 
                 foreach (var cycle in Db.Context.Cycles.Where(cy => cycles.Contains(cy.id)))
                 {
-                    Console.WriteLine((cycle.id == Guid.Parse("b88f7627-fd15-4173-a33f-ea80c7147681")) + "\n\n\n\n\n\n");
+                    //Console.WriteLine((cycle.id == Guid.Parse("b88f7627-fd15-4173-a33f-ea80c7147681")) + "\n\n\n\n\n\n");
                     var recordedRatios = new Dictionary<Guid, Dictionary<Guid, List<double>>>();
 
                     var nestedCycles = cycle.CycleReactions.Where(cr => !cr.isReaction).Select(cr => cr.otherId).ToList();
-                    var satisfiedNestedCycles = nestedCycles.All(c => Db.Context.cycleInterfaceMetabolitesRatios.Any(ci => ci.cycleId == c));
+                    //var satisfiedNestedCycles = nestedCycles.All(c => Db.Context.cycleInterfaceMetabolitesRatios.Any(ci => ci.cycleId == c));
 
-                    if (cycle.CycleReactions.All(cr => cr.isReaction) || satisfiedNestedCycles)
+                    if (cycle.CycleReactions.All(cr => cr.isReaction) /*|| satisfiedNestedCycles*/)
                     {
 
                         var ratios = nestedCycles.SelectMany(nc => Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == nc)).ToList();
@@ -145,7 +145,7 @@ namespace Ecoli.Util
                                 expr1.AddTerm(1, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite1)]]);
                                 var expr2 = model.LinearNumExpr();
                                 expr2.AddTerm(ra.ratio, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
-                                model.AddEq(expr1, expr2);
+                                model.AddEq(model.Abs(expr1), model.Abs(expr2));
                             });
 
                             var solved = model.Solve();
@@ -235,17 +235,14 @@ namespace Ecoli.Util
                                     });
                         }
 
-                        Console.WriteLine("removing cycle" + "                                  " + cycles.Count);
+                        Console.WriteLine("removing cycle" + "  ===========================>  " + cycles.Count);
                         cycles.Remove(cycle.id);
                     }
                     recordedRatios.Values.ToList().ForEach(s => s.ToList().ForEach(l =>
                     {
                         if (l.Value.All(v => !double.IsNaN(v) && Math.Abs(v) > double.Epsilon && Math.Abs(Math.Abs(v) - Math.Abs(l.Value[0])) < double.Epsilon))
                         {
-                            Console.WriteLine();
-                            Console.WriteLine();
-                            Console.WriteLine();
-                            Console.WriteLine(l.Key + " " + l.Value[0]);
+                            Console.WriteLine("111111111111111111111111111   " + l.Key + " " + l.Value[0]);
                         }
                     }));
                 }
