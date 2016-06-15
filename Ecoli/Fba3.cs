@@ -206,6 +206,8 @@ namespace Ecoli
             AddMetabolitesStableStateConstraints(sm, model, vars, cycleMetabolitesVars);
             AddObjectiveFunction(sm, model, vars, cycleMetabolitesVars);
 
+            GeneNetwork.AddRegulationConstraints(model, sm, vars);
+
             var isfeas = model.Solve();
             model.ExportModel($"{Core.Dir}{sm.Step}model.lp");
 

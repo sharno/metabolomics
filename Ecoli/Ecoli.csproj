@@ -63,8 +63,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BooleanParser.cs" />
     <Compile Include="Fba3.cs" />
     <Compile Include="FVA.cs" />
+    <Compile Include="GeneNetwork.cs" />
+    <Compile Include="MOMA.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TheAlgorithm.cs" />
