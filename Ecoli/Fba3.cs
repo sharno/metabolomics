@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Dynamic;
+using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace Ecoli
 {
@@ -67,6 +69,34 @@ namespace Ecoli
                                 cycleMetabolitesVars[edge.Id][m.Key] =
                                     model.NumVar(cycleReversibleLowerBound, cycleUpperBound, NumVarType.Float,
                                         edge.Label + /*"_rev*/"_" + m.Value.Label));
+
+
+
+
+                    // put cycle ratios
+                    //if (cycle.Id == Guid.Parse("b88f7627-fd15-4173-a33f-ea80c7147681"))
+                    //{
+                        var ratios =
+                            Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == cycle.Id).ToList();
+                        ratios.ForEach(ra =>
+                        {
+                            var expr1 = model.LinearNumExpr();
+                            expr1.AddTerm(1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+                            var expr2 = model.LinearNumExpr();
+                            expr2.AddTerm(ra.ratio, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+                            model.AddEq(model.Abs(expr1), model.Abs(expr2),
+                                $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio");
+                            var g = model.Eq(model.Abs(expr1), model.Abs(expr2), "rratio");
+                            var g2 = model.Eq(model.Abs(expr1), 0);
+                            var g3 = model.Eq(model.Abs(expr2), 0);
+                            var o = model.Or();
+                            o.Add(g);
+                            o.Add(g2);
+                            o.Add(g3);
+                            model.Add(o);
+                        });
+                    //}
+
 
 
                     // add atom numbers constraints to link metabolites of the cycle reaction
@@ -360,18 +390,36 @@ namespace Ecoli
         }
 
 
+        public static dynamic ToDynamic(object value)
+        {
+            return (ExpandoObject)value.GetType()
+                .GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+                .Aggregate((IDictionary<string, object>)new ExpandoObject(), (obj, info) =>
+                {
+                    obj[info.Name] = info.GetValue(value);
+                    return obj;
+                });
+        }
+
         public static void Debug(int step, IDictionary<string, double> prevals)
         {
-            var model = new Cplex { Name = "FBA" };
-            model.SetParam(Cplex.Param.Preprocessing.Presolve, false);
+            var model = new Cplex();
+            //model.SetParam(Cplex.Param.Preprocessing.Presolve, false);
             model.ImportModel($"{Core.Dir}{step}model.lp");
-
+            dynamic link = ToDynamic(ToDynamic(ToDynamic(ToDynamic(model)._model)._gc)._link);
+            link = ToDynamic(link._prev);
+            var cconst = new List<CpxIfThen>();
+            while (link._obj != null)
+            {
+                cconst.Add(link._obj as CpxIfThen);
+                link = ToDynamic(link._prev);
+            }
 
             var m = model.GetLPMatrixEnumerator();
             m.MoveNext();
             var mat = (CpxLPMatrix)m.Current;
 
-            var vars = mat.NumVars;
+            var vars = mat.GetNumVars();
             var ranges = mat.GetRanges();
             var obj = model.GetObjective();
 
@@ -384,12 +432,10 @@ namespace Ecoli
             for (var i = 0; i < ranges.Length; i++)
             {
                 var model2 = new Cplex { Name = ranges[i].Name };
-                model2.SetParam(Cplex.Param.Preprocessing.Presolve, false);
+                //model2.SetParam(Cplex.Param.Preprocessing.Presolve, false);
                 var cloner = new SimpleCloneManager(model2);
                 foreach (var var in vars)
-                {
                     model2.NumVar(var.LB, var.UB, var.Type, var.Name);
-                }
 
                 for (var j = 0; j < ranges.Length; j++)
                 {
@@ -398,10 +444,13 @@ namespace Ecoli
                     model2.AddRange(ranges[j].LB, (CpxQLExpr)ranges[j].Expr.MakeClone(cloner), ranges[j].UB, ranges[j].Name);
                 }
 
+                foreach (var ifThen in cconst)
+                    model2.Add((CpxIfThen)ifThen.MakeClone(cloner));
+
                 model2.AddObjective(obj.Sense, (CpxQLExpr)obj.Expr.MakeClone(cloner));
 
-                model2.Solve();
-                File.AppendAllLines($"{Core.Dir}debug.txt", new[] { string.Format("{0}:{1}", ranges[i].Name, model2.GetStatus()) });
+                Console.WriteLine(model2.Solve());
+                File.AppendAllLines($"{Core.Dir}debug.txt", new[] { $"{ranges[i].Name}:{model2.GetStatus()}" });
 
                 model2.EndModel();
 
@@ -412,29 +461,29 @@ namespace Ecoli
                              select str).ToList();
 
                 var ex1 = evars.Where(prevals.ContainsKey)
-                    .Aggregate(ex + "", (current, var) => current.Replace(var, string.Format("{0}({1})", var, prevals[var])));
+                    .Aggregate(ex + "", (current, var) => current.Replace(var, $"{var}({prevals[var]})"));
 
                 var ex2 = evars.Where(prevals.ContainsKey)
-                  .Aggregate(ex + "", (current, var) => current.Replace(var, string.Format("{0}", prevals[var])));
+                  .Aggregate(ex + "", (current, var) => current.Replace(var, $"{prevals[var]}"));
 
                 if (Math.Abs(ranges[i].LB - ranges[i].UB) <= double.Epsilon)
                 {
-                    ex1 = string.Format("{0}=={1}", ex1, ranges[i].LB);
-                    ex2 = string.Format("{0}=={1}", ex2, ranges[i].LB);
+                    ex1 = $"{ex1}=={ranges[i].LB}";
+                    ex2 = $"{ex2}=={ranges[i].LB}";
                 }
                 else if (Math.Abs(ranges[i].LB - double.MinValue) < double.Epsilon)
                 {
-                    ex1 = string.Format("{0}<={1}", ex1, ranges[i].UB);
-                    ex2 = string.Format("{0}<={1}", ex2, ranges[i].UB);
+                    ex1 = $"{ex1}<={ranges[i].UB}";
+                    ex2 = $"{ex2}<={ranges[i].UB}";
 
                 }
                 else if (Math.Abs(ranges[i].UB - double.MaxValue) < double.Epsilon)
                 {
-                    ex1 = string.Format("{0}>={1}", ex1, ranges[i].LB);
-                    ex2 = string.Format("{0}>={1}", ex2, ranges[i].LB);
+                    ex1 = $"{ex1}>={ranges[i].LB}";
+                    ex2 = $"{ex2}>={ranges[i].LB}";
                 }
 
-                File.AppendAllLines($"{Core.Dir}debug_val.txt", new[] { string.Format("{0}|{1}", ex2, ex1) });
+                File.AppendAllLines($"{Core.Dir}debug_val.txt", new[] { $"{ex2}|{ex1}" });
             }
         }
     }
