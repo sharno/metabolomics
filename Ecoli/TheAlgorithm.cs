@@ -38,6 +38,8 @@ namespace Ecoli
 
         public void Start()
         {
+
+
             //1. Among a user-provided set of observed metabolite changes Z,
             //  let m be the metabolite with the least total number of producer and consumer reactions in the respective metabolic network M
             //var m = Util.CachedS(Z.Keys.OrderBy(Util.GetReactionCountSum).First()); //e => Z[e] > 0
