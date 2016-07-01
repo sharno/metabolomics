@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Ecoli.Util;
 using ILOG.Concert;
 using ILOG.CPLEX;
+using Metabol.DbModels;
 
 namespace Ecoli
 {

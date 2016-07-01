@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.Entity;
+﻿using System.Data.Entity;
 using System.Data.Entity.Core.Common;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using EFCache;
 
-namespace Metabol.Util
+namespace Ecoli.Util
 {
     public class Configuration : DbConfiguration
     {
