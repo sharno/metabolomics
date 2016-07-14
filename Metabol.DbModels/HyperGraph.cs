@@ -454,9 +454,6 @@ namespace Metabol.DbModels
                 Level = level;
 
                 if (isPseudo) return;
-                var rb = Db.Context.ReactionBoundFixes.Single(e => e.reactionId == id);
-                LowerBound = rb.lowerbound;
-                UpperBound = rb.upperbound;
                 var rbf = Db.Context.ReactionBoundFixes.SingleOrDefault(e => e.reactionId == id);
                 if (rbf != null)
                 {

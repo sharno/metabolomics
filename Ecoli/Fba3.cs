@@ -266,7 +266,7 @@ namespace Ecoli
             //fva.Solve(model, sm, vars.Values);
             //File.AppendAllText("A:\\fva.csv", $"{fva.Stat.Item1},{fva.Stat.Item2}\r\n");
 
-            GeneNetwork.AddRegulationConstraints(model, sm, vars);
+            //GeneNetwork.AddRegulationConstraints(model, sm, vars);
 
             //var fva = new FVA();
             //fva.Solve(model, sm, vars.Values);

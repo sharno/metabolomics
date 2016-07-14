@@ -9,6 +9,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Metabol", "Metabol\Metabol.csproj", "{A858B1E3-1ACF-4634-9AA2-76787317C83D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Metabol.Api", "Metabol.Api\Metabol.Api.csproj", "{2DE1F7B4-A6B5-494A-97F1-6EA35BDD97B4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E8C9F1F9-DCA6-4C81-B496-1824EC1CDF59} = {E8C9F1F9-DCA6-4C81-B496-1824EC1CDF59}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Metabol.DbModels", "Metabol.DbModels\Metabol.DbModels.csproj", "{AAC07319-DE70-4BA1-B891-469B81C2AF38}"
 EndProject

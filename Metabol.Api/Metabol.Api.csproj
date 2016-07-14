@@ -329,6 +329,10 @@
     <None Include="Project_Readme.html" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Ecoli\Ecoli.csproj">
+      <Project>{e8c9f1f9-dca6-4c81-b496-1824ec1cdf59}</Project>
+      <Name>Ecoli</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Metabol.DbModels\Metabol.DbModels.csproj">
       <Project>{aac07319-de70-4ba1-b891-469b81c2af38}</Project>
       <Name>Metabol.DbModels</Name>
