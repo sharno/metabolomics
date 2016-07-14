@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+ <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <edmx:Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <!-- Diagram content (shape and connector positions) -->
+    <edmx:Diagrams>
+      <Diagram DiagramId="bc6c944c9ae746748e69c43fac309302" Name="Diagram1" ZoomLevel="142">
+        <EntityTypeShape EntityType="MetabolicNetworkModel.C__MigrationHistory" Width="1.5" PointX="4.75" PointY="2.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.AnnotationQualifier" Width="1.5" PointX="7.5" PointY="9.625" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.attribute_names" Width="1.5" PointX="10.75" PointY="0.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.attribute_values" Width="1.5" PointX="11.75" PointY="9.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.Author" Width="1.5" PointX="2.75" PointY="0.875" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.basic_molecules" Width="1.5" PointX="9.75" PointY="2.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.chromosome" Width="1.5" PointX="0.75" PointY="0.875" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.common_molecules" Width="1.5" PointX="12" PointY="2.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.common_species" Width="1.5" PointX="12.75" PointY="0.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.Compartment" Width="1.5" PointX="5.25" PointY="15.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.CompartmentType" Width="1.5" PointX="5.25" PointY="17.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.Constraint" Width="1.5" PointX="3" PointY="12.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.Cycle" Width="1.5" PointX="8.5" PointY="8.25" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.DataSource" Width="1.5" PointX="0.75" PointY="16.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.DesignedBy" Width="1.5" PointX="5" PointY="0.875" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.ec_number_name_lookups" Width="1.5" PointX="13.5" PointY="14" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.ec_numbers" Width="1.5" PointX="8.25" PointY="26.125" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.entity_name_lookups" Width="1.5" PointX="9.75" PointY="6.875" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.Event" Width="1.5" PointX="5.25" PointY="19.5" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.EventAssignment" Width="1.5" PointX="10.5" PointY="17.125" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.EventDelay" Width="1.5" PointX="3" PointY="21.125" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.EventTrigger" Width="1.5" PointX="3" PointY="22.25" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.FunctionDefinition" Width="1.5" PointX="5.25" PointY="13.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.gene_encodings" Width="1.5" PointX="12" PointY="4.125" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.gene_products" Width="1.5" PointX="9.75" PointY="5.25" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.gene" Width="1.5" PointX="8.25" PointY="1.5" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.go_terms" Width="1.5" PointX="0.75" PointY="9.875" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.GONodeCode" Width="1.5" PointX="3" PointY="9.875" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.InitialAssignment" Width="1.5" PointX="3" PointY="14.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.KineticLaw" Width="1.5" PointX="3" PointY="23.375" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.MapModelsPathway" Width="1.5" PointX="8.25" PointY="11.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.MapReactionECNumber" Width="1.5" PointX="10.5" PointY="21.125" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.MapReactionsProcessEntity" Width="1.5" PointX="7.5" PointY="22.125" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.MapSpeciesMolecularEntity" Width="1.5" PointX="9.75" PointY="15.25" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.MetaboliteReactionCount" Width="1.5" PointX="9.75" PointY="9.625" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.MetaboliteReactionStoichiometry" Width="1.5" PointX="9.75" PointY="22.25" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.Model" Width="1.5" PointX="3" PointY="16.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.ModelLayout" Width="1.5" PointX="5.25" PointY="23.625" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.ModelMetadata" Width="1.5" PointX="2.75" PointY="3.875" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.ModelOrganism" Width="1.5" PointX="8.25" PointY="20.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.molecular_entities" Width="1.5" PointX="7.5" PointY="6.875" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.molecular_entity_names" Width="1.5" PointX="7.5" PointY="3.875" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.molecular_entity_types" Width="1.5" PointX="12.75" PointY="7.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.name_types" Width="1.5" PointX="12.75" PointY="12.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.OLD_external_database_links" Width="1.5" PointX="3" PointY="6.875" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.OLD_external_databases" Width="1.5" PointX="0.75" PointY="6.875" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.organism_groups" Width="1.5" PointX="6" PointY="8.125" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.organism" Width="1.5" PointX="13.75" PointY="9.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.Parameter" Width="1.5" PointX="5.25" PointY="11.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.pathway_groups" Width="1.5" PointX="3.75" PointY="5.375" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.pathway_links" Width="1.5" PointX="9.75" PointY="4.125" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.pathway_processes" Width="1.5" PointX="11.25" PointY="11.25" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.pathway_types" Width="1.5" PointX="14.75" PointY="0.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.pathway" Width="1.5" PointX="6" PointY="5.375" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.process_entities" Width="1.5" PointX="12.75" PointY="21" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.process_entity_roles" Width="1.5" PointX="14.75" PointY="2.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.process" Width="1.5" PointX="5.25" PointY="27.125" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.protein" Width="1.5" PointX="12" PointY="5.25" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.Reaction" Width="1.5" PointX="5.25" PointY="21.125" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.ReactionBound" Width="1.5" PointX="7.5" PointY="23.375" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.ReactionSpecy" Width="1.5" PointX="10.75" PointY="19.625" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.ReactionSpeciesRole" Width="1.5" PointX="8.5" PointY="24.625" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.rna_types" Width="1.5" PointX="14.75" PointY="4.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.rna" Width="1.5" PointX="12" PointY="6.375" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.Rule" Width="1.5" PointX="8.25" PointY="16.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.RuleType" Width="1.5" PointX="6" PointY="25.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.Sbase" Width="1.5" PointX="0.75" PointY="14.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.Species" Width="1.5" PointX="7.5" PointY="15.25" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.SpeciesType" Width="1.5" PointX="8.25" PointY="13.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.StoichiometryMath" Width="1.5" PointX="3" PointY="24.5" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.Unit" Width="1.5" PointX="8.25" PointY="18.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.UnitDefinition" Width="1.5" PointX="12.5" PointY="15.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.viewState" Width="1.5" PointX="14.75" PointY="6.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.BlockedReaction" Width="1.5" PointX="14.75" PointY="11.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.catalyze" Width="1.5" PointX="13" PointY="17.125" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.chromosome_bands" Width="1.5" PointX="15.75" PointY="8.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.chromosomes_pathcase" Width="1.5" PointX="15.75" PointY="13.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.CompartmentClass" Width="1.5" PointX="14.75" PointY="15.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.CycleConnection" Width="1.5" PointX="10.75" PointY="13.25" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.CycleReaction" Width="1.5" PointX="10.75" PointY="8.25" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.ec_go" Width="1.5" PointX="16.75" PointY="0.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.ec_go_orig" Width="1.5" PointX="16.75" PointY="2.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.entity_graph_nodes" Width="1.5" PointX="16.75" PointY="4.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.external_database_links" Width="1.5" PointX="16.75" PointY="6.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.external_database_urls" Width="1.5" PointX="16.75" PointY="10.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.external_databases" Width="1.5" PointX="16.75" PointY="15.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.go_annotation_pathways" Width="1.5" PointX="17.75" PointY="8.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.go_pathway_annotation_counts" Width="1.5" PointX="17.75" PointY="12.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.go_pathway_group_annotation_counts" Width="1.5" PointX="15.75" PointY="17.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.go_terms_hierarchy" Width="1.5" PointX="17.75" PointY="17.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.MapSbaseGO" Width="1.5" PointX="18.75" PointY="0.75" IsExpanded="false" />
+        <EntityTypeShape EntityType="MetabolicNetworkModel.process_graph_nodes" Width="1.5" PointX="0.75" PointY="18.75" IsExpanded="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_MapModelsPathways_AnnotationQualifier" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_MapReactionECNumber_AnnotationQualifier" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_MapReactionsProcessEntities_AnnotationQualifier" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_ModelOrganism_AnnotationQualifier" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_SpeciesMolecularEntityMapping_AnnotationQualifier" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_DesignedBy_Author" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_basic_molecules_molecular_entities" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_common_molecules_basic_molecules" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_genes_chromosomes" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Compartment_Compartment" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Compartment_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Compartment_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Compartment_UnitDefinition" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Species_Compartment" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_CompartmentType_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_CompartmentType_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Constraint_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Constraint_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_CycleConnection_Cycle" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_CycleReaction_Cycle" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Model_DataSource" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_DesignedBy_ModelMetadata" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_ec_number_name_lookups_ec_numbers" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_ec_number_name_lookups_molecular_entity_names" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_catalyzes_ec_numbers" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_MapReactionECNumber_ec_numbers" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_entity_name_lookups_molecular_entities" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_entity_name_lookups_molecular_entity_names" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Event_EventDelay" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Event_EventTrigger" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Event_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Event_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_EventAssignment_Event" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_EventAssignment_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_EventDelay_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_EventTrigger_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_FunctionDefinition_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_FunctionDefinition_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_gene_and_gene_products_gene_products" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_catalyzes_gene_products" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_gene_products_molecular_entities" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_proteins_gene_products" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_rnas_gene_products" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_genes_organism_groups" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_GONodeCodes_go_terms" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_InitialAssignment_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_InitialAssignment_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_KineticLaw_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Reaction_KineticLaw" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_MapModelsPathways_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_MapModelsPathways_organism_groups" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_MapModelsPathways_pathways" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_MapReactionECNumber_Reaction" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_MapReactionsProcessEntities_processes" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_MapReactionsProcessEntities_Reaction" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_MapSpeciesMolecularEntities_molecular_entities" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_MapSpeciesMolecularEntities_Species" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_dbo_MetaboliteReactionCount_dbo_Species_speciesId" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_dbo_MetaboliteReactionStoichiometry_dbo_Species_speciesId" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Model_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_ModelLayout_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_ModelOrganism_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Parameter_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Reaction_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Rule_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_SpeciesType_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Unit_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_UnitDefinition_Model" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_ModelOrganism_organism_groups" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_pathway_links_molecular_entities" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_process_entities_molecular_entities" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_external_database_links_external_databases" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_catalyzes_organism_groups" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_organism_groups_organism_groups" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Parameter_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Parameter_UnitDefinition" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_pathway_links_pathways" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_pathway_links_pathways1" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_pathway_processes_pathways" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_pathway_processes_processes" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_process_entities_processes" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_catalyzes_processes" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Reaction_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_ReactionBound_Reaction" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_ReactionSpecies_Reaction" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_ReactionSpecies_ReactionSpeciesRole" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_ReactionSpecies_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_ReactionSpecies_Species" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_ReactionSpecies_StoichiometryMath" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Rule_RuleType" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Rule_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Species_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_SpeciesType_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_StoichiometryMath_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Unit_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_UnitDefinition_Sbase" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_CycleConnection_Species" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Species_SpeciesType" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Species_UnitDefinition" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.FK_Unit_UnitDefinition" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.pathway_to_pathway_groups" ManuallyRouted="false" />
+        <AssociationConnector Association="MetabolicNetworkModel.UnitComposition" ManuallyRouted="false" />
+      </Diagram>
+    </edmx:Diagrams>
+  </edmx:Designer>
+</edmx:Edmx>

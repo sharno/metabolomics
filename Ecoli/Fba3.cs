@@ -1,6 +1,8 @@
 ﻿using System.Dynamic;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Metabol.DbModels;
+
 
 namespace Ecoli
 {
@@ -12,11 +14,8 @@ namespace Ecoli
     using ILOG.Concert;
     using ILOG.CPLEX;
 
-    using Util;
-
     public class Fba3
     {
-        public static double LastRuntime { get; set; }
         public static List<IConstraint> Constraints = new List<IConstraint>();
         public static Dictionary<Guid, Tuple<double, double>> ReactionsConstraintsDictionary = new Dictionary<Guid, Tuple<double, double>>();
         const double Change = 0.01;
@@ -36,8 +35,8 @@ namespace Ecoli
             const double cycleReversibleLowerBound = -1000.0;
             const double cycleIrreversibleLowerBound = 0.0;
 
-            sm.Edges.Values.ToList().ForEach(e => e.PreFlux = e.Flux);
-            sm.Cycles.Values.ToList().ForEach(c => c.Fluxes.Keys.ToList().ForEach(m => c.PreFluxes[m] = c.Fluxes[m]));
+            sm.Edges.Values.ToList().ForEach(e => e.PreFlux = Math.Abs(e.Flux) < 0.00001 ? 0 : e.Flux);
+            sm.Cycles.Values.ToList().ForEach(c => c.Fluxes.Keys.ToList().ForEach(m => c.PreFluxes[m] = Math.Abs(c.Fluxes[m]) < 0.00001 ? 0 : c.Fluxes[m]));
             foreach (var cycle in sm.Cycles)
             {
                 var f = cycle.Value.PreFluxes;
@@ -51,6 +50,8 @@ namespace Ecoli
                 }
                 else if (edge is HyperGraph.Cycle)
                 {
+                    #region cycle
+
                     cycleMetabolitesVars[edge.Id] = new Dictionary<Guid, INumVar>();
                     var cycle = edge as HyperGraph.Cycle;
 
@@ -60,7 +61,7 @@ namespace Ecoli
                             m =>
                                 cycleMetabolitesVars[edge.Id][m.Key] =
                                     model.NumVar(cycleIrreversibleLowerBound, cycleUpperBound, NumVarType.Float,
-                                        edge.Label + /*"_irrev"*/"_" + m.Value.Label));
+                                        edge.Label + /*"_irrev"*/ "_" + m.Value.Label));
 
                     // make it reversible bounds for shared products and reactants
                     cycle.Reactants.Intersect(cycle.Products).ToList()
@@ -68,16 +69,16 @@ namespace Ecoli
                             m =>
                                 cycleMetabolitesVars[edge.Id][m.Key] =
                                     model.NumVar(cycleReversibleLowerBound, cycleUpperBound, NumVarType.Float,
-                                        edge.Label + /*"_rev*/"_" + m.Value.Label));
+                                        edge.Label + /*"_rev*/ "_" + m.Value.Label));
 
 
 
-                    var ratios =
-                        Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == cycle.Id).ToList();
-                    ratios.ForEach(ra =>
-                    {
-                        var expr1 = model.LinearNumExpr();
-                        expr1.AddTerm(1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+                        var ratios =
+                            Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == cycle.Id).ToList();
+                        ratios.ForEach(ra =>
+                        {
+                            var expr1 = model.LinearNumExpr();
+                            expr1.AddTerm(1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
 
                         //var expr2 = model.LinearNumExpr();
                         //expr2.AddTerm(Math.Abs(ra.ratio), cycleMetabolitesVars[edge.Id][ra.metabolite1]);
@@ -143,9 +144,7 @@ namespace Ecoli
                         or.Add(zeroRight);
 
                         model.Add(or);
-                    });
-
-
+                        });
 
                     // add atom numbers constraints to link metabolites of the cycle reaction
                     var carbonExpr = model.LinearNumExpr();
@@ -153,7 +152,8 @@ namespace Ecoli
                         .ForEach(
                             m =>
                             {
-                                var formula = Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "C");
+                                var formula =
+                                    Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "C");
                                 if (formula == null) return;
 
                                 carbonExpr.AddTerm(formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
@@ -162,10 +162,11 @@ namespace Ecoli
                        .ForEach(
                            m =>
                            {
-                               var formula = Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "C");
+                                var formula =
+                                    Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "C");
                                if (formula == null) return;
 
-                               carbonExpr.AddTerm(- formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
+                                carbonExpr.AddTerm(-formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
                            });
                     Constraints.Add(model.AddEq(carbonExpr, 0.0, edge.Label + "_carbon_atoms_balance"));
 
@@ -174,7 +175,8 @@ namespace Ecoli
                         .ForEach(
                             m =>
                             {
-                                var formula = Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "H");
+                                var formula =
+                                    Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "H");
                                 if (formula == null) return;
 
                                 hydrogenExpr.AddTerm(formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
@@ -183,10 +185,11 @@ namespace Ecoli
                         .ForEach(
                             m =>
                             {
-                                var formula = Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "H");
+                                var formula =
+                                    Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "H");
                                 if (formula == null) return;
 
-                                hydrogenExpr.AddTerm(- formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
+                                hydrogenExpr.AddTerm(-formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
                             });
                     Constraints.Add(model.AddEq(hydrogenExpr, 0.0, edge.Label + "_hydrogen_atoms_balance"));
 
@@ -195,7 +198,8 @@ namespace Ecoli
                         .ForEach(
                             m =>
                             {
-                                var formula = Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "N");
+                                var formula =
+                                    Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "N");
                                 if (formula == null) return;
 
                                 nitrogenExpr.AddTerm(formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
@@ -204,10 +208,11 @@ namespace Ecoli
                         .ForEach(
                             m =>
                             {
-                                var formula = Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "N");
+                                var formula =
+                                    Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "N");
                                 if (formula == null) return;
 
-                                nitrogenExpr.AddTerm(- formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
+                                nitrogenExpr.AddTerm(-formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
                             });
                     Constraints.Add(model.AddEq(nitrogenExpr, 0.0, edge.Label + "_nitrogen_atoms_balance"));
 
@@ -216,7 +221,8 @@ namespace Ecoli
                         .ForEach(
                             m =>
                             {
-                                var formula = Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "O");
+                                var formula =
+                                    Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "O");
                                 if (formula == null) return;
 
                                 oxygenExpr.AddTerm(formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
@@ -225,12 +231,15 @@ namespace Ecoli
                         .ForEach(
                             m =>
                             {
-                                var formula = Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "O");
+                                var formula =
+                                    Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "O");
                                 if (formula == null) return;
 
-                                oxygenExpr.AddTerm(- formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
+                                oxygenExpr.AddTerm(-formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
                             });
                     Constraints.Add(model.AddEq(oxygenExpr, 0.0, edge.Label + "_oxygen_atoms_balance"));
+
+                    #endregion
                 }
                 else
                 {
@@ -252,6 +261,17 @@ namespace Ecoli
 
             AddReactionsConstraits(sm, model, vars, cycleMetabolitesVars);
             AddMetabolitesStableStateConstraints(sm, model, vars, cycleMetabolitesVars);
+
+            //var fva = new FVA();
+            //fva.Solve(model, sm, vars.Values);
+            //File.AppendAllText("A:\\fva.csv", $"{fva.Stat.Item1},{fva.Stat.Item2}\r\n");
+
+            GeneNetwork.AddRegulationConstraints(model, sm, vars);
+
+            //var fva = new FVA();
+            //fva.Solve(model, sm, vars.Values);
+            //File.AppendAllText("A:\\rfva.csv", $"{fva.Stat.Item1},{fva.Stat.Item2}\r\n");
+
             AddObjectiveFunction(sm, model, vars, cycleMetabolitesVars);
 
             var isfeas = model.Solve();
@@ -269,20 +289,8 @@ namespace Ecoli
             }
             else
             {
-                var reactionsFluxes = new Dictionary<string, double>();
-                sm.Edges.Where(e => !(e.Value is HyperGraph.Cycle) && !e.Value.RecentlyAdded)
-                    .ToList()
-                    .ForEach(e => reactionsFluxes[e.Value.Label] = e.Value.PreFlux);
-                sm.Cycles
-                    .ToList()
-                    .ForEach(c => c.Value.Fluxes.Keys.ToList()
-                    .ForEach(m => reactionsFluxes[$"{c.Value.Label}_{sm.Nodes[m].Label}"] = c.Value.PreFluxes[m]));
-                reactionsFluxes.Keys.Where(f => f.StartsWith("EX_")).ToList().ForEach(f =>
-                {
-                    reactionsFluxes["_" + f] = reactionsFluxes[f];
-                    reactionsFluxes.Remove(f);
-                });
-                //Debug(sm.Step, reactionsFluxes);
+                var reactionsFluxes = ReactionsFluxes(sm);
+                Debug($"{Core.Dir}{sm.Step}model.lp", reactionsFluxes);
                 sm.Edges.ToList().ForEach(d => d.Value.Flux = 0);
             }
 
@@ -304,7 +312,25 @@ namespace Ecoli
             return isfeas;
         }
 
-        private static void AddObjectiveFunction(HyperGraph hyperGraph, Cplex model, Dictionary<Guid, INumVar> vars, Dictionary<Guid, Dictionary<Guid, INumVar>> cycleMetabolitesVars)
+        public static Dictionary<string, double> ReactionsFluxes(HyperGraph sm)
+        {
+            var reactionsFluxes = new Dictionary<string, double>();
+            sm.Edges.Where(e => !(e.Value is HyperGraph.Cycle) && !e.Value.RecentlyAdded)
+                .ToList()
+                .ForEach(e => reactionsFluxes[e.Value.Label] = e.Value.PreFlux);
+            sm.Cycles
+                .ToList()
+                .ForEach(c => c.Value.Fluxes.Keys.ToList()
+                    .ForEach(m => reactionsFluxes[$"{c.Value.Label}_{sm.Nodes[m].Label}"] = c.Value.PreFluxes[m]));
+            reactionsFluxes.Keys.Where(f => f.StartsWith("EX_")).ToList().ForEach(f =>
+            {
+                reactionsFluxes["_" + f] = reactionsFluxes[f];
+                reactionsFluxes.Remove(f);
+            });
+            return reactionsFluxes;
+        }
+
+        public static void AddObjectiveFunction(HyperGraph hyperGraph, Cplex model, Dictionary<Guid, INumVar> vars, Dictionary<Guid, Dictionary<Guid, INumVar>> cycleMetabolitesVars)
         {
             var fobj = model.LinearNumExpr();
             var metabolite = hyperGraph.Nodes[TheAlgorithm.StartingMetabolite];
@@ -350,11 +376,11 @@ namespace Ecoli
             //model.AddGe(vars[TempObjective], 1, $"{TempObjective}_nonzeroc");
 
             Console.WriteLine(fobj.ToString());
-
+            model.Remove(model.GetObjective());
             model.AddObjective(ObjectiveSense.Maximize, fobj, "fobj");
         }
 
-        private static void AddMetabolitesStableStateConstraints(HyperGraph sm, Cplex model, Dictionary<Guid, INumVar> vars, Dictionary<Guid, Dictionary<Guid, INumVar>> cycleMetabolitesVars)
+        public static void AddMetabolitesStableStateConstraints(HyperGraph sm, Cplex model, Dictionary<Guid, INumVar> vars, Dictionary<Guid, Dictionary<Guid, INumVar>> cycleMetabolitesVars)
         {
             foreach (var metabolite in sm.Nodes.Values)
             {
@@ -400,14 +426,14 @@ namespace Ecoli
             }
         }
 
-        private static void AddReactionsConstraits(HyperGraph sm, Cplex model, Dictionary<Guid, INumVar> vars, Dictionary<Guid, Dictionary<Guid, INumVar>> cycleMetabolitesVars)
+        public static void AddReactionsConstraits(HyperGraph sm, Cplex model, Dictionary<Guid, INumVar> vars, Dictionary<Guid, Dictionary<Guid, INumVar>> cycleMetabolitesVars)
         {
-            foreach (var reaction in sm.Edges.Where(e => ! (e.Value is HyperGraph.Cycle) && ! e.Value.RecentlyAdded))
+            foreach (var reaction in sm.Edges.Where(e => !(e.Value is HyperGraph.Cycle) && !e.Value.RecentlyAdded))
             {
                 if (!ReactionsConstraintsDictionary.ContainsKey(reaction.Key))
                 {
-                    var ub = Math.Max(reaction.Value.Flux*(1 - Change), reaction.Value.Flux*(1 + Change));
-                    var lb = Math.Min(reaction.Value.Flux*(1 - Change), reaction.Value.Flux*(1 + Change));
+                    var ub = Math.Max(reaction.Value.Flux * (1 - Change), reaction.Value.Flux * (1 + Change));
+                    var lb = Math.Min(reaction.Value.Flux * (1 - Change), reaction.Value.Flux * (1 + Change));
                     ReactionsConstraintsDictionary[reaction.Key] = Tuple.Create(lb, ub);
                 }
                 Constraints.Add(model.AddGe(vars[reaction.Value.Id], ReactionsConstraintsDictionary[reaction.Key].Item1, $"{reaction.Value.Label}_lb"));
@@ -437,7 +463,6 @@ namespace Ecoli
             }
         }
 
-
         public static dynamic ToDynamic(object value)
         {
             return (ExpandoObject)value.GetType()
@@ -449,11 +474,11 @@ namespace Ecoli
                 });
         }
 
-        public static void Debug(int step, IDictionary<string, double> prevals)
+        public static void Debug(string file, IDictionary<string, double> prevals)
         {
             var model = new Cplex();
             //model.SetParam(Cplex.Param.Preprocessing.Presolve, false);
-            model.ImportModel($"{Core.Dir}{step}model.lp");
+            model.ImportModel(file);
             dynamic link = ToDynamic(ToDynamic(ToDynamic(ToDynamic(model)._model)._gc)._link);
             link = ToDynamic(link._prev);
             var cconst = new List<CpxIfThen>();
@@ -481,14 +506,13 @@ namespace Ecoli
             {
                 var model2 = new Cplex { Name = ranges[i].Name };
                 //model2.SetParam(Cplex.Param.Preprocessing.Presolve, false);
-                var cloner = new SimpleCloneManager(model2);
                 foreach (var var in vars)
                     model2.NumVar(var.LB, var.UB, var.Type, var.Name);
+                var cloner = new SimpleCloneManager(model2);
 
                 for (var j = 0; j < ranges.Length; j++)
                 {
                     if (j == i) continue;
-
                     model2.AddRange(ranges[j].LB, (CpxQLExpr)ranges[j].Expr.MakeClone(cloner), ranges[j].UB, ranges[j].Name);
                 }
 
@@ -498,6 +522,7 @@ namespace Ecoli
                 model2.AddObjective(obj.Sense, (CpxQLExpr)obj.Expr.MakeClone(cloner));
 
                 Console.WriteLine(model2.Solve());
+                //model2.Add(ranges[i]);
                 File.AppendAllLines($"{Core.Dir}debug.txt", new[] { $"{ranges[i].Name}:{model2.GetStatus()}" });
 
                 model2.EndModel();

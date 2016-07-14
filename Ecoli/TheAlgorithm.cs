@@ -1,18 +1,13 @@
-﻿using Ecoli.Util.DB;
+﻿using Metabol.DbModels.DB;
+using Metabol.DbModels.Models;
 
 namespace Ecoli
 {
+    using Metabol.DbModels;
     using System;
-    using System.Collections.Concurrent;
     using System.Collections.Generic;
-    using System.Configuration;
     using System.Diagnostics;
     using System.Linq;
-    using System.Threading.Tasks;
-
-    using Util;
-
-    using Newtonsoft.Json;
 
     public class TheAlgorithm
     {
@@ -30,14 +25,29 @@ namespace Ecoli
 
         public readonly LinkedList<string> Pathway = new LinkedList<string>();
 
-        [JsonProperty("isFeasable")]
         public bool IsFeasable { get; set; }
-
-        [JsonProperty("graph")]
         public readonly HyperGraph Sm = new HyperGraph();
 
-        [JsonProperty("Z")]
         public Dictionary<Guid, int> Z = new Dictionary<Guid, int>();
+        public int Iteration = 1;
+        public int IterationId => Iteration++;
+
+
+        internal void Start(ConcentrationChange[] z)
+        {
+            //1. Among a user-provided set of observed metabolite changes Z,
+            //  let m be the metabolite with the least total number of producer and consumer reactions in the respective metabolic network M
+            //var m = Util.CachedS(Z.Keys.OrderBy(Util.GetReactionCountSum).First()); //e => Z[e] > 0
+            //TODO use Z
+            var m = Db.Context.Species.Find(StartingMetabolite);
+
+            //2. Let S(m) be a subnetwork of the whole metabolic network M. 
+            //Initialize S(m) so that iteration contains only m
+            Sm.AddNode(m.id, m.sbmlId);
+
+            //3. Extend S(m) with a subset K of m’s consumers and producers such that K has not been used before to extend the current subnetwork. 
+            ExtendGraph(m.id, Sm);
+        }
 
         public void Start()
         {
@@ -53,14 +63,28 @@ namespace Ecoli
             Sm.AddNode(m.id, m.sbmlId);
 
             //3. Extend S(m) with a subset K of m’s consumers and producers such that K has not been used before to extend the current subnetwork. 
-            //HashSet<ServerSpecies> K = new HashSet<ServerSpecies>();
             ExtendGraph(m.id, Sm);
         }
 
-        public void Step()
+        public IterationModels Step()
         {
-            // steps 4, 5
+            // steps  5
+            var timer = new Stopwatch();
+            timer.Start();
             ApplyFba(Sm);
+            timer.Stop();
+
+            var it = new IterationModels(IterationId)
+            {
+                Fba = IsFeasable ? 1 : 0,
+                Time = timer.ElapsedMilliseconds * 1.0 / 1000.0,
+                Fluxes = Sm.Edges.Values.ToDictionary(r => r.Label, r => r.Flux),
+                // TODO add constraints
+                Constraints = Enumerable.Range(0, 10).Select(e => Guid.NewGuid().ToString()),
+                Nodes = Sm.JsonNodes(Z),
+                Links = Sm.JsonLinks()
+                // MetabolicNetwork = sm
+            };
 
             //4. Let a metabolite mb be labeled as a border metabolite 
             // if there is at least one consumer or producer of mb that is not included in the current subnetwork, S(m). 
@@ -68,6 +92,8 @@ namespace Ecoli
 
             if (borderm.Count == 0)
             {
+                #region algo
+
                 Core.SaveAsDgs(Sm.Nodes.First().Value, Sm, Core.Dir);
                 Console.WriteLine("NO BORDER METABILTES");
 
@@ -88,10 +114,15 @@ namespace Ecoli
                             {
                                 if (reactionSpecy.roleId == Db.ProductId)
                                 {
-                                    Sm.AddProduct(reactionSpecy.reactionId, reactionSpecy.Reaction.sbmlId, reactionSpecy.Reaction.reversible, false, reactionSpecy.speciesId, reactionSpecy.Species.sbmlId);
-                                } else if (reactionSpecy.roleId == Db.ReactantId)
+                                    Sm.AddProduct(reactionSpecy.reactionId, reactionSpecy.Reaction.sbmlId,
+                                        reactionSpecy.Reaction.reversible, false, reactionSpecy.speciesId,
+                                        reactionSpecy.Species.sbmlId);
+                                }
+                                else if (reactionSpecy.roleId == Db.ReactantId)
                                 {
-                                    Sm.AddReactant(reactionSpecy.reactionId, reactionSpecy.Reaction.sbmlId, reactionSpecy.Reaction.reversible, false, reactionSpecy.speciesId, reactionSpecy.Species.sbmlId);
+                                    Sm.AddReactant(reactionSpecy.reactionId, reactionSpecy.Reaction.sbmlId,
+                                        reactionSpecy.Reaction.reversible, false, reactionSpecy.speciesId,
+                                        reactionSpecy.Species.sbmlId);
                                 }
                             }
                         }
@@ -103,14 +134,18 @@ namespace Ecoli
                                 switch (cycleConnection.roleId)
                                 {
                                     case Db.ProductId:
-                                        Sm.AddProduct(new HyperGraph.Cycle(innerCycle), new HyperGraph.Node(cycleConnection.Species, Sm.LastLevel));
+                                        Sm.AddProduct(new HyperGraph.Cycle(innerCycle),
+                                            new HyperGraph.Node(cycleConnection.Species, Sm.LastLevel));
                                         break;
                                     case Db.ReactantId:
-                                        Sm.AddReactant(new HyperGraph.Cycle(innerCycle), new HyperGraph.Node(cycleConnection.Species, Sm.LastLevel));
+                                        Sm.AddReactant(new HyperGraph.Cycle(innerCycle),
+                                            new HyperGraph.Node(cycleConnection.Species, Sm.LastLevel));
                                         break;
                                     case Db.ReversibleId:
-                                        Sm.AddProduct(new HyperGraph.Cycle(innerCycle), new HyperGraph.Node(cycleConnection.Species, Sm.LastLevel));
-                                        Sm.AddReactant(new HyperGraph.Cycle(innerCycle), new HyperGraph.Node(cycleConnection.Species, Sm.LastLevel));
+                                        Sm.AddProduct(new HyperGraph.Cycle(innerCycle),
+                                            new HyperGraph.Node(cycleConnection.Species, Sm.LastLevel));
+                                        Sm.AddReactant(new HyperGraph.Cycle(innerCycle),
+                                            new HyperGraph.Node(cycleConnection.Species, Sm.LastLevel));
                                         break;
                                 }
                             }
@@ -120,7 +155,7 @@ namespace Ecoli
 
                     // new border metabolites that are a part of an outer cycle that need to be connected as interface metabolites of inner cycles if that outer cycle was deleted
                     var borderMetabolites = GetBorderMetabolites(Sm);
-                    foreach(var borderMetabolite in borderMetabolites)
+                    foreach (var borderMetabolite in borderMetabolites)
                     {
                         //var parentCycles = Db.ParentCyclesOfMetabolite(borderMetabolite.Id);
                         //foreach (var parentCycle in parentCycles.Where(parentCycle => Sm.Cycles.ContainsKey(parentCycle.Key)))
@@ -143,7 +178,7 @@ namespace Ecoli
                         foreach (var cc in connectedCycles)
                         {
                             if (!Sm.Cycles.ContainsKey(cc.cycleId))
-                            {
+                        {
                                 continue;
                             }
                             switch (cc.roleId)
@@ -187,7 +222,9 @@ namespace Ecoli
                 }
 
                 Console.ReadKey();
-                Environment.Exit(0);
+                //Environment.Exit(0);
+
+                #endregion
             }
 
             //8. Let m’ be a border metabolite in S(m) involved in the smallest total number of reactions.
@@ -205,7 +242,10 @@ namespace Ecoli
 
             //Go to step 4 to add exchange fluxes for the new border metabolites. 
             //If S(m) cannot be extended, then go to step 3.
+            return it;
         }
+
+     
 
         public void RemoveExchangeReaction(HyperGraph sm, HyperGraph.Node m)
         {
@@ -261,12 +301,9 @@ namespace Ecoli
         {
             //5. Apply Flux Balance Analysis on S(m) with the objective function F defined as follows. 
             //For  each non-border metabolite  m  that  is  included  in  both S(m)and  Z,  perform  the following checks:
-            var timer = new Stopwatch();
-            timer.Start();
             IsFeasable = Fba3.Solve(sm);
-            Fba3.LastRuntime = timer.ElapsedMilliseconds * 1.0 / 1000.0;
-            timer.Stop();
 
+            //Stats[sm.Step] = Fba3.Stat;
             return IsFeasable;
         }
 
@@ -348,14 +385,14 @@ namespace Ecoli
                 {
                     reactant.Consumers.Remove(edge);
                     reactant.Producers.Add(edge);
-                    reactant.Weights[edge.Id] = - reactant.Weights[edge.Id];
+                    reactant.Weights[edge.Id] = -reactant.Weights[edge.Id];
                 }
 
                 var temp = edge.Reactants;
                 edge.Reactants = edge.Products;
                 edge.Products = temp;
 
-                edge.UpperBound = - edge.LowerBound;
+                edge.UpperBound = -edge.LowerBound;
                 edge.LowerBound = 0;
 
                 edge.IsReversible = false;

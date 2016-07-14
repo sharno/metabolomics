@@ -4,6 +4,7 @@ using System.Linq;
 
 using ILOG.Concert;
 using ILOG.CPLEX;
+using Metabol.DbModels;
 
 namespace Metabol
 {
@@ -13,11 +14,11 @@ namespace Metabol
 
     class FVA
     {
-        public Dictionary<Guid, Tuple<double, double>> Results;
+        public Dictionary<Guid, Tuple<float, float>> Results;
 
         public FVA()
         {
-            Results = new Dictionary<Guid, Tuple<double, double>>();
+            Results = new Dictionary<Guid, Tuple<float, float>>();
         }
 
         public void Solve(HyperGraph graph)
@@ -39,25 +40,25 @@ namespace Metabol
 
 
             var obj = model.AddObjective(ObjectiveSense.Maximize, vars["biomass_reaction"]);
-            var f = model.Solve();
-            var z = model.BestObjValue;
+            //var f = Model.Solve();
+            //var z = 900;//Model.BestObjValue;
             model.Remove(obj);
-            model.AddGe(vars["biomass_reaction"], 0.0*z);
+            //Model.AddGe(vars["biomass_reaction"],1 * z);
             foreach (var edge in graph.Edges.Values)
             {
                 Console.Clear();
                 Console.SetCursorPosition(0, y);
                 obj = model.AddObjective(ObjectiveSense.Maximize, vars[edge.Label]);
                 var isfeas = model.Solve();
-                //model.ExportModel(string.Format("{0}{1}model.lp", Util.Dir, edge.Label));
-                //SaveResult(graph, isfeas, model, vars, edge);
-                var max = model.GetValue(vars[edge.Label]);
+                //Model.ExportModel(string.Format("{0}{1}Model.lp", Util.Dir, edge.Label));
+                //SaveResult(graph, isfeas, Model, vars, edge);
+                var max = (float)model.GetValue(vars[edge.Label]);
                 model.Remove(obj);
                 Console.SetCursorPosition(0, y);
                 obj = model.AddObjective(ObjectiveSense.Minimize, vars[edge.Label]);
                 isfeas = model.Solve();
-                //SaveResult(graph, isfeas, model, vars, edge);
-                var min = model.GetValue(vars[edge.Label]);
+                SaveResult(graph, isfeas, model, vars, edge);
+                var min = (float)model.GetValue(vars[edge.Label]);
                 model.Remove(obj);
 
                 Results[edge.Id] = Tuple.Create(min, max);
@@ -79,7 +80,7 @@ namespace Metabol
 
             var list = graph.Edges.ToList().Select(d => string.Format("{0}:{1}", d.Value.Label, d.Value.Flux)).ToList();
             list.Sort((decision, decision1) => string.Compare(decision, decision1, StringComparison.Ordinal));
-            File.WriteAllLines(string.Format("{0}{1}result.txt", Util.Core.Dir, edge.Label), list);
+            File.WriteAllLines(string.Format("{0}{1}result.txt", Core.Dir, edge.Label), list);
         }
 
         private void AddGlobalConstraint(HyperGraph sm, Cplex model, Dictionary<string, INumVar> vars)
