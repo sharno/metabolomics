@@ -69,6 +69,7 @@
   <ItemGroup>
     <Compile Include="Fba3.cs" />
     <Compile Include="FVA.cs" />
+    <Compile Include="LogicalOperators.cs" />
     <Compile Include="MOMA.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

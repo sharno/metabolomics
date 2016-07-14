@@ -80,14 +80,15 @@ namespace Ecoli
                             var expr1 = model.LinearNumExpr();
                             expr1.AddTerm(1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
 
-                        //var expr2 = model.LinearNumExpr();
-                        //expr2.AddTerm(Math.Abs(ra.ratio), cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+                            //var expr2 = model.LinearNumExpr();
+                            //expr2.AddTerm(Math.Abs(ra.ratio), cycleMetabolitesVars[edge.Id][ra.metabolite1]);
 
-                        var expr2High = model.LinearNumExpr();
-                        expr2High.AddTerm(Math.Abs(ra.ratio) * 1.1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
 
-                        var expr2Low = model.LinearNumExpr();
-                        expr2Low.AddTerm(Math.Abs(ra.ratio) * 0.9, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+                            var expr2Low = model.LinearNumExpr();
+                            expr2Low.AddTerm(Math.Abs(ra.ratio) * 0.9, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+
+                            var expr2High = model.LinearNumExpr();
+                            expr2High.AddTerm(Math.Abs(ra.ratio) * 1.1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
 
 
                         //var equal = model.Eq(model.Abs(expr1), model.Abs(expr2), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio");
@@ -101,12 +102,12 @@ namespace Ecoli
                         withRatio1.Add(high1);
                         or.Add(withRatio1);
 
-                        var low2 = model.Le(model.Abs(expr1), model.Abs(expr2Low), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low");
-                        var high2 = model.Ge(model.Abs(expr1), model.Abs(expr2High), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high");
-                        var withRatio2 = model.And();
-                        withRatio2.Add(low2);
-                        withRatio2.Add(high2);
-                        or.Add(withRatio2);
+                        //var low2 = model.Le(model.Abs(expr1), model.Abs(expr2Low), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low");
+                        //var high2 = model.Ge(model.Abs(expr1), model.Abs(expr2High), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high");
+                        //var withRatio2 = model.And();
+                        //withRatio2.Add(low2);
+                        //withRatio2.Add(high2);
+                        //or.Add(withRatio2);
 
                         //var upperBound = model.BoolVar();
                         //var lowerBound = model.BoolVar();
@@ -140,8 +141,8 @@ namespace Ecoli
                         var zeroLeft = model.Eq(model.Abs(expr1), 0);
                         var zeroRight = model.Eq(model.Abs(expr2High), 0);
 
-                        or.Add(zeroLeft);
-                        or.Add(zeroRight);
+                        //or.Add(zeroLeft);
+                        //or.Add(zeroRight);
 
                         model.Add(or);
                         });

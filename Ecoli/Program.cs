@@ -11,6 +11,9 @@ namespace Ecoli
     {
         static void Main(string[] args)
         {
+            //LogicalOperators.TestLogic();
+            //return;
+
             var p = new TheAlgorithm();
             p.Start();
             do
