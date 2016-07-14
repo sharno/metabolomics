@@ -34,7 +34,10 @@ namespace Ecoli.Util.SimpleCycle
                     {
                         findingCycles = true;
                         var cycleReaction = CollapseCycle(cycle, hypergraph);
-                        cycles.Add(cycleReaction, cycle);
+                        // record to DB directly as the cycle reaction object might be changed if it's stored as an object as we did before
+                        // todo modify it so that the object we save in memory doesn't get changed until we finish finding all cycles
+                        Program.RecordToDatabase(cycleReaction, cycle);
+                        //cycles.Add(cycleReaction, cycle);
                         break;
                     }
                 }
@@ -138,7 +141,6 @@ namespace Ecoli.Util.SimpleCycle
             HyperGraph.Cycle cycleReaction = new HyperGraph.Cycle();
 
             // modify hypergraph
-            // TODO add weights if needed
             foreach (var v in cycle)
             {
                 if (v is HyperGraph.Node)

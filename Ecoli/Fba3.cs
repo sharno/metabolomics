@@ -72,30 +72,78 @@ namespace Ecoli
 
 
 
+                    var ratios =
+                        Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == cycle.Id).ToList();
+                    ratios.ForEach(ra =>
+                    {
+                        var expr1 = model.LinearNumExpr();
+                        expr1.AddTerm(1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
 
-                    // put cycle ratios
-                    //if (cycle.Id == Guid.Parse("b88f7627-fd15-4173-a33f-ea80c7147681"))
-                    //{
-                        var ratios =
-                            Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == cycle.Id).ToList();
-                        ratios.ForEach(ra =>
-                        {
-                            var expr1 = model.LinearNumExpr();
-                            expr1.AddTerm(1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
-                            var expr2 = model.LinearNumExpr();
-                            expr2.AddTerm(ra.ratio, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
-                            model.AddEq(model.Abs(expr1), model.Abs(expr2),
-                                $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio");
-                            var g = model.Eq(model.Abs(expr1), model.Abs(expr2), "rratio");
-                            var g2 = model.Eq(model.Abs(expr1), 0);
-                            var g3 = model.Eq(model.Abs(expr2), 0);
-                            var o = model.Or();
-                            o.Add(g);
-                            o.Add(g2);
-                            o.Add(g3);
-                            model.Add(o);
-                        });
-                    //}
+                        //var expr2 = model.LinearNumExpr();
+                        //expr2.AddTerm(Math.Abs(ra.ratio), cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+
+                        var expr2High = model.LinearNumExpr();
+                        expr2High.AddTerm(Math.Abs(ra.ratio) * 1.1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+
+                        var expr2Low = model.LinearNumExpr();
+                        expr2Low.AddTerm(Math.Abs(ra.ratio) * 0.9, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+
+
+                        //var equal = model.Eq(model.Abs(expr1), model.Abs(expr2), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio");
+
+                        var or = model.Or();
+
+                        var low1 = model.Ge(model.Abs(expr1), model.Abs(expr2Low), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low");
+                        var high1 = model.Le(model.Abs(expr1), model.Abs(expr2High), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high");
+                        var withRatio1 = model.And();
+                        withRatio1.Add(low1);
+                        withRatio1.Add(high1);
+                        or.Add(withRatio1);
+
+                        var low2 = model.Le(model.Abs(expr1), model.Abs(expr2Low), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low");
+                        var high2 = model.Ge(model.Abs(expr1), model.Abs(expr2High), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high");
+                        var withRatio2 = model.And();
+                        withRatio2.Add(low2);
+                        withRatio2.Add(high2);
+                        or.Add(withRatio2);
+
+                        //var upperBound = model.BoolVar();
+                        //var lowerBound = model.BoolVar();
+                        //var withinBounds = model.BoolVar();
+                        //var leftZero = model.BoolVar();
+                        //var rightZero = model.BoolVar();
+
+                        //// upperBound
+                        //model.Add(model.IfThen(model.Le(model.Abs(expr1), model.Abs(expr2High), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high"), model.Eq(upperBound, 1)));
+                        //model.Add(model.IfThen(model.Not(model.Le(model.Abs(expr1), model.Abs(expr2High), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high")), model.Eq(upperBound, 0)));
+
+                        //// lowerBound
+                        //model.Add(model.IfThen(model.Ge(model.Abs(expr1), model.Abs(expr2Low), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low"), model.Eq(lowerBound, 1)));
+                        //model.Add(model.IfThen(model.Not(model.Ge(model.Abs(expr1), model.Abs(expr2Low), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low")), model.Eq(lowerBound, 0)));
+
+                        //// withinBounds (and-ing operation)
+                        //model.Add(model.IfThen(model.Eq(model.Sum(upperBound, lowerBound), 2), model.Eq(withinBounds, 1)));
+                        //model.Add(model.IfThen(model.Not(model.Eq(model.Sum(upperBound, lowerBound), 2)), model.Eq(withinBounds, 1)));
+
+                        //// leftZero
+                        //model.Add(model.IfThen(model.Eq(model.Abs(expr1), 0), model.Eq(leftZero, 1)));
+                        //model.Add(model.IfThen(model.Not(model.Eq(model.Abs(expr1), 0)), model.Eq(leftZero, 0)));
+
+                        //// rightZero
+                        //model.Add(model.IfThen(model.Eq(model.Abs(expr2High), 0), model.Eq(rightZero, 1)));
+                        //model.Add(model.IfThen(model.Not(model.Eq(model.Abs(expr2High), 0)), model.Eq(rightZero, 0)));
+
+                        //// or-ing operation
+                        //model.AddGe(model.Sum(withinBounds, leftZero, rightZero), 1);
+
+                        var zeroLeft = model.Eq(model.Abs(expr1), 0);
+                        var zeroRight = model.Eq(model.Abs(expr2High), 0);
+
+                        or.Add(zeroLeft);
+                        or.Add(zeroRight);
+
+                        model.Add(or);
+                    });
 
 
 
@@ -234,7 +282,7 @@ namespace Ecoli
                     reactionsFluxes["_" + f] = reactionsFluxes[f];
                     reactionsFluxes.Remove(f);
                 });
-                Debug(sm.Step, reactionsFluxes);
+                //Debug(sm.Step, reactionsFluxes);
                 sm.Edges.ToList().ForEach(d => d.Value.Flux = 0);
             }
 

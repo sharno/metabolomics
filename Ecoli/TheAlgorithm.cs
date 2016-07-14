@@ -22,8 +22,11 @@ namespace Ecoli
         // pep_c
         //Guid.Parse("CB4656B3-F54A-483F-B703-43B8F812740E");
 
+        // q8c
+        //  5218A267-A0C3-410D-82AD-21B1C488E0E4
+
         // start from a reaction instaed of metabolite
-        public static readonly Guid StartingMetabolite = Guid.Parse("CB4656B3-F54A-483F-B703-43B8F812740E");
+        public static readonly Guid StartingMetabolite = Guid.Parse("5218A267-A0C3-410D-82AD-21B1C488E0E4");
 
         public readonly LinkedList<string> Pathway = new LinkedList<string>();
 
@@ -115,24 +118,45 @@ namespace Ecoli
                     }
                     Sm.RemoveCycle(cycle.Value);
 
-                    // new border metabolites that are a part of an inner cycle that need to be connected again to the outer if the outermost was deleted
+                    // new border metabolites that are a part of an outer cycle that need to be connected as interface metabolites of inner cycles if that outer cycle was deleted
                     var borderMetabolites = GetBorderMetabolites(Sm);
                     foreach(var borderMetabolite in borderMetabolites)
                     {
-                        var parentCycles = Db.ParentCyclesOfMetabolite(borderMetabolite.Id);
-                        foreach (var parentCycle in parentCycles.Where(parentCycle => Sm.Cycles.ContainsKey(parentCycle.Key)))
+                        //var parentCycles = Db.ParentCyclesOfMetabolite(borderMetabolite.Id);
+                        //foreach (var parentCycle in parentCycles.Where(parentCycle => Sm.Cycles.ContainsKey(parentCycle.Key)))
+                        //{
+                        //    switch (parentCycle.Value)
+                        //    {
+                        //        case Db.ProductId:
+                        //            Sm.AddProduct(Sm.Cycles[parentCycle.Key], Sm.Nodes[borderMetabolite.Id]);
+                        //            break;
+                        //        case Db.ReactantId:
+                        //            Sm.AddReactant(Sm.Cycles[parentCycle.Key], Sm.Nodes[borderMetabolite.Id]);
+                        //            break;
+                        //        case Db.ReversibleId:
+                        //            Sm.AddProduct(Sm.Cycles[parentCycle.Key], Sm.Nodes[borderMetabolite.Id]);
+                        //            Sm.AddReactant(Sm.Cycles[parentCycle.Key], Sm.Nodes[borderMetabolite.Id]);
+                        //            break;
+                        //    }
+                        //}
+                        var connectedCycles = Db.Context.CycleConnections.Where(cc => cc.metaboliteId == borderMetabolite.Id);
+                        foreach (var cc in connectedCycles)
                         {
-                            switch (parentCycle.Value)
+                            if (!Sm.Cycles.ContainsKey(cc.cycleId))
+                            {
+                                continue;
+                            }
+                            switch (cc.roleId)
                             {
                                 case Db.ProductId:
-                                    Sm.AddProduct(Sm.Cycles[parentCycle.Key], Sm.Nodes[borderMetabolite.Id]);
+                                    Sm.AddProduct(Sm.Cycles[cc.cycleId], Sm.Nodes[borderMetabolite.Id]);
                                     break;
                                 case Db.ReactantId:
-                                    Sm.AddReactant(Sm.Cycles[parentCycle.Key], Sm.Nodes[borderMetabolite.Id]);
+                                    Sm.AddReactant(Sm.Cycles[cc.cycleId], Sm.Nodes[borderMetabolite.Id]);
                                     break;
                                 case Db.ReversibleId:
-                                    Sm.AddProduct(Sm.Cycles[parentCycle.Key], Sm.Nodes[borderMetabolite.Id]);
-                                    Sm.AddReactant(Sm.Cycles[parentCycle.Key], Sm.Nodes[borderMetabolite.Id]);
+                                    Sm.AddProduct(Sm.Cycles[cc.cycleId], Sm.Nodes[borderMetabolite.Id]);
+                                    Sm.AddReactant(Sm.Cycles[cc.cycleId], Sm.Nodes[borderMetabolite.Id]);
                                     break;
                             }
                         }
@@ -140,6 +164,9 @@ namespace Ecoli
 
                     // new border metabolites were introduced to the graph
                     // this includes metabolites with no producers or consumers
+                    borderMetabolites = GetBorderMetabolites(Sm);
+
+                    // there shouldn't be border metabolites in the steps of expanding cycles
                     foreach (var borderMetabolite in borderMetabolites)
                     {
                         DefineExReaction(borderMetabolite, Sm);

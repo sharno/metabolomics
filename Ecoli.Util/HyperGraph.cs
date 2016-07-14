@@ -385,9 +385,12 @@ namespace Ecoli.Util
                 Level = level;
 
                 if (isPseudo) return;
-                var rb = Db.Context.ReactionBounds.Single(e => e.reactionId == id);
-                LowerBound = rb.lowerBound;
-                UpperBound = rb.upperBound;
+                var rb = Db.Context.ReactionBounds.SingleOrDefault(e => e.reactionId == id);
+                if (rb != null)
+                {
+                    LowerBound = rb.lowerBound;
+                    UpperBound = rb.upperBound;
+                }
                 var rbf = Db.Context.ReactionBoundFixes.SingleOrDefault(e => e.reactionId == id);
                 if (rbf != null)
                 {

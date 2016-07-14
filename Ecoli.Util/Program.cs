@@ -27,6 +27,311 @@ namespace Ecoli.Util
             //CheckExchangeReactionsInCycles();
             //LimitReactionsFluxes();
             RecordCyclesInterfaceMetabolitesRations();
+
+            // cycles with no ratios:
+            //419FB6A3-A478-4607-BCF4-32A30C1AFDA7
+            //1F958FD4-D2BB-46E1-B418-6DE0C731E50C
+            //09814608-806D-4B7F-A8CB-AEAEC590A541
+            //AAC30E50-570F-4927-A36D-ED534DD2DABC
+            //87F8DBCE-D972-4BD2-AE60-FD05A928707B
+            //CheckCycleRatios(Guid.Parse("419FB6A3-A478-4607-BCF4-32A30C1AFDA7"));
+        }
+
+        private static void CheckCycleRatios(Guid cycleId)
+        {
+            var count = 0;
+            var cycle = Db.Context.Cycles.Find(cycleId);
+
+            var recordedRatios = new Dictionary<Guid, Dictionary<Guid, List<double>>>();
+
+            var nestedCycles = cycle.CycleReactions.Where(cr => !cr.isReaction).Select(cr => cr.otherId).ToList();
+
+            var ratios =
+                nestedCycles.SelectMany(
+                    nc => Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == nc)).ToList();
+
+            var cReactions = cycle.CycleReactions.Select(cr => cr.otherId).ToList();
+            var allSpecies =
+                Db.Context.ReactionSpecies.Where(rs => cReactions.Contains(rs.reactionId))
+                    .Select(rs => rs.speciesId).Distinct().ToList();
+            allSpecies =
+                allSpecies.Union(
+                    Db.Context.CycleConnections.Where(cc => nestedCycles.Contains(cc.cycleId))
+                        .Select(cc => cc.metaboliteId)).Distinct().ToList();
+
+            foreach (var cycleConnection in cycle.CycleConnections)
+            {
+                var model = new Cplex { Name = "FBA" };
+                var vars = new Dictionary<Guid, INumVar>();
+                var cycleMets = new Dictionary<Tuple<Guid, Guid>, Guid>();
+
+                cycle.CycleReactions.Where(cr => cr.isReaction).ToList().ForEach(r =>
+                {
+                    var bound = Db.Context.ReactionBounds.Single(rb => rb.reactionId == r.otherId);
+                    vars[r.otherId] = model.NumVar(bound.lowerBound, bound.upperBound, NumVarType.Float,
+                        Db.Context.Reactions.Find(r.otherId).sbmlId);
+                });
+
+                Db.Context.CycleConnections.Where(
+                    cc => allSpecies.Contains(cc.metaboliteId) && nestedCycles.Contains(cc.cycleId))
+                    .ToList()
+                    .ForEach(cc =>
+                    {
+                        cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)] = Guid.NewGuid();
+                        vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]] =
+                            model.NumVar(cc.isReversible ? -1000 : 0, 1000, cc.Species.sbmlId);
+                    });
+
+                allSpecies.ForEach(s =>
+                {
+                    var expr = model.LinearNumExpr();
+                    Db.Context.ReactionSpecies.Where(
+                        rs => rs.speciesId == s && cReactions.Contains(rs.reactionId))
+                        .ToList()
+                        .ForEach(rs =>
+                        {
+                            expr.AddTerm(rs.stoichiometry, vars[rs.reactionId]);
+                        });
+                    Db.Context.CycleConnections.Where(
+                        cc => cc.metaboliteId == s && nestedCycles.Contains(cc.cycleId))
+                        .ToList()
+                        .ForEach(cc =>
+                        {
+                            expr.AddTerm(1, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                        });
+
+
+                    // add atoms balance
+                    // add atom numbers constraints to link metabolites of the cycle reaction
+                    foreach (Guid nc in nestedCycles)
+                    {
+                        var carbonExpr = model.LinearNumExpr();
+                        Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && (cc.roleId == Db.ProductId || cc.roleId == Db.ReversibleId)).ToList()
+                            .ForEach(
+                                cc =>
+                                {
+                                    var formula =
+                                        Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "C");
+                                    if (formula == null) return;
+
+                                    carbonExpr.AddTerm(formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                });
+                        Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && cc.roleId == Db.ReactantId).ToList()
+                            .ForEach(
+                                cc =>
+                                {
+                                    var formula =
+                                        Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "C");
+                                    if (formula == null) return;
+
+                                    carbonExpr.AddTerm(-formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                });
+                        model.AddEq(carbonExpr, 0.0, nc + "_carbon_atoms_balance");
+
+                        var hydrogenExpr = model.LinearNumExpr();
+                        Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && (cc.roleId == Db.ProductId || cc.roleId == Db.ReversibleId)).ToList()
+                            .ForEach(
+                                cc =>
+                                {
+                                    var formula =
+                                        Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "H");
+                                    if (formula == null) return;
+
+                                    hydrogenExpr.AddTerm(formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                });
+                        Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && cc.roleId == Db.ReactantId).ToList()
+                            .ForEach(
+                                cc =>
+                                {
+                                    var formula =
+                                        Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "H");
+                                    if (formula == null) return;
+
+                                    hydrogenExpr.AddTerm(-formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                });
+                        model.AddEq(hydrogenExpr, 0.0, nc + "_hydrogen_atoms_balance");
+
+                        var nitrogenExpr = model.LinearNumExpr();
+                        Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && (cc.roleId == Db.ProductId || cc.roleId == Db.ReversibleId)).ToList()
+                            .ForEach(
+                                cc =>
+                                {
+                                    var formula =
+                                        Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "N");
+                                    if (formula == null) return;
+
+                                    nitrogenExpr.AddTerm(formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                });
+                        Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && cc.roleId == Db.ReactantId).ToList()
+                            .ForEach(
+                                cc =>
+                                {
+                                    var formula =
+                                        Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "N");
+                                    if (formula == null) return;
+
+                                    nitrogenExpr.AddTerm(-formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                });
+                        model.AddEq(nitrogenExpr, 0.0, nc + "_nitrogen_atoms_balance");
+
+                        var oxygenExpr = model.LinearNumExpr();
+                        Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && (cc.roleId == Db.ProductId || cc.roleId == Db.ReversibleId)).ToList()
+                            .ForEach(
+                                cc =>
+                                {
+                                    var formula =
+                                        Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "O");
+                                    if (formula == null) return;
+
+                                    oxygenExpr.AddTerm(formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                });
+                        Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && cc.roleId == Db.ReactantId).ToList()
+                            .ForEach(
+                                cc =>
+                                {
+                                    var formula =
+                                        Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "O");
+                                    if (formula == null) return;
+
+                                    oxygenExpr.AddTerm(-formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                });
+                        model.AddEq(oxygenExpr, 0.0, nc + "_oxygen_atoms_balance");
+                    }
+
+
+
+                    // add pseudo reactions to every interface metabolite
+                    if (cycle.CycleConnections.Any(cc => cc.metaboliteId == s))
+                    {
+                        var pseudo = Guid.NewGuid();
+                        vars[pseudo] = model.NumVar(-1000, 1000, NumVarType.Float,
+                            "pseudo" + Db.Context.Species.Find(s).sbmlId);
+                        expr.AddTerm(1, vars[pseudo]);
+
+                        if (cycleConnection.metaboliteId == s) model.AddGe(vars[pseudo], new Random().Next(1, 900));
+                    }
+                    model.AddEq(expr, 0, Db.Context.Species.Find(s).sbmlId);
+                });
+
+                ratios.ForEach(ra =>
+                {
+                    var expr1 = model.LinearNumExpr();
+                    expr1.AddTerm(1, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite1)]]);
+                    var expr2 = model.LinearNumExpr();
+                    expr2.AddTerm(ra.ratio, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
+                    model.AddEq(model.Abs(expr1), model.Abs(expr2));
+                });
+
+                var solved = model.Solve();
+                count++;
+                model.ExportModel($"{Core.Dir}{count}model.lp");
+                if (!solved)
+                {
+                    continue;
+                }
+
+
+                var list =
+                    vars.ToList()
+                        .Select(
+                            v =>
+                                (Db.Context.Reactions.Find(v.Key) != null
+                                    ? Db.Context.Reactions.Find(v.Key).sbmlId
+                                    : v.Value.Name) + "    " + model.GetValue(v.Value));
+                File.WriteAllLines($"{Core.Dir}result{count}.txt", list);
+
+
+                cycle.CycleConnections.ToList().ForEach(cc =>
+                {
+                    var first = 0.0;
+                    foreach (
+                        var rs in
+                            Db.Context.ReactionSpecies.Where(
+                                rs => rs.speciesId == cc.metaboliteId && cReactions.Contains(rs.reactionId)))
+                    {
+                        if (model.GetValue(vars[rs.reactionId]) > 0)
+                        {
+                            first += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
+                        }
+                    }
+                    first +=
+                        nestedCycles.Where(
+                            nc =>
+                                cycleMets.ContainsKey(Tuple.Create(nc, cc.metaboliteId)) &&
+                                model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) > 0)
+                            .Sum(nc => model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]));
+
+
+                    cycle.CycleConnections.ToList()
+                        .Where(cc2 => cc2.metaboliteId != cc.metaboliteId)
+                        .ToList()
+                        .ForEach(cc2 =>
+                        {
+                            var second = 0.0;
+                            foreach (
+                                var rs in
+                                    Db.Context.ReactionSpecies.Where(
+                                        rs => rs.speciesId == cc2.metaboliteId && cReactions.Contains(rs.reactionId))
+                                )
+                            {
+                                    // only pick producers
+                                    if (model.GetValue(vars[rs.reactionId]) > 0)
+                                {
+                                    second += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
+                                }
+                            }
+                            second +=
+                                nestedCycles.Where(
+                                    nc =>
+                                        cycleMets.ContainsKey(Tuple.Create(nc, cc2.metaboliteId)) &&
+                                        model.GetValue(
+                                            vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]) > 0)
+                                    .Sum(
+                                        nc =>
+                                            model.GetValue(
+                                                vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]));
+
+                            if (String.Compare(cc.Species.sbmlId, cc2.Species.sbmlId, StringComparison.Ordinal) < 0)
+                            {
+                                //Console.Write(cc.Species.sbmlId + " " + cc2.Species.sbmlId + ", ");
+                                if (!recordedRatios.ContainsKey(cc.metaboliteId))
+                                    recordedRatios[cc.metaboliteId] = new Dictionary<Guid, List<double>>();
+                                if (!recordedRatios[cc.metaboliteId].ContainsKey(cc2.metaboliteId))
+                                    recordedRatios[cc.metaboliteId][cc2.metaboliteId] = new List<double>();
+                                recordedRatios[cc.metaboliteId][cc2.metaboliteId].Add(first/second);
+                            }
+                            else
+                            {
+                                //Console.Write(cc2.Species.sbmlId + " " + cc.Species.sbmlId + ", ");
+                                if (!recordedRatios.ContainsKey(cc2.metaboliteId))
+                                    recordedRatios[cc2.metaboliteId] = new Dictionary<Guid, List<double>>();
+                                if (!recordedRatios[cc2.metaboliteId].ContainsKey(cc.metaboliteId))
+                                    recordedRatios[cc2.metaboliteId][cc.metaboliteId] = new List<double>();
+                                recordedRatios[cc2.metaboliteId][cc.metaboliteId].Add(second/first);
+                            }
+                        });
+                });
+            }
+
+            recordedRatios.ToList().ForEach(f => f.Value.ToList().ForEach(s =>
+            {
+                var values = s.Value.Where(v => Math.Abs(v) > 0 && !double.IsInfinity(v)).ToList();
+                Console.WriteLine("List of ratios of " + Db.Context.Species.Find(f.Key).sbmlId + " .. " +
+                                  Db.Context.Species.Find(s.Key).sbmlId);
+                values.ForEach(v => Console.Write(v + ", "));
+                Console.WriteLine();
+
+                if (values.Count > 1 &&
+                    values.All(v => Math.Abs(Math.Abs(v) - Math.Abs(values[0])) < double.Epsilon))
+                {
+                    Console.WriteLine("111111111111111111111111111   " + Db.Context.Species.Find(f.Key).sbmlId +
+                                      " " + Db.Context.Species.Find(s.Key).sbmlId + " " + values[0]);
+                }
+                else
+                {
+                    Console.WriteLine("didn't :(");
+                }
+            }));
         }
 
         private static IEnumerable<Guid> GetAllReactionsOfCycle(Guid cycleId)
@@ -71,221 +376,314 @@ namespace Ecoli.Util
 
         private static void RecordCyclesInterfaceMetabolitesRations()
         {
-            Db.Context.cycleInterfaceMetabolitesRatios.RemoveRange(Db.Context.cycleInterfaceMetabolitesRatios.Where(e => true));
+            Db.Context.cycleInterfaceMetabolitesRatios.RemoveRange(
+                Db.Context.cycleInterfaceMetabolitesRatios.Where(e => true));
             Db.Context.SaveChanges();
 
-            //var cycles = Db.Context.Cycles.Select(c => c.id).ToList();
             int count = 0;
 
-            //while (cycles.Any())
-            //{
-                //foreach (var cycle in Db.Context.Cycles.Where(cy => cycles.Contains(cy.id)))
-                //{
-
-                var sortedCycles = TopologicalSortCycles(Db.Context.Cycles.ToList());
-                foreach (var cycle in sortedCycles) {
-                    //Console.WriteLine((cycle.id == Guid.Parse("b88f7627-fd15-4173-a33f-ea80c7147681")) + "\n\n\n\n\n\n");
-                    var recordedRatios = new Dictionary<Guid, Dictionary<Guid, List<double>>>();
+            var sortedCycles = TopologicalSortCycles(Db.Context.Cycles.ToList());
+            foreach (var cycle in sortedCycles)
+            {
+                var recordedRatios = new Dictionary<Guid, Dictionary<Guid, List<double>>>();
 
                 var nestedCycles = cycle.CycleReactions.Where(cr => !cr.isReaction).Select(cr => cr.otherId).ToList();
-                //var satisfiedNestedCycles = nestedCycles.All(c => Db.Context.cycleInterfaceMetabolitesRatios.Any(ci => ci.cycleId == c));
 
-                //if (cycle.CycleReactions.All(cr => cr.isReaction) || satisfiedNestedCycles)
-                //{
+                var ratios =
+                    nestedCycles.SelectMany(
+                        nc => Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == nc)).ToList();
 
-                var ratios = nestedCycles.SelectMany(nc => Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == nc)).ToList();
+                var cReactions = cycle.CycleReactions.Select(cr => cr.otherId).ToList();
+                var allSpecies =
+                    Db.Context.ReactionSpecies.Where(rs => cReactions.Contains(rs.reactionId))
+                        .Select(rs => rs.speciesId).Distinct().ToList();
+                allSpecies =
+                    allSpecies.Union(
+                        Db.Context.CycleConnections.Where(cc => nestedCycles.Contains(cc.cycleId))
+                            .Select(cc => cc.metaboliteId)).Distinct().ToList();
 
-                        var cReactions = cycle.CycleReactions.Select(cr => cr.otherId).ToList();
-                        var allSpecies =
-                                Db.Context.ReactionSpecies.Where(rs => cReactions.Contains(rs.reactionId))
-                                    .Select(rs => rs.speciesId).Distinct().ToList();
-                        allSpecies = allSpecies.Union(Db.Context.CycleConnections.Where(cc => nestedCycles.Contains(cc.cycleId)).Select(cc => cc.metaboliteId)).Distinct().ToList();
+                foreach (var cycleConnection in cycle.CycleConnections)
+                {
+                    var model = new Cplex {Name = "FBA"};
+                    var vars = new Dictionary<Guid, INumVar>();
+                    var cycleMets = new Dictionary<Tuple<Guid, Guid>, Guid>();
 
-                        //var allReactions =
-                        //        Db.Context.ReactionSpecies.Where(rs => allSpecies.Contains(rs.speciesId))
-                        //            .Select(rs => rs.reactionId).Distinct().ToList();
-                        //var insideReactions = nestedCycles.SelectMany(GetAllReactionsOfCycle);
-                        //allReactions.RemoveAll(re => insideReactions.Contains(re));
+                    cycle.CycleReactions.Where(cr => cr.isReaction).ToList().ForEach(r =>
+                    {
+                        var bound = Db.Context.ReactionBounds.Single(rb => rb.reactionId == r.otherId);
+                        vars[r.otherId] = model.NumVar(bound.lowerBound, bound.upperBound, NumVarType.Float,
+                            Db.Context.Reactions.Find(r.otherId).sbmlId);
+                    });
 
-                        //allReactions.ForEach(r =>
-                        //{
-                        //    var bound = Db.Context.ReactionBounds.Single(rb => rb.reactionId == r);
-                        //    vars[r] = model.NumVar(bound.lowerBound, bound.upperBound, NumVarType.Float);
-                        //});
-                        foreach (var cycleConnection in cycle.CycleConnections)
+                    Db.Context.CycleConnections.Where(
+                        cc => allSpecies.Contains(cc.metaboliteId) && nestedCycles.Contains(cc.cycleId))
+                        .ToList()
+                        .ForEach(cc =>
                         {
-                            var model = new Cplex {Name = "FBA"};
-                            var vars = new Dictionary<Guid, INumVar>();
-                            var cycleMets = new Dictionary<Tuple<Guid, Guid>, Guid>();
+                            cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)] = Guid.NewGuid();
+                            vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]] =
+                                model.NumVar(cc.isReversible ? -1000 : 0, 1000, cc.Species.sbmlId);
+                        });
 
-                            cycle.CycleReactions.Where(cr => cr.isReaction).ToList().ForEach(r =>
+                    allSpecies.ForEach(s =>
+                    {
+                        var expr = model.LinearNumExpr();
+                        Db.Context.ReactionSpecies.Where(
+                            rs => rs.speciesId == s && cReactions.Contains(rs.reactionId))
+                            .ToList()
+                            .ForEach(rs =>
                             {
-                                var bound = Db.Context.ReactionBounds.Single(rb => rb.reactionId == r.otherId);
-                                vars[r.otherId] = model.NumVar(bound.lowerBound, bound.upperBound, NumVarType.Float,
-                                    Db.Context.Reactions.Find(r.otherId).sbmlId);
+                                expr.AddTerm(rs.stoichiometry, vars[rs.reactionId]);
+                            });
+                        Db.Context.CycleConnections.Where(
+                            cc => cc.metaboliteId == s && nestedCycles.Contains(cc.cycleId))
+                            .ToList()
+                            .ForEach(cc =>
+                            {
+                                expr.AddTerm(1, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
                             });
 
-                            Db.Context.CycleConnections.Where(
-                                cc => allSpecies.Contains(cc.metaboliteId) && nestedCycles.Contains(cc.cycleId))
-                                .ToList()
-                                .ForEach(cc =>
-                                {
-                                    cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)] = Guid.NewGuid();
-                                    vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]] =
-                                        model.NumVar(cc.isReversible ? -1000 : 0, 1000, cc.Species.sbmlId);
-                                });
 
-                            allSpecies.ForEach(s =>
-                            {
-                                var expr = model.LinearNumExpr();
+                        // add atoms balance
+                        // add atom numbers constraints to link metabolites of the cycle reaction
+                        foreach (Guid nc in nestedCycles)
+                        {
+                            var carbonExpr = model.LinearNumExpr();
+                            Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && (cc.roleId == Db.ProductId || cc.roleId == Db.ReversibleId)).ToList()
+                                .ForEach(
+                                    cc =>
+                                    {
+                                        var formula =
+                                            Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "C");
+                                        if (formula == null) return;
+
+                                        carbonExpr.AddTerm(formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                    });
+                            Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && cc.roleId == Db.ReactantId).ToList()
+                                .ForEach(
+                                    cc =>
+                                    {
+                                        var formula =
+                                            Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "C");
+                                        if (formula == null) return;
+
+                                        carbonExpr.AddTerm(-formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                    });
+                            model.AddEq(carbonExpr, 0.0, nc + "_carbon_atoms_balance");
+
+                            var hydrogenExpr = model.LinearNumExpr();
+                            Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && (cc.roleId == Db.ProductId || cc.roleId == Db.ReversibleId)).ToList()
+                                .ForEach(
+                                    cc =>
+                                    {
+                                        var formula =
+                                            Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "H");
+                                        if (formula == null) return;
+
+                                        hydrogenExpr.AddTerm(formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                    });
+                            Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && cc.roleId == Db.ReactantId).ToList()
+                                .ForEach(
+                                    cc =>
+                                    {
+                                        var formula =
+                                            Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "H");
+                                        if (formula == null) return;
+
+                                        hydrogenExpr.AddTerm(-formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                    });
+                            model.AddEq(hydrogenExpr, 0.0, nc + "_hydrogen_atoms_balance");
+
+                            var nitrogenExpr = model.LinearNumExpr();
+                            Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && (cc.roleId == Db.ProductId || cc.roleId == Db.ReversibleId)).ToList()
+                                .ForEach(
+                                    cc =>
+                                    {
+                                        var formula =
+                                            Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "N");
+                                        if (formula == null) return;
+
+                                        nitrogenExpr.AddTerm(formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                    });
+                            Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && cc.roleId == Db.ReactantId).ToList()
+                                .ForEach(
+                                    cc =>
+                                    {
+                                        var formula =
+                                            Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "N");
+                                        if (formula == null) return;
+
+                                        nitrogenExpr.AddTerm(-formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                    });
+                            model.AddEq(nitrogenExpr, 0.0, nc + "_nitrogen_atoms_balance");
+
+                            var oxygenExpr = model.LinearNumExpr();
+                            Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && (cc.roleId == Db.ProductId || cc.roleId == Db.ReversibleId)).ToList()
+                                .ForEach(
+                                    cc =>
+                                    {
+                                        var formula =
+                                            Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "O");
+                                        if (formula == null) return;
+
+                                        oxygenExpr.AddTerm(formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                    });
+                            Db.Context.CycleConnections.Where(cc => cc.cycleId == nc && cc.roleId == Db.ReactantId).ToList()
+                                .ForEach(
+                                    cc =>
+                                    {
+                                        var formula =
+                                            Db.Context.Formulae.SingleOrDefault(f => f.speciesId == cc.metaboliteId && f.atom == "O");
+                                        if (formula == null) return;
+
+                                        oxygenExpr.AddTerm(-formula.numAtoms, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
+                                    });
+                            model.AddEq(oxygenExpr, 0.0, nc + "_oxygen_atoms_balance");
+                        }
+
+
+                        // add reversible pseudo reactions to every interface metabolite
+                        if (cycle.CycleConnections.Any(cc => cc.metaboliteId == s))
+                        {
+                            var pseudo = Guid.NewGuid();
+                            vars[pseudo] = model.NumVar(-1000, 1000, NumVarType.Float,
+                                "pseudo" + Db.Context.Species.Find(s).sbmlId);
+                            expr.AddTerm(1, vars[pseudo]);
+
+                            if (cycleConnection.metaboliteId == s) model.AddGe(vars[pseudo], new Random().Next(1, 900));
+                        }
+                        model.AddEq(expr, 0, Db.Context.Species.Find(s).sbmlId);
+                    });
+
+                    ratios.ForEach(ra =>
+                    {
+                        var expr1 = model.LinearNumExpr();
+                        expr1.AddTerm(1, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite1)]]);
+                        var expr2 = model.LinearNumExpr();
+                        expr2.AddTerm(ra.ratio, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
+                        model.AddEq(model.Abs(expr1), model.Abs(expr2));
+                    });
+
+                    var solved = model.Solve();
+                    count++;
+                    model.ExportModel($"{Core.Dir}{count}model.lp");
+                    if (!solved)
+                    {
+                        continue;
+                    }
+
+
+                    var list =
+                        vars.ToList()
+                            .Select(
+                                v =>
+                                    (Db.Context.Reactions.Find(v.Key) != null
+                                        ? Db.Context.Reactions.Find(v.Key).sbmlId
+                                        : v.Value.Name) + "    " + model.GetValue(v.Value));
+                    File.WriteAllLines($"{Core.Dir}result{count}.txt", list);
+
+
+                    cycle.CycleConnections.ToList().ForEach(cc =>
+                    {
+                        var first = 0.0;
+                        foreach (
+                            var rs in
                                 Db.Context.ReactionSpecies.Where(
-                                    rs => rs.speciesId == s && cReactions.Contains(rs.reactionId))
-                                    .ToList()
-                                    .ForEach(rs =>
-                                    {
-                                        expr.AddTerm(rs.stoichiometry, vars[rs.reactionId]);
-                                    });
-                                Db.Context.CycleConnections.Where(
-                                    cc => cc.metaboliteId == s && nestedCycles.Contains(cc.cycleId))
-                                    .ToList()
-                                    .ForEach(cc =>
-                                    {
-                                        expr.AddTerm(1, vars[cycleMets[Tuple.Create(cc.cycleId, cc.metaboliteId)]]);
-                                    });
-
-                                if (cycle.CycleConnections.Any(cc => cc.metaboliteId == s))
-                                {
-                                    var pseudo = Guid.NewGuid();
-                                    vars[pseudo] = model.NumVar(-1000, 1000, NumVarType.Float, "pseudo" + Db.Context.Species.Find(s).sbmlId);
-                                    expr.AddTerm(1, vars[pseudo]);
-
-                                    if (cycleConnection.metaboliteId == s) model.AddGe(vars[pseudo], new Random().Next(1, 900));
-                                }
-                                model.AddEq(expr, 0, Db.Context.Species.Find(s).sbmlId);
-                            });
-
-                            ratios.ForEach(ra =>
+                                    rs => rs.speciesId == cc.metaboliteId && cReactions.Contains(rs.reactionId)))
+                        {
+                            if (model.GetValue(vars[rs.reactionId]) > 0)
                             {
-                                var expr1 = model.LinearNumExpr();
-                                expr1.AddTerm(1, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite1)]]);
-                                var expr2 = model.LinearNumExpr();
-                                expr2.AddTerm(ra.ratio, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
-                                model.AddEq(model.Abs(expr1), model.Abs(expr2));
-                            });
-
-                            var solved = model.Solve();
-                            count++;
-                            model.ExportModel($"{Core.Dir}{count}model.lp");
-                            if (!solved)
-                            {
-                                continue;
+                                first += rs.stoichiometry*model.GetValue(vars[rs.reactionId]);
                             }
+                        }
+                        first +=
+                            nestedCycles.Where(
+                                nc =>
+                                    cycleMets.ContainsKey(Tuple.Create(nc, cc.metaboliteId)) &&
+                                    model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) > 0)
+                                .Sum(nc => model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]));
 
 
-                            var list = vars.ToList().Select(v => (Db.Context.Reactions.Find(v.Key) != null? Db.Context.Reactions.Find(v.Key).sbmlId: v.Value.Name) + "    " + model.GetValue(v.Value));
-                            File.WriteAllLines($"{Core.Dir}result{count}.txt", list);
-                            
-
-                            cycle.CycleConnections.ToList().ForEach(cc => {
-                                var first = 0.0;
-                                foreach (var rs in Db.Context.ReactionSpecies.Where(rs => rs.speciesId == cc.metaboliteId && cReactions.Contains(rs.reactionId))) {
-                                    if (model.GetValue(vars[rs.reactionId]) > 0) {
-                                        first += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
+                        cycle.CycleConnections.ToList()
+                            .Where(cc2 => cc2.metaboliteId != cc.metaboliteId)
+                            .ToList()
+                            .ForEach(cc2 =>
+                            {
+                                var second = 0.0;
+                                foreach (
+                                    var rs in
+                                        Db.Context.ReactionSpecies.Where(
+                                            rs => rs.speciesId == cc2.metaboliteId && cReactions.Contains(rs.reactionId))
+                                    )
+                                {
+                                    // only pick producers
+                                    if (model.GetValue(vars[rs.reactionId]) > 0)
+                                    {
+                                        second += rs.stoichiometry*model.GetValue(vars[rs.reactionId]);
                                     }
                                 }
-                                first +=
+                                second +=
                                     nestedCycles.Where(
                                         nc =>
-                                            cycleMets.ContainsKey(Tuple.Create(nc, cc.metaboliteId)) &&
-                                            model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) > 0)
-                                        .Sum(nc => model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]));
-
-
-                                cycle.CycleConnections.ToList().Where(cc2 => cc2.metaboliteId != cc.metaboliteId).ToList().ForEach(cc2 => {
-                                    var second = 0.0;
-                                    foreach (var rs in Db.Context.ReactionSpecies.Where(rs => rs.speciesId == cc2.metaboliteId && cReactions.Contains(rs.reactionId)))
-                                    {
-                                        // only pick producers
-                                        if (model.GetValue(vars[rs.reactionId]) > 0)
-                                        {
-                                            second += rs.stoichiometry*model.GetValue(vars[rs.reactionId]);
-                                        }
-                                    }
-                                    second +=
-                                        nestedCycles.Where(
+                                            cycleMets.ContainsKey(Tuple.Create(nc, cc2.metaboliteId)) &&
+                                            model.GetValue(
+                                                vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]) > 0)
+                                        .Sum(
                                             nc =>
-                                                cycleMets.ContainsKey(Tuple.Create(nc, cc2.metaboliteId)) &&
                                                 model.GetValue(
-                                                    vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]) > 0)
-                                            .Sum(
-                                                nc =>
-                                                    model.GetValue(
-                                                        vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]));
+                                                    vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]));
 
-                                    if (String.Compare(cc.Species.sbmlId, cc2.Species.sbmlId, StringComparison.Ordinal) < 0)
-                                    {
-                                        //Console.Write(cc.Species.sbmlId + " " + cc2.Species.sbmlId + ", ");
-                                        if (!recordedRatios.ContainsKey(cc.metaboliteId))
-                                            recordedRatios[cc.metaboliteId] = new Dictionary<Guid, List<double>>();
-                                        if (!recordedRatios[cc.metaboliteId].ContainsKey(cc2.metaboliteId))
-                                            recordedRatios[cc.metaboliteId][cc2.metaboliteId] = new List<double>();
-                                        recordedRatios[cc.metaboliteId][cc2.metaboliteId].Add(first / second);
-                                    }
-                                    else
-                                    {
-                                        //Console.Write(cc2.Species.sbmlId + " " + cc.Species.sbmlId + ", ");
-                                        if (!recordedRatios.ContainsKey(cc2.metaboliteId))
-                                            recordedRatios[cc2.metaboliteId] = new Dictionary<Guid, List<double>>();
-                                        if (!recordedRatios[cc2.metaboliteId].ContainsKey(cc.metaboliteId))
-                                            recordedRatios[cc2.metaboliteId][cc.metaboliteId] = new List<double>();
-                                        recordedRatios[cc2.metaboliteId][cc.metaboliteId].Add(second / first);
-                                    }
-                                    // record in DB
-                                    //var record = new DB.cycleInterfaceMetabolitesRatio
-                                    //{
-                                    //    cycleId = cycle.id,
-                                    //    metabolite1 = cycleConnection.metaboliteId,
-                                    //    metabolite2 = cc2.metaboliteId,
-                                    //    ratio = Math.Round(first/second, 7)
-                                    //};
-
-                                    //Db.Context.cycleInterfaceMetabolitesRatios.Add(record);
-                                });
+                                if (String.Compare(cc.Species.sbmlId, cc2.Species.sbmlId, StringComparison.Ordinal) < 0)
+                                {
+                                    //Console.Write(cc.Species.sbmlId + " " + cc2.Species.sbmlId + ", ");
+                                    if (!recordedRatios.ContainsKey(cc.metaboliteId))
+                                        recordedRatios[cc.metaboliteId] = new Dictionary<Guid, List<double>>();
+                                    if (!recordedRatios[cc.metaboliteId].ContainsKey(cc2.metaboliteId))
+                                        recordedRatios[cc.metaboliteId][cc2.metaboliteId] = new List<double>();
+                                    recordedRatios[cc.metaboliteId][cc2.metaboliteId].Add(first/second);
+                                }
+                                else
+                                {
+                                    //Console.Write(cc2.Species.sbmlId + " " + cc.Species.sbmlId + ", ");
+                                    if (!recordedRatios.ContainsKey(cc2.metaboliteId))
+                                        recordedRatios[cc2.metaboliteId] = new Dictionary<Guid, List<double>>();
+                                    if (!recordedRatios[cc2.metaboliteId].ContainsKey(cc.metaboliteId))
+                                        recordedRatios[cc2.metaboliteId][cc.metaboliteId] = new List<double>();
+                                    recordedRatios[cc2.metaboliteId][cc.metaboliteId].Add(second/first);
+                                }
                             });
-                        }
-
-                        //Console.WriteLine("removing cycle" + "  ===========================>  " + cycles.Count);
-                        //cycles.Remove(cycle.id);
-                    //}
-                    recordedRatios.ToList().ForEach(f => f.Value.ToList().ForEach(s =>
-                    {
-                        var values = s.Value.Where(v => Math.Abs(v) > 0 && !double.IsInfinity(v)).ToList();
-                        Console.WriteLine("List of ratios of " + Db.Context.Species.Find(f.Key).sbmlId + " .. " + Db.Context.Species.Find(s.Key).sbmlId);
-                        values.ForEach(v => Console.Write(v + ", "));
-                        Console.WriteLine();
-
-                        if (values.Count > 1 &&
-                            values.All(v => Math.Abs(Math.Abs(v) - Math.Abs(values[0])) < double.Epsilon))
-                        {
-                            Console.WriteLine("111111111111111111111111111   " + Db.Context.Species.Find(f.Key).sbmlId +
-                                              " " + Db.Context.Species.Find(s.Key).sbmlId + " " + values[0]);
-                            var record = new DB.cycleInterfaceMetabolitesRatio
-                            {
-                                cycleId = cycle.id,
-                                metabolite1 = f.Key,
-                                metabolite2 = s.Key,
-                                ratio = Math.Abs(values[0])
-                            };
-                            Db.Context.cycleInterfaceMetabolitesRatios.Add(record);
-                            Db.Context.SaveChanges();
-                        }
-                        else
-                        {
-                            Console.WriteLine("didn't :(");
-                        }
-                    }));
+                    });
                 }
-            //}
+
+                recordedRatios.ToList().ForEach(f => f.Value.ToList().ForEach(s =>
+                {
+                    var values = s.Value.Where(v => Math.Abs(v) > 0 && !double.IsInfinity(v)).ToList();
+                    Console.WriteLine("List of ratios of " + Db.Context.Species.Find(f.Key).sbmlId + " .. " +
+                                      Db.Context.Species.Find(s.Key).sbmlId);
+                    values.ForEach(v => Console.Write(v + ", "));
+                    Console.WriteLine();
+
+                    if (values.Count > 1 &&
+                        values.All(v => Math.Abs(Math.Abs(v) - Math.Abs(values[0])) < double.Epsilon))
+                    {
+                        Console.WriteLine("111111111111111111111111111   " + Db.Context.Species.Find(f.Key).sbmlId +
+                                          " " + Db.Context.Species.Find(s.Key).sbmlId + " " + values[0]);
+                        var record = new DB.cycleInterfaceMetabolitesRatio
+                        {
+                            cycleId = cycle.id,
+                            metabolite1 = f.Key,
+                            metabolite2 = s.Key,
+                            ratio = Math.Abs(values[0])
+                        };
+                        Db.Context.cycleInterfaceMetabolitesRatios.Add(record);
+                        Db.Context.SaveChanges();
+                    }
+                    else
+                    {
+                        Console.WriteLine("didn't :(");
+                    }
+                }));
+            }
 
             Db.Context.SaveChanges();
             Console.WriteLine("Recorded all");
@@ -432,19 +830,21 @@ namespace Ecoli.Util
             Console.WriteLine("loaded the whole network");
 
 
+
             // delete all entries from DB
             Db.Context.Database.ExecuteSqlCommand("TRUNCATE TABLE CycleReaction");
             Db.Context.Database.ExecuteSqlCommand("TRUNCATE TABLE CycleConnection");
+            Db.Context.Database.ExecuteSqlCommand("TRUNCATE TABLE CycleInterfaceMetabolitesRatios");
             Db.Context.Database.ExecuteSqlCommand("DELETE FROM Cycle");
             Console.WriteLine("deleted DB entries");
 
-
             Dictionary<HyperGraph.Cycle, List<HyperGraph.Entity>> cycles = DFS.DetectAndCollapseCycles(g);
 
-            foreach (var cycle in cycles)
-            {
-                RecordToDatabase(cycle.Key, cycle.Value);
-            }
+
+            //foreach (var cycle in cycles)
+            //{
+            //    RecordToDatabase(cycle.Key, cycle.Value);
+            //}
 
             Console.WriteLine("finished saving to DB");
             Console.ReadKey();
