@@ -12,6 +12,7 @@ namespace Ecoli
         public static void TestLogicalOperators()
         {
             var model = new Cplex { Name = "FBA" };
+            var x0 = model.NumVar(-10, 10, "y0");
             var x1 = model.NumVar(-10, 10, "y1");
             var x2 = model.NumVar(-10, 10, "y2");
             var x3 = model.NumVar(-10, 10, "y3");
@@ -28,7 +29,6 @@ namespace Ecoli
             exp2lb.AddTerm(x2, (2.0 / 3) * 0.9);
             var lowBound = model.Ge(exp1, exp2lb);
 
-
             var and = model.And();
             and.Add(new [] {lowBound, upBound});
 
@@ -41,11 +41,34 @@ namespace Ecoli
             or.Add(zeroRight);
             or.Add(zeroLeft);
 
-            //model.Add(or);
-            model.AddEq(x1, -2);
-            model.AddEq(model.Abs(exp1), exp2ub);
+            model.Add(or);
 
-            model.AddMinimize(x2);
+
+            // y1 = -2
+            //model.AddEq(x1, -2);
+
+            // y0 = -10
+            model.AddEq(x0, -10);
+
+            // y0 + y2 = 0
+            var expr2 = model.LinearNumExpr();
+            expr2.AddTerm(x0, 1);
+            expr2.AddTerm(x2, 1);
+            model.AddEq(expr2, 0);
+
+            // y2 - y4 = 0
+            var expr3 = model.LinearNumExpr();
+            expr3.AddTerm(x2, 1);
+            expr3.AddTerm(x4, -1);
+            model.AddEq(expr3, 0);
+
+            // y3 = y1 + y2
+            //var expr = model.LinearNumExpr();
+            //expr.AddTerm(x1, 1);
+            //expr.AddTerm(x2, 1);
+            //model.AddEq(x3, expr);
+
+            model.AddMaximize(x4);
 
             var solved = model.Solve();
             model.ExportModel("C:/model2/hi.lp");
@@ -58,9 +81,12 @@ namespace Ecoli
             }
 
             Console.WriteLine("solved");
-
+            Console.WriteLine("x0: " + model.GetValue(x0));
             Console.WriteLine("x1: " + model.GetValue(x1));
             Console.WriteLine("x2: " + model.GetValue(x2));
+            //Console.WriteLine("x3: " + model.GetValue(x3));
+            Console.WriteLine("x4: " + model.GetValue(x4));
+
             //Console.WriteLine("x3: " + model.GetValue(x3));
             //Console.WriteLine("x4: " + model.GetValue(x4));
 

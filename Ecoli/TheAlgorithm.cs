@@ -22,6 +22,7 @@ namespace Ecoli
 
         // start from a reaction instaed of metabolite
         public static readonly Guid StartingMetabolite = Guid.Parse("5218A267-A0C3-410D-82AD-21B1C488E0E4");
+        //public static Guid NonZeroReaction = Guid.Empty;
 
         public readonly LinkedList<string> Pathway = new LinkedList<string>();
 
@@ -64,6 +65,15 @@ namespace Ecoli
 
             //3. Extend S(m) with a subset K of m’s consumers and producers such that K has not been used before to extend the current subnetwork. 
             ExtendGraph(m.id, Sm);
+
+            //foreach (var edge in Sm.Edges)
+            //{
+            //    if (edge.Value.Label.IndexOf("ex", StringComparison.OrdinalIgnoreCase) < 0)
+            //    {
+            //        NonZeroReaction = edge.Key;
+            //        break;
+            //    }
+            //}
         }
 
         public IterationModels Step()

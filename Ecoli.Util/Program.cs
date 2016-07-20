@@ -37,6 +37,8 @@ namespace Ecoli.Util
             //CheckCycleRatios(Guid.Parse("419FB6A3-A478-4607-BCF4-32A30C1AFDA7"));
         }
 
+        private const double ZeroOutFlux = 0.000001;
+
         private static void CheckCycleRatios(Guid cycleId)
         {
             var count = 0;
@@ -591,7 +593,7 @@ namespace Ecoli.Util
                                 Db.Context.ReactionSpecies.Where(
                                     rs => rs.speciesId == cc.metaboliteId && cReactions.Contains(rs.reactionId)))
                         {
-                            if (model.GetValue(vars[rs.reactionId]) > 0)
+                            if (model.GetValue(vars[rs.reactionId]) > ZeroOutFlux)
                             {
                                 first += rs.stoichiometry*model.GetValue(vars[rs.reactionId]);
                             }
@@ -600,7 +602,7 @@ namespace Ecoli.Util
                             nestedCycles.Where(
                                 nc =>
                                     cycleMets.ContainsKey(Tuple.Create(nc, cc.metaboliteId)) &&
-                                    model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) > 0)
+                                    model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) > ZeroOutFlux)
                                 .Sum(nc => model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]));
 
 
@@ -617,7 +619,7 @@ namespace Ecoli.Util
                                     )
                                 {
                                     // only pick producers
-                                    if (model.GetValue(vars[rs.reactionId]) > 0)
+                                    if (model.GetValue(vars[rs.reactionId]) > ZeroOutFlux)
                                     {
                                         second += rs.stoichiometry*model.GetValue(vars[rs.reactionId]);
                                     }
@@ -627,7 +629,7 @@ namespace Ecoli.Util
                                         nc =>
                                             cycleMets.ContainsKey(Tuple.Create(nc, cc2.metaboliteId)) &&
                                             model.GetValue(
-                                                vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]) > 0)
+                                                vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]) > ZeroOutFlux)
                                         .Sum(
                                             nc =>
                                                 model.GetValue(
