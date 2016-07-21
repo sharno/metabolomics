@@ -20,6 +20,8 @@ namespace Ecoli
         public static Dictionary<Guid, Tuple<double, double>> ReactionsConstraintsDictionary = new Dictionary<Guid, Tuple<double, double>>();
         const double Change = 0.01;
         private const double ZeroOutFlux = 0.000001;
+        //TODO get rid of this
+        public static List<string> ConstraintList = new List<string>();
 
         public static bool Solve(HyperGraph sm)
         {
@@ -284,7 +286,7 @@ namespace Ecoli
             //fva.Solve(model, sm, vars.Values);
             //File.AppendAllText("A:\\fva.csv", $"{fva.Stat.Item1},{fva.Stat.Item2}\r\n");
 
-            //GeneNetwork.AddRegulationConstraints(model, sm, vars);
+            GeneNetwork.AddRegulationConstraints(model, sm, vars);
 
             //var fva = new FVA();
             //fva.Solve(model, sm, vars.Values);
@@ -331,6 +333,13 @@ namespace Ecoli
             var status = model.GetCplexStatus();
             
             Console.WriteLine(status);
+
+            var tmpfile = Path.GetTempFileName() + ".lp";
+
+            Console.WriteLine(status);
+            model.ExportModel(tmpfile);
+            ConstraintList.Clear();
+            ConstraintList.AddRange(Core.Constraints(tmpfile));
 
             return isfeas;
         }

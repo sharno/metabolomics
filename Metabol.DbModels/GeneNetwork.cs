@@ -37,20 +37,20 @@ namespace Metabol.DbModels
             Genes = new ConcurrentDictionary<string, Gene>();
         }
 
-        public static ConcurrentDictionary<string, IIntVar> AddRegulationConstraints(Cplex cplex, HyperGraph graph, Dictionary<Guid, INumVar> v)
+        public static ConcurrentDictionary<string, INumVar> AddRegulationConstraints(Cplex cplex, HyperGraph graph, Dictionary<Guid, INumVar> v)
         {
-            var bvars = new ConcurrentDictionary<string, IIntVar>();
+            var bvars = new ConcurrentDictionary<string, INumVar>();
             if (graph.Step <= 0) return bvars;
             foreach (var edge in graph.Edges.Values.Where(e => !e.IsPseudo && ridname.ContainsKey(e.Label)))
             {
-                var p = BooleanParser.Parse(ridname[edge.Label], bvars);
+                var p = BooleanParser.Parse(ridname[edge.Label], bvars, cplex);
 
                 //cplex.Add(p.Constraints.ToArray());
-                foreach (var constraint in p.Constraints)
-                    cplex.Add(constraint);
+                //foreach (var constraint in p.Constraints)
+                //    cplex.Add(constraint);
 
-                cplex.Add(cplex.IfThen(cplex.Eq(p.RootVar, 0), cplex.Eq(v[edge.Id], 0), $"Gr_{edge.Label}"));
-                
+                cplex.Add(cplex.IfThen(cplex.Eq(p.RootVar, 0), cplex.Eq(v[edge.Id], 0)));
+
                 if (Math.Abs(edge.PreFlux) > 0.000001)
                     cplex.Add(cplex.Eq(p.RootVar, 1, $"Gia_{edge.Label}"));
             }
@@ -64,7 +64,7 @@ namespace Metabol.DbModels
                 var tf = bvars.GetOrAdd(tfId, cplex.BoolVar(tfId));
                 var tg = bvars.GetOrAdd(tgId, cplex.BoolVar(tgId));
                 //if (nameid.ContainsKey(rel.Value.TF.Name) && nameid.ContainsKey(rel.Value.TG.Name))
-                cplex.Add(cplex.IfThen(cplex.Eq(tf, 1), cplex.Eq(tg, 0),$"{tf}{tg}"));
+                cplex.Add(cplex.IfThen(cplex.Eq(tf, 1), cplex.Eq(tg, 0), $"{tf}{tg}"));
             }
 
             return bvars;
