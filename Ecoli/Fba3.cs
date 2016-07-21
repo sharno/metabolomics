@@ -252,8 +252,18 @@ namespace Ecoli
                 else
                 {
                     // TODO get reaction bounds from database with the construction of reactions
+                    
                     var reactionBounds = Db.Context.ReactionBounds.Single(rb => rb.reactionId == edge.Id);
                     var fixedbounds = Db.Context.ReactionBoundFixes.SingleOrDefault(rbf => rbf.reactionId == edge.Id);
+
+                    // ATPM bounds
+                    if (edge.Id == Guid.Parse("0AB996A3-C97A-4A4F-968E-12E9F2AD9180"))
+                    {
+                        vars[edge.Id] = model.NumVar(0, reactionBounds.upperBound, NumVarType.Float,
+                            edge.Label);
+                        continue;
+                    }
+
                     if (fixedbounds != null)
                     {
                         vars[edge.Id] = model.NumVar(fixedbounds.lowerbound, fixedbounds.upperbound, NumVarType.Float,
@@ -350,7 +360,8 @@ namespace Ecoli
 
             if (hyperGraph.Step == 0)
             {
-                model.Add(model.Not(model.Eq(vars[hyperGraph.Edges.Keys.ToList()[0]], 0)));
+                //model.Add(model.Not(model.Eq(vars[hyperGraph.Edges.Keys.ToList()[0]], 0)));
+                model.AddGe(vars[hyperGraph.Edges.Keys.ToList()[0]], 10);
             }
 
             foreach (var p in metabolite.Producers.Except(metabolite.Consumers))

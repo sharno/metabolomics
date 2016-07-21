@@ -26,7 +26,7 @@ namespace Ecoli.Util
             //ValidateCyclesAtomsBalance();
             //CheckExchangeReactionsInCycles();
             //LimitReactionsFluxes();
-            RecordCyclesInterfaceMetabolitesRations();
+            //RecordCyclesInterfaceMetabolitesRations();
 
             // cycles with no ratios:
             //419FB6A3-A478-4607-BCF4-32A30C1AFDA7
@@ -34,7 +34,7 @@ namespace Ecoli.Util
             //09814608-806D-4B7F-A8CB-AEAEC590A541
             //AAC30E50-570F-4927-A36D-ED534DD2DABC
             //87F8DBCE-D972-4BD2-AE60-FD05A928707B
-            //CheckCycleRatios(Guid.Parse("419FB6A3-A478-4607-BCF4-32A30C1AFDA7"));
+            CheckCycleRatios(Guid.Parse("8d9fd632-1a54-4d57-a809-4e3336c7967a"));
         }
 
         private const double ZeroOutFlux = 0.000001;
@@ -210,7 +210,7 @@ namespace Ecoli.Util
                             "pseudo" + Db.Context.Species.Find(s).sbmlId);
                         expr.AddTerm(1, vars[pseudo]);
 
-                        if (cycleConnection.metaboliteId == s) model.AddGe(vars[pseudo], new Random().Next(1, 900));
+                        if (cycleConnection.metaboliteId == s) model.AddEq(vars[pseudo], -1000 /*new Random().Next(-900, -1)*/);
                     }
                     model.AddEq(expr, 0, Db.Context.Species.Find(s).sbmlId);
                 });
@@ -219,9 +219,36 @@ namespace Ecoli.Util
                 {
                     var expr1 = model.LinearNumExpr();
                     expr1.AddTerm(1, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite1)]]);
-                    var expr2 = model.LinearNumExpr();
-                    expr2.AddTerm(ra.ratio, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
-                    model.AddEq(model.Abs(expr1), model.Abs(expr2));
+                    
+                    var expr2Low = model.LinearNumExpr();
+                    expr2Low.AddTerm(Math.Abs(ra.ratio) * 0.9, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
+
+                    var expr2High = model.LinearNumExpr();
+                    expr2High.AddTerm(Math.Abs(ra.ratio) * 1.1, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
+                    
+                    var or = model.Or();
+
+                    var low1 = model.Ge(model.Abs(expr1), model.Abs(expr2Low),
+                        $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low");
+                    var high1 = model.Le(model.Abs(expr1), model.Abs(expr2High),
+                        $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high");
+                    var withRatio1 = model.And();
+                    withRatio1.Add(low1);
+                    withRatio1.Add(high1);
+                    or.Add(withRatio1);
+
+                    var zeroLeft = model.Le(model.Abs(vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite1)]]), ZeroOutFlux);
+                    var zeroRight = model.Le(model.Abs(vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]), ZeroOutFlux);
+
+                    or.Add(zeroLeft);
+                    or.Add(zeroRight);
+
+                    model.Add(or);
+                    //var expr1 = model.LinearNumExpr();
+                    //expr1.AddTerm(1, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite1)]]);
+                    //var expr2 = model.LinearNumExpr();
+                    //expr2.AddTerm(ra.ratio, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
+                    //model.AddEq(model.Abs(expr1), model.Abs(expr2));
                 });
 
                 var solved = model.Solve();
@@ -251,7 +278,7 @@ namespace Ecoli.Util
                             Db.Context.ReactionSpecies.Where(
                                 rs => rs.speciesId == cc.metaboliteId && cReactions.Contains(rs.reactionId)))
                     {
-                        if (model.GetValue(vars[rs.reactionId]) > 0)
+                        if (model.GetValue(vars[rs.reactionId]) > ZeroOutFlux)
                         {
                             first += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
                         }
@@ -260,7 +287,7 @@ namespace Ecoli.Util
                         nestedCycles.Where(
                             nc =>
                                 cycleMets.ContainsKey(Tuple.Create(nc, cc.metaboliteId)) &&
-                                model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) > 0)
+                                model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) > ZeroOutFlux)
                             .Sum(nc => model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]));
 
 
@@ -277,7 +304,7 @@ namespace Ecoli.Util
                                 )
                             {
                                     // only pick producers
-                                    if (model.GetValue(vars[rs.reactionId]) > 0)
+                                    if (model.GetValue(vars[rs.reactionId]) > ZeroOutFlux)
                                 {
                                     second += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
                                 }
@@ -287,7 +314,7 @@ namespace Ecoli.Util
                                     nc =>
                                         cycleMets.ContainsKey(Tuple.Create(nc, cc2.metaboliteId)) &&
                                         model.GetValue(
-                                            vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]) > 0)
+                                            vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]) > ZeroOutFlux)
                                     .Sum(
                                         nc =>
                                             model.GetValue(
@@ -334,6 +361,8 @@ namespace Ecoli.Util
                     Console.WriteLine("didn't :(");
                 }
             }));
+
+            Console.ReadKey();
         }
 
         private static IEnumerable<Guid> GetAllReactionsOfCycle(Guid cycleId)
@@ -561,9 +590,36 @@ namespace Ecoli.Util
                     {
                         var expr1 = model.LinearNumExpr();
                         expr1.AddTerm(1, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite1)]]);
-                        var expr2 = model.LinearNumExpr();
-                        expr2.AddTerm(ra.ratio, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
-                        model.AddEq(model.Abs(expr1), model.Abs(expr2));
+
+                        var expr2Low = model.LinearNumExpr();
+                        expr2Low.AddTerm(Math.Abs(ra.ratio) * 0.9, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
+
+                        var expr2High = model.LinearNumExpr();
+                        expr2High.AddTerm(Math.Abs(ra.ratio) * 1.1, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
+
+                        var or = model.Or();
+
+                        var low1 = model.Ge(model.Abs(expr1), model.Abs(expr2Low),
+                            $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low");
+                        var high1 = model.Le(model.Abs(expr1), model.Abs(expr2High),
+                            $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high");
+                        var withRatio1 = model.And();
+                        withRatio1.Add(low1);
+                        withRatio1.Add(high1);
+                        or.Add(withRatio1);
+
+                        var zeroLeft = model.Le(model.Abs(vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite1)]]), ZeroOutFlux);
+                        var zeroRight = model.Le(model.Abs(vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]), ZeroOutFlux);
+
+                        or.Add(zeroLeft);
+                        or.Add(zeroRight);
+
+                        model.Add(or);
+                        //var expr1 = model.LinearNumExpr();
+                        //expr1.AddTerm(1, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite1)]]);
+                        //var expr2 = model.LinearNumExpr();
+                        //expr2.AddTerm(ra.ratio, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
+                        //model.AddEq(model.Abs(expr1), model.Abs(expr2));
                     });
 
                     var solved = model.Solve();
