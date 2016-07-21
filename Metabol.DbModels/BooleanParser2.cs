@@ -5,9 +5,10 @@ using System.IO;
 using System.Text;
 using ILOG.Concert;
 using ILOG.CPLEX;
+using Metabol.DbModels;
 using Exception = System.Exception;
 
-namespace Metabol.DbModels
+namespace Ecoli
 {
     [Flags]
     public enum Token
@@ -21,20 +22,21 @@ namespace Metabol.DbModels
         OpenParenthesis
     }
 
-    public class BooleanParser
+    public class BooleanParser2
     {
         protected readonly Cplex cplex = new Cplex();
         protected readonly IEnumerator<Tuple<string, Token>> _tokens;
         protected readonly HashSet<Token> _operators = new HashSet<Token>();
         //protected ConcurrentDictionary<string, IIntVar> VarNames = new ConcurrentDictionary<string, IIntVar>();
+
         public ConcurrentDictionary<string, INumVar> Vars = new ConcurrentDictionary<string, INumVar>();
-        public IConstraint RootVar;
+        public INumVar RootVar;
 
-        //public List<IConstraint> Constraints = new List<IConstraint>();
-        //private static int _count;
+        public List<ICopyable> Constraints = new List<ICopyable>();
+        private static int _count;
 
 
-        protected BooleanParser(IEnumerable<Tuple<string, Token>> tokens)
+        protected BooleanParser2(IEnumerable<Tuple<string, Token>> tokens)
         {
             _operators.Add(Token.And);
             _operators.Add(Token.Or);
@@ -43,34 +45,41 @@ namespace Metabol.DbModels
             _tokens.MoveNext();
         }
 
-        protected BooleanParser(IEnumerable<Tuple<string, Token>> tokens, Cplex model) : this(tokens)
+        private BooleanParser2(IEnumerable<Tuple<string, Token>> tokens, Cplex model) : this(tokens)
         {
             cplex = model;
         }
 
-        public static BooleanParser Parse(string exp)
+        //public static BooleanParser Parse(string exp)
+        //{
+        //    exp = OpertorPrecdence(exp);
+        //    var tokens = Tokenizer.Tokenize(exp);
+        //    var parser = new BooleanParser(tokens);
+        //    parser.cplex.EndModel();
+        //    parser.RootVar = parser.Parse();
+        //    return parser;
+        //}
+
+        public static BooleanParser2 Parse(string exp, ConcurrentDictionary<string, INumVar> vars)
         {
-            exp = OpertorPrecedence(exp);
+            exp = OpertorPrecdence(exp);
             var tokens = Tokenizer.Tokenize(exp);
-            var parser = new BooleanParser(tokens);
+            var parser = new BooleanParser2(tokens) { Vars = vars };
             parser.cplex.EndModel();
             parser.RootVar = parser.Parse();
             return parser;
         }
-
-        public static BooleanParser Parse(string exp, ConcurrentDictionary<string, INumVar> vars, Cplex model)
+        public static BooleanParser2 Parse(string exp, ConcurrentDictionary<string, INumVar> vars, Cplex model)
         {
-            exp = OpertorPrecedence(exp);
+            exp = OpertorPrecdence(exp);
             var tokens = Tokenizer.Tokenize(exp);
-            var parser = new BooleanParser(tokens, model) { Vars = vars };
+            var parser = new BooleanParser2(tokens, model) { Vars = vars };
             //parser.cplex.EndModel();
             parser.RootVar = parser.Parse();
             return parser;
         }
-
-
         //makes <and> operator precede <or>
-        private static string OpertorPrecedence(string exp)
+        private static string OpertorPrecdence(string exp)
         {
             var str = exp;
             str = str.Replace("(", "(((");
@@ -82,7 +91,7 @@ namespace Metabol.DbModels
             return $"(({str}))";
         }
 
-        protected IConstraint Parse()
+        protected INumVar Parse()
         {
             while (_tokens.Current != null)
             {
@@ -96,21 +105,55 @@ namespace Metabol.DbModels
 
                     var right = ParseBoolean();
 
+                    string varname;
+                    INumVar varr;
+
+                    if (Vars.ContainsKey($"{left.Name}{operand.Item1}{right.Name}"))
+                    {
+                        varr = Vars[$"{left.Name}{operand.Item1}{right.Name}"];
+                        varname = varr.Name;
+                    }
+                    else
+                    {
+                        varname = $"gx{_count++}";
+                        varr = Vars.GetOrAdd(varname, cplex.BoolVar(varname));
+
+                        Vars[$"{left.Name}{operand.Item1}{right.Name}"] = varr;
+                        Vars[$"{right.Name}{operand.Item1}{left.Name}"] = varr;
+                    }
+
+                    var exp = cplex.LinearNumExpr();
+                    exp.AddTerm(left, 1);
+                    exp.AddTerm(right, 1);
                     switch (operand.Item2)
                     {
                         case Token.And:
-                            var and = cplex.And();
-                            and.Add(left);
-                            and.Add(right);
-                            left = and;
-                        
+                            //var and = cplex.And();
+                            //and.Add(cplex.Eq(left, 1));
+                            //and.Add(cplex.Eq(right, 1));
+                            //cplex.Add(and);
+
+                            cplex.Add(cplex.IfThen(cplex.Ge(exp, 2), cplex.Eq(varr, 1)));
+                            cplex.Add(cplex.IfThen(cplex.Le(exp, 1), cplex.Eq(varr, 0)));
+
+                            cplex.Add(cplex.IfThen(cplex.Eq(varr, 1), cplex.Ge(exp, 2)));
+                            cplex.Add(cplex.IfThen(cplex.Eq(varr, 0), cplex.Le(exp, 1)));
+
+                            left = varr;
                             break;
                         case Token.Or:
-                            var or = cplex.Or();
-                            or.Add(left);
-                            or.Add(right);
-                            left = or;
-                         
+                            //var or = cplex.Or();
+                            //or.Add(cplex.Eq(left, 1));
+                            //or.Add(cplex.Eq(right, 1));
+                            //cplex.Add(or);
+
+                            cplex.Add(cplex.IfThen(cplex.Ge(exp, 1), cplex.Eq(varr, 1)));
+                            cplex.Add(cplex.IfThen(cplex.Le(exp, 0), cplex.Eq(varr, 0)));
+
+                            cplex.Add(cplex.IfThen(cplex.Eq(varr, 1), cplex.Ge(exp, 1)));
+                            cplex.Add(cplex.IfThen(cplex.Eq(varr, 0), cplex.Le(exp, 0)));
+
+                            left = varr;
                             break;
                     }
                 }
@@ -121,7 +164,7 @@ namespace Metabol.DbModels
             throw new Exception("Empty expression");
         }
 
-        protected IConstraint ParseBoolean()
+        protected INumVar ParseBoolean()
         {
             switch (_tokens.Current.Item2)
             {
@@ -129,7 +172,8 @@ namespace Metabol.DbModels
 
                     var current = _tokens.Current;
                     _tokens.MoveNext();
-                    var vv = cplex.Eq(Vars.GetOrAdd(current.Item1, cplex.BoolVar(current.Item1)), 1);
+                    var vv = Vars.GetOrAdd(current.Item1, cplex.BoolVar(current.Item1));
+
                     return vv;
                 case Token.OpenParenthesis:
                     _tokens.MoveNext();
@@ -149,6 +193,7 @@ namespace Metabol.DbModels
             var val = Parse();
             return val;
         }
+
 
 
     }

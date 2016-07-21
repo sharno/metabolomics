@@ -19,6 +19,8 @@ namespace Ecoli
         public static List<IConstraint> Constraints = new List<IConstraint>();
         public static Dictionary<Guid, Tuple<double, double>> ReactionsConstraintsDictionary = new Dictionary<Guid, Tuple<double, double>>();
         const double Change = 0.01;
+        //TODO get rid of this
+        public static List<string> ConstraintList = new List<string>();
 
         public static bool Solve(HyperGraph sm)
         {
@@ -73,22 +75,22 @@ namespace Ecoli
 
 
 
-                        var ratios =
-                            Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == cycle.Id).ToList();
-                        ratios.ForEach(ra =>
-                        {
-                            var expr1 = model.LinearNumExpr();
-                            expr1.AddTerm(1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+                    var ratios =
+                        Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == cycle.Id).ToList();
+                    ratios.ForEach(ra =>
+                    {
+                        var expr1 = model.LinearNumExpr();
+                        expr1.AddTerm(1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
 
-                            //var expr2 = model.LinearNumExpr();
-                            //expr2.AddTerm(Math.Abs(ra.ratio), cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+                        //var expr2 = model.LinearNumExpr();
+                        //expr2.AddTerm(Math.Abs(ra.ratio), cycleMetabolitesVars[edge.Id][ra.metabolite1]);
 
 
-                            var expr2Low = model.LinearNumExpr();
-                            expr2Low.AddTerm(Math.Abs(ra.ratio) * 0.9, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+                        var expr2Low = model.LinearNumExpr();
+                        expr2Low.AddTerm(Math.Abs(ra.ratio) * 0.9, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
 
-                            var expr2High = model.LinearNumExpr();
-                            expr2High.AddTerm(Math.Abs(ra.ratio) * 1.1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+                        var expr2High = model.LinearNumExpr();
+                        expr2High.AddTerm(Math.Abs(ra.ratio) * 1.1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
 
 
                         //var equal = model.Eq(model.Abs(expr1), model.Abs(expr2), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio");
@@ -145,7 +147,7 @@ namespace Ecoli
                         //or.Add(zeroRight);
 
                         model.Add(or);
-                        });
+                    });
 
                     // add atom numbers constraints to link metabolites of the cycle reaction
                     var carbonExpr = model.LinearNumExpr();
@@ -163,11 +165,11 @@ namespace Ecoli
                        .ForEach(
                            m =>
                            {
-                                var formula =
-                                    Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "C");
+                               var formula =
+                                   Db.Context.Formulae.SingleOrDefault(f => f.speciesId == m.Key && f.atom == "C");
                                if (formula == null) return;
 
-                                carbonExpr.AddTerm(-formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
+                               carbonExpr.AddTerm(-formula.numAtoms, cycleMetabolitesVars[edge.Id][m.Key]);
                            });
                     Constraints.Add(model.AddEq(carbonExpr, 0.0, edge.Label + "_carbon_atoms_balance"));
 
@@ -267,7 +269,7 @@ namespace Ecoli
             //fva.Solve(model, sm, vars.Values);
             //File.AppendAllText("A:\\fva.csv", $"{fva.Stat.Item1},{fva.Stat.Item2}\r\n");
 
-            //GeneNetwork.AddRegulationConstraints(model, sm, vars);
+            GeneNetwork.AddRegulationConstraints(model, sm, vars);
 
             //var fva = new FVA();
             //fva.Solve(model, sm, vars.Values);
@@ -276,7 +278,7 @@ namespace Ecoli
             AddObjectiveFunction(sm, model, vars, cycleMetabolitesVars);
 
             var isfeas = model.Solve();
-            model.ExportModel($"{Core.Dir}{sm.Step}model.lp");
+            //model.ExportModel($"{Core.Dir}{sm.Step}model.lp");
 
             if (isfeas)
             {
@@ -291,7 +293,7 @@ namespace Ecoli
             else
             {
                 var reactionsFluxes = ReactionsFluxes(sm);
-                Debug($"{Core.Dir}{sm.Step}model.lp", reactionsFluxes);
+                //Debug($"{Core.Dir}{sm.Step}model.lp", reactionsFluxes);
                 sm.Edges.ToList().ForEach(d => d.Value.Flux = 0);
             }
 
@@ -304,11 +306,18 @@ namespace Ecoli
                     else return $"{sm.Cycles[c].Label}_{sm.Nodes[m].Label}:0";
                 })));
             list.Sort((decision, decision1) => string.Compare(decision, decision1, StringComparison.Ordinal));
-            File.WriteAllLines($"{Core.Dir}{sm.Step}result.txt", list);
+            //File.WriteAllLines($"{Core.Dir}{sm.Step}result.txt", list);
 
             var status = model.GetCplexStatus();
-            
+
             Console.WriteLine(status);
+
+            var tmpfile = Path.GetTempFileName() + ".lp";
+
+            Console.WriteLine(status);
+            model.ExportModel(tmpfile);
+            ConstraintList.Clear();
+            ConstraintList.AddRange(Core.Constraints(tmpfile));
 
             return isfeas;
         }

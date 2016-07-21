@@ -2,8 +2,14 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text.RegularExpressions;
+using ILOG.Concert;
+using ILOG.CPLEX;
+using Exception = System.Exception;
 
 namespace Metabol.DbModels
 {
@@ -26,6 +32,65 @@ namespace Metabol.DbModels
             {
                 Console.Write(e);
             }
+        }
+
+        public static dynamic ToDynamic(object value)
+        {
+            return (ExpandoObject)value.GetType()
+                .GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+                .Aggregate((IDictionary<string, object>)new ExpandoObject(), (obj, info) =>
+                {
+                    obj[info.Name] = info.GetValue(value);
+                    return obj;
+                });
+        }
+
+        public static IEnumerable<string> Constraints(string file)
+        {
+            var model = new Cplex();
+            //model.SetParam(Cplex.Param.Preprocessing.Presolve, false);
+            model.ImportModel(file);
+            dynamic link = ToDynamic(ToDynamic(ToDynamic(ToDynamic(model)._model)._gc)._link);
+            link = ToDynamic(link._prev);
+            var cconst = new List<CpxIfThen>();
+            while (link._obj != null)
+            {
+                cconst.Add(link._obj as CpxIfThen);
+                link = ToDynamic(link._prev);
+            }
+
+            var m = model.GetLPMatrixEnumerator();
+            m.MoveNext();
+            var mat = (CpxLPMatrix)m.Current;
+
+            var vars = mat.GetNumVars();
+            var ranges = mat.GetRanges();
+            var obj = model.GetObjective();
+            var exps = new Dictionary<string, IRange>();
+            foreach (var range in ranges)
+            {
+                var exp = Regex.Replace(range.Expr.ToString(), "#\\d+", "")
+                    .Replace("_ex", "ex")
+                    .Replace("_EX", "EX");
+
+                if (exps.ContainsKey(exp))
+                {
+                    if (Math.Abs(exps[exp].UB - double.MaxValue) < double.Epsilon ||
+                        double.IsPositiveInfinity(exps[exp].UB))
+                        exps[exp].UB = range.UB;
+
+                    else if (Math.Abs(exps[exp].LB - double.MinValue) < double.Epsilon ||
+                        double.IsNegativeInfinity(exps[exp].LB))
+                        exps[exp].LB = range.LB;
+                }
+                else
+                    exps[exp] = model.Range(range.LB, range.Expr, range.UB);
+
+            }
+
+            return exps.Select(range => Math.Abs(range.Value.UB - range.Value.LB) < 0.0001 ?
+                $"{range.Key} == {range.Value.LB}"
+                : $"{range.Value.UB} >= {range.Key} >= {range.Value.LB}");
         }
 
         public static void SaveAsDgs(HyperGraph.Node mi, HyperGraph graph, string dir)

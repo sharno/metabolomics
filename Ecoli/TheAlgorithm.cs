@@ -32,8 +32,7 @@ namespace Ecoli
         public int Iteration = 1;
         public int IterationId => Iteration++;
 
-
-        internal void Start(ConcentrationChange[] z)
+        public void Start(ConcentrationChange[] z)
         {
             //1. Among a user-provided set of observed metabolite changes Z,
             //  let m be the metabolite with the least total number of producer and consumer reactions in the respective metabolic network M
@@ -51,8 +50,6 @@ namespace Ecoli
 
         public void Start()
         {
-
-
             //1. Among a user-provided set of observed metabolite changes Z,
             //  let m be the metabolite with the least total number of producer and consumer reactions in the respective metabolic network M
             //var m = Util.CachedS(Z.Keys.OrderBy(Util.GetReactionCountSum).First()); //e => Z[e] > 0
@@ -79,8 +76,7 @@ namespace Ecoli
                 Fba = IsFeasable ? 1 : 0,
                 Time = timer.ElapsedMilliseconds * 1.0 / 1000.0,
                 Fluxes = Sm.Edges.Values.ToDictionary(r => r.Label, r => r.Flux),
-                // TODO add constraints
-                Constraints = Enumerable.Range(0, 10).Select(e => Guid.NewGuid().ToString()),
+                Constraints = Fba3.ConstraintList,
                 Nodes = Sm.JsonNodes(Z),
                 Links = Sm.JsonLinks()
                 // MetabolicNetwork = sm
@@ -244,8 +240,6 @@ namespace Ecoli
             //If S(m) cannot be extended, then go to step 3.
             return it;
         }
-
-     
 
         public void RemoveExchangeReaction(HyperGraph sm, HyperGraph.Node m)
         {

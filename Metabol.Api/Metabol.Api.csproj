@@ -51,10 +51,6 @@
       <HintPath>..\packages\Antlr.3.5.0.2\lib\Antlr3.Runtime.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Metabol, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>Bin\Metabol.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.AspNet.WebApi.MessageHandlers.Compression">
       <HintPath>..\packages\Microsoft.AspNet.WebApi.MessageHandlers.Compression.1.2.2\lib\portable-net45+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1\Microsoft.AspNet.WebApi.MessageHandlers.Compression.dll</HintPath>
     </Reference>

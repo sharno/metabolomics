@@ -84,6 +84,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BooleanParser.cs" />
+    <Compile Include="BooleanParser2.cs" />
     <Compile Include="Configuration.cs" />
     <Compile Include="Db.cs" />
     <Compile Include="Db.Api.cs" />
