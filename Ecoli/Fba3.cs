@@ -19,7 +19,7 @@ namespace Ecoli
         public static List<IConstraint> Constraints = new List<IConstraint>();
         public static Dictionary<Guid, Tuple<double, double>> ReactionsConstraintsDictionary = new Dictionary<Guid, Tuple<double, double>>();
         const double Change = 0.01;
-        private const double ZeroOutFlux = 0.000001;
+        private const double ZeroOutFlux = 0.01;
         //TODO get rid of this
         public static List<string> ConstraintList = new List<string>();
 
