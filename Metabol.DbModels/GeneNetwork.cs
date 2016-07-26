@@ -17,10 +17,10 @@ namespace Metabol.DbModels
         private int ids;
         private static readonly ConcurrentDictionary<string, string> nameid = new ConcurrentDictionary<string, string>();
         private static readonly ConcurrentDictionary<string, string> ridname = new ConcurrentDictionary<string, string>();
-
+        private static string RootDir="A:\\"
         static GeneNetwork()
         {
-            dynamic ecoli = JsonConvert.DeserializeObject<dynamic>(File.ReadAllText("E:\\Dropbox\\Metabolomics\\Data\\ecoli_core.json"));
+            dynamic ecoli = JsonConvert.DeserializeObject<dynamic>(File.ReadAllText(RootDir+"ecoli_core.json"));
 
             foreach (var gene in ecoli.genes)
                 nameid[gene.name.ToString().ToLower()] = gene.id.ToString();
@@ -28,6 +28,8 @@ namespace Metabol.DbModels
             foreach (var r in ecoli.reactions)
                 if (r.gene_reaction_rule.ToString() != String.Empty)
                     ridname[r.id.ToString()] = r.gene_reaction_rule.ToString();
+
+            Console.WriteLine();
 
         }
 
@@ -55,7 +57,7 @@ namespace Metabol.DbModels
                     cplex.Add(cplex.Eq(p.RootVar, 1, $"Gia_{edge.Label}"));
             }
 
-            var net = LoadGraph("E:\\Dropbox\\Metabolomics\\Data\\ecoli_network_tf_gene.txt");
+            var net = LoadGraph(RootDir+"ecoli_network_tf_tf.txt");
             foreach (var rel in net.Relations)
             {
                 var tfId = nameid.ContainsKey(rel.Value.TF.Name) ? nameid[rel.Value.TF.Name] : rel.Value.TF.Name;
@@ -79,7 +81,18 @@ namespace Metabol.DbModels
             foreach (var line in File.ReadAllLines(path).Skip(34))
                 GeneRelation.ParseRegulon(line, net);
 
+            //net.ToDgs("A:\\regnet.dgs");
+
             return net;
+        }
+
+        public void ToDgs(string file)
+        {
+            var lines = new List<string> {"DGS004", "\"Regulation Network\" 0 0", "#Nodes"};
+            lines.AddRange(Genes.Select(gene => $"an \"{gene.Value.Name}\" label:\"{gene.Value.Name}\""));
+            lines.Add("#Edges");
+            lines.AddRange(Relations.Select(geneRelation => $"ae \"{geneRelation.Value}\" \"{geneRelation.Value.TF.Name}\" > \"{geneRelation.Value.TG.Name}\" label:\"{geneRelation.Value.RelationStr}\" ui.style:\"size: 3px; arrow-size:8px, 6px; \""));
+            File.WriteAllLines(file, lines);
         }
 
         public class Gene
@@ -151,9 +164,10 @@ namespace Metabol.DbModels
                 var gr = new GeneRelation();
                 var g = Regex.Split(line, "\t");
 
+                // skip self and up regulation 
                 if (g[2] != "-" || string.Equals(g[0], g[1], StringComparison.CurrentCultureIgnoreCase)) return;
 
-                gr.Relation = g[2] == "-" ? -1 : g[2] == "+" ? 1 : g[2] == "+-" ? 0 : int.MaxValue;
+                gr.Relation = g[2] == "-" ? -1 : g[2] == "+" ? 1 : 0;//g[2] == "+-" ? 0 : int.MaxValue;
                 gr.RelationStr = g[2];
                 net.Relations[net.ids++] = gr;
 
@@ -188,7 +202,6 @@ namespace Metabol.DbModels
 
                 gr.TG = gene;
             }
-
 
             public override string ToString()
             {
