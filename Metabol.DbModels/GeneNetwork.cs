@@ -17,7 +17,7 @@ namespace Metabol.DbModels
         private int ids;
         private static readonly ConcurrentDictionary<string, string> nameid = new ConcurrentDictionary<string, string>();
         private static readonly ConcurrentDictionary<string, string> ridname = new ConcurrentDictionary<string, string>();
-        private static string RootDir="A:\\"
+        private static string RootDir = "A:\\";
         static GeneNetwork()
         {
             dynamic ecoli = JsonConvert.DeserializeObject<dynamic>(File.ReadAllText(RootDir+"ecoli_core.json"));
