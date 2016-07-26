@@ -38,14 +38,14 @@ namespace Ecoli.Util
             //CheckCycleRatios(Guid.Parse("8d9fd632-1a54-4d57-a809-4e3336c7967a"));
         }
 
-        private const double ZeroOutFlux = 0.000001;
+        private const double ZeroOutFlux = 0.01;
 
         private static void CheckCycleRatios(Guid cycleId)
         {
             var count = 0;
             var cycle = Db.Context.Cycles.Find(cycleId);
 
-            var recordedRatios = new Dictionary<Guid, Dictionary<Guid, List<double>>>();
+            var recordedRatios = new Dictionary<Guid, Dictionary<Guid, Dictionary<int, List<double>>>>();
 
             var nestedCycles = cycle.CycleReactions.Where(cr => !cr.isReaction).Select(cr => cr.otherId).ToList();
 
@@ -67,6 +67,7 @@ namespace Ecoli.Util
                 var model = new Cplex { Name = "FBA" };
                 var vars = new Dictionary<Guid, INumVar>();
                 var cycleMets = new Dictionary<Tuple<Guid, Guid>, Guid>();
+                var mainPseudoReaction = Guid.Empty;
 
                 cycle.CycleReactions.Where(cr => cr.isReaction).ToList().ForEach(r =>
                 {
@@ -202,8 +203,7 @@ namespace Ecoli.Util
                     }
 
 
-
-                    // add pseudo reactions to every interface metabolite
+                    // add reversible pseudo reactions to every interface metabolite
                     if (cycle.CycleConnections.Any(cc => cc.metaboliteId == s))
                     {
                         var pseudo = Guid.NewGuid();
@@ -211,7 +211,7 @@ namespace Ecoli.Util
                             "pseudo" + Db.Context.Species.Find(s).sbmlId);
                         expr.AddTerm(1, vars[pseudo]);
 
-                        if (cycleConnection.metaboliteId == s) model.AddEq(vars[pseudo], -1000 /*new Random().Next(-900, -1)*/);
+                        if (cycleConnection.metaboliteId == s) mainPseudoReaction = pseudo;
                     }
                     model.AddEq(expr, 0, Db.Context.Species.Find(s).sbmlId);
                 });
@@ -220,13 +220,13 @@ namespace Ecoli.Util
                 {
                     var expr1 = model.LinearNumExpr();
                     expr1.AddTerm(1, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite1)]]);
-                    
+
                     var expr2Low = model.LinearNumExpr();
                     expr2Low.AddTerm(Math.Abs(ra.ratio) * 0.9, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
 
                     var expr2High = model.LinearNumExpr();
                     expr2High.AddTerm(Math.Abs(ra.ratio) * 1.1, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
-                    
+
                     var or = model.Or();
 
                     var low1 = model.Ge(model.Abs(expr1), model.Abs(expr2Low),
@@ -245,113 +245,222 @@ namespace Ecoli.Util
                     or.Add(zeroRight);
 
                     model.Add(or);
-                    //var expr1 = model.LinearNumExpr();
-                    //expr1.AddTerm(1, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite1)]]);
-                    //var expr2 = model.LinearNumExpr();
-                    //expr2.AddTerm(ra.ratio, vars[cycleMets[Tuple.Create(ra.cycleId, ra.metabolite2)]]);
-                    //model.AddEq(model.Abs(expr1), model.Abs(expr2));
                 });
+
+
+                // solving for producers
+                var fluxConstraint = model.AddGe(vars[mainPseudoReaction], new Random().Next(1, 900));
 
                 var solved = model.Solve();
                 count++;
-                model.ExportModel($"{Core.Dir}{count}model.lp");
-                if (!solved)
+                model.ExportModel($"{Core.Dir}{count}model_p.lp");
+                if (solved)
                 {
-                    continue;
+
+
+
+                    var list =
+                        vars.ToList()
+                            .Select(
+                                v =>
+                                    (Db.Context.Reactions.Find(v.Key) != null
+                                        ? Db.Context.Reactions.Find(v.Key).sbmlId
+                                        : v.Value.Name) + "    " + model.GetValue(v.Value));
+                    File.WriteAllLines($"{Core.Dir}{count}result_p.txt", list);
+
+
+                    cycle.CycleConnections.ToList().ForEach(cc =>
+                    {
+                        var first = 0.0;
+                        foreach (
+                            var rs in
+                                Db.Context.ReactionSpecies.Where(
+                                    rs => rs.speciesId == cc.metaboliteId && cReactions.Contains(rs.reactionId)))
+                        {
+                            if (rs.stoichiometry * model.GetValue(vars[rs.reactionId]) > ZeroOutFlux)
+                            {
+                                first += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
+                            }
+                        }
+                        first +=
+                            nestedCycles.Where(
+                                nc =>
+                                    cycleMets.ContainsKey(Tuple.Create(nc, cc.metaboliteId)) &&
+                                    model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) > ZeroOutFlux)
+                                .Sum(nc => model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]));
+
+
+                        cycle.CycleConnections.ToList()
+                            .Where(cc2 => cc2.metaboliteId != cc.metaboliteId)
+                            .ToList()
+                            .ForEach(cc2 =>
+                            {
+                                var second = 0.0;
+                                foreach (
+                                    var rs in
+                                        Db.Context.ReactionSpecies.Where(
+                                            rs =>
+                                                rs.speciesId == cc2.metaboliteId &&
+                                                cReactions.Contains(rs.reactionId))
+                                    )
+                                {
+                                        // only pick producers
+                                        if (rs.stoichiometry * model.GetValue(vars[rs.reactionId]) > ZeroOutFlux)
+                                    {
+                                        second += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
+                                    }
+                                }
+                                second +=
+                                    nestedCycles.Where(
+                                        nc =>
+                                            cycleMets.ContainsKey(Tuple.Create(nc, cc2.metaboliteId)) &&
+                                            model.GetValue(
+                                                vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]) > ZeroOutFlux)
+                                        .Sum(
+                                            nc =>
+                                                model.GetValue(
+                                                    vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]));
+
+                                first = Math.Abs(first);
+                                second = Math.Abs(second);
+
+                                if (
+                                    String.Compare(cc.Species.sbmlId, cc2.Species.sbmlId, StringComparison.Ordinal) <
+                                    0)
+                                {
+                                    if (!recordedRatios.ContainsKey(cc.metaboliteId))
+                                        recordedRatios[cc.metaboliteId] = new Dictionary<Guid, Dictionary<int, List<double>>>();
+                                    if (!recordedRatios[cc.metaboliteId].ContainsKey(cc2.metaboliteId))
+                                        recordedRatios[cc.metaboliteId][cc2.metaboliteId] = new Dictionary<int, List<double>>();
+                                    if (!recordedRatios[cc.metaboliteId][cc2.metaboliteId].ContainsKey(count))
+                                        recordedRatios[cc.metaboliteId][cc2.metaboliteId][count] = new List<double>();
+                                    recordedRatios[cc.metaboliteId][cc2.metaboliteId][count].Add(first / second);
+                                }
+                                else
+                                {
+                                    if (!recordedRatios.ContainsKey(cc2.metaboliteId))
+                                        recordedRatios[cc2.metaboliteId] = new Dictionary<Guid, Dictionary<int, List<double>>>();
+                                    if (!recordedRatios[cc2.metaboliteId].ContainsKey(cc.metaboliteId))
+                                        recordedRatios[cc2.metaboliteId][cc.metaboliteId] = new Dictionary<int, List<double>>();
+                                    if (!recordedRatios[cc2.metaboliteId][cc.metaboliteId].ContainsKey(count))
+                                        recordedRatios[cc2.metaboliteId][cc.metaboliteId][count] = new List<double>();
+                                    recordedRatios[cc2.metaboliteId][cc.metaboliteId][count].Add(second / first);
+                                }
+                            });
+                    });
                 }
 
 
-                var list =
-                    vars.ToList()
-                        .Select(
-                            v =>
-                                (Db.Context.Reactions.Find(v.Key) != null
-                                    ? Db.Context.Reactions.Find(v.Key).sbmlId
-                                    : v.Value.Name) + "    " + model.GetValue(v.Value));
-                File.WriteAllLines($"{Core.Dir}result{count}.txt", list);
+                // solving for consumers
+                model.Remove(fluxConstraint);
+                fluxConstraint = model.AddLe(vars[mainPseudoReaction], new Random().Next(-900, -1));
 
-
-                cycle.CycleConnections.ToList().ForEach(cc =>
+                solved = model.Solve();
+                model.ExportModel($"{Core.Dir}{count}model_n.lp");
+                if (solved)
                 {
-                    var first = 0.0;
-                    foreach (
-                        var rs in
-                            Db.Context.ReactionSpecies.Where(
-                                rs => rs.speciesId == cc.metaboliteId && cReactions.Contains(rs.reactionId)))
+                    var list =
+                        vars.ToList()
+                            .Select(
+                                v =>
+                                    (Db.Context.Reactions.Find(v.Key) != null
+                                        ? Db.Context.Reactions.Find(v.Key).sbmlId
+                                        : v.Value.Name) + "    " + model.GetValue(v.Value));
+                    File.WriteAllLines($"{Core.Dir}{count}result_n.txt", list);
+
+
+                    cycle.CycleConnections.ToList().ForEach(cc =>
                     {
-                        if (model.GetValue(vars[rs.reactionId]) > ZeroOutFlux)
+                        var first = 0.0;
+                        foreach (
+                            var rs in
+                                Db.Context.ReactionSpecies.Where(
+                                    rs => rs.speciesId == cc.metaboliteId && cReactions.Contains(rs.reactionId)))
                         {
-                            first += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
+                            if (rs.stoichiometry * model.GetValue(vars[rs.reactionId]) < -ZeroOutFlux)
+                            {
+                                first += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
+                            }
                         }
-                    }
-                    first +=
-                        nestedCycles.Where(
-                            nc =>
-                                cycleMets.ContainsKey(Tuple.Create(nc, cc.metaboliteId)) &&
-                                model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) > ZeroOutFlux)
-                            .Sum(nc => model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]));
+                        first +=
+                            nestedCycles.Where(
+                                nc =>
+                                    cycleMets.ContainsKey(Tuple.Create(nc, cc.metaboliteId)) &&
+                                    model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) < -ZeroOutFlux)
+                                .Sum(nc => model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]));
 
 
-                    cycle.CycleConnections.ToList()
-                        .Where(cc2 => cc2.metaboliteId != cc.metaboliteId)
-                        .ToList()
-                        .ForEach(cc2 =>
-                        {
-                            var second = 0.0;
-                            foreach (
-                                var rs in
-                                    Db.Context.ReactionSpecies.Where(
-                                        rs => rs.speciesId == cc2.metaboliteId && cReactions.Contains(rs.reactionId))
-                                )
+                        cycle.CycleConnections.ToList()
+                            .Where(cc2 => cc2.metaboliteId != cc.metaboliteId)
+                            .ToList()
+                            .ForEach(cc2 =>
                             {
-                                    // only pick producers
-                                    if (model.GetValue(vars[rs.reactionId]) > ZeroOutFlux)
+                                var second = 0.0;
+                                foreach (
+                                    var rs in
+                                        Db.Context.ReactionSpecies.Where(
+                                            rs =>
+                                                rs.speciesId == cc2.metaboliteId &&
+                                                cReactions.Contains(rs.reactionId))
+                                    )
                                 {
-                                    second += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
+                                        // only pick consumers
+                                        if (rs.stoichiometry * model.GetValue(vars[rs.reactionId]) < -ZeroOutFlux)
+                                    {
+                                        second += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
+                                    }
                                 }
-                            }
-                            second +=
-                                nestedCycles.Where(
-                                    nc =>
-                                        cycleMets.ContainsKey(Tuple.Create(nc, cc2.metaboliteId)) &&
-                                        model.GetValue(
-                                            vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]) > ZeroOutFlux)
-                                    .Sum(
+                                second +=
+                                    nestedCycles.Where(
                                         nc =>
+                                            cycleMets.ContainsKey(Tuple.Create(nc, cc2.metaboliteId)) &&
                                             model.GetValue(
-                                                vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]));
+                                                vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]) < -ZeroOutFlux)
+                                        .Sum(
+                                            nc =>
+                                                model.GetValue(
+                                                    vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]));
 
-                            if (String.Compare(cc.Species.sbmlId, cc2.Species.sbmlId, StringComparison.Ordinal) < 0)
-                            {
-                                //Console.Write(cc.Species.sbmlId + " " + cc2.Species.sbmlId + ", ");
-                                if (!recordedRatios.ContainsKey(cc.metaboliteId))
-                                    recordedRatios[cc.metaboliteId] = new Dictionary<Guid, List<double>>();
-                                if (!recordedRatios[cc.metaboliteId].ContainsKey(cc2.metaboliteId))
-                                    recordedRatios[cc.metaboliteId][cc2.metaboliteId] = new List<double>();
-                                recordedRatios[cc.metaboliteId][cc2.metaboliteId].Add(first/second);
-                            }
-                            else
-                            {
-                                //Console.Write(cc2.Species.sbmlId + " " + cc.Species.sbmlId + ", ");
-                                if (!recordedRatios.ContainsKey(cc2.metaboliteId))
-                                    recordedRatios[cc2.metaboliteId] = new Dictionary<Guid, List<double>>();
-                                if (!recordedRatios[cc2.metaboliteId].ContainsKey(cc.metaboliteId))
-                                    recordedRatios[cc2.metaboliteId][cc.metaboliteId] = new List<double>();
-                                recordedRatios[cc2.metaboliteId][cc.metaboliteId].Add(second/first);
-                            }
-                        });
-                });
+                                first = Math.Abs(first);
+                                second = Math.Abs(second);
+
+                                if (
+                                    String.Compare(cc.Species.sbmlId, cc2.Species.sbmlId, StringComparison.Ordinal) <
+                                    0)
+                                {
+                                    if (!recordedRatios.ContainsKey(cc.metaboliteId))
+                                        recordedRatios[cc.metaboliteId] = new Dictionary<Guid, Dictionary<int, List<double>>>();
+                                    if (!recordedRatios[cc.metaboliteId].ContainsKey(cc2.metaboliteId))
+                                        recordedRatios[cc.metaboliteId][cc2.metaboliteId] = new Dictionary<int, List<double>>();
+                                    if (!recordedRatios[cc.metaboliteId][cc2.metaboliteId].ContainsKey(count))
+                                        recordedRatios[cc.metaboliteId][cc2.metaboliteId][count] = new List<double>();
+                                    recordedRatios[cc.metaboliteId][cc2.metaboliteId][count].Add(first / second);
+                                }
+                                else
+                                {
+                                    if (!recordedRatios.ContainsKey(cc2.metaboliteId))
+                                        recordedRatios[cc2.metaboliteId] = new Dictionary<Guid, Dictionary<int, List<double>>>();
+                                    if (!recordedRatios[cc2.metaboliteId].ContainsKey(cc.metaboliteId))
+                                        recordedRatios[cc2.metaboliteId][cc.metaboliteId] = new Dictionary<int, List<double>>();
+                                    if (!recordedRatios[cc2.metaboliteId][cc.metaboliteId].ContainsKey(count))
+                                        recordedRatios[cc2.metaboliteId][cc.metaboliteId][count] = new List<double>();
+                                    recordedRatios[cc2.metaboliteId][cc.metaboliteId][count].Add(second / first);
+                                }
+                            });
+                    });
+                }
             }
 
             recordedRatios.ToList().ForEach(f => f.Value.ToList().ForEach(s =>
             {
-                var values = s.Value.Where(v => Math.Abs(v) > 0 && !double.IsInfinity(v)).ToList();
+                var values = s.Value.Values.SelectMany(v => v).Where(v => Math.Abs(v) > 0 && !double.IsInfinity(v)).ToList();
+                var lists = s.Value.Values.Where(v => v.Any(e => Math.Abs(e) > 0 && !double.IsInfinity(e))).ToList();
                 Console.WriteLine("List of ratios of " + Db.Context.Species.Find(f.Key).sbmlId + " .. " +
                                   Db.Context.Species.Find(s.Key).sbmlId);
                 values.ForEach(v => Console.Write(v + ", "));
                 Console.WriteLine();
 
-                if (values.Count > 1 &&
+                if (lists.Count > 1 &&
                     values.All(v => Math.Abs(Math.Abs(v) - Math.Abs(values[0])) < double.Epsilon))
                 {
                     Console.WriteLine("111111111111111111111111111   " + Db.Context.Species.Find(f.Key).sbmlId +
@@ -649,9 +758,9 @@ namespace Ecoli.Util
                                     Db.Context.ReactionSpecies.Where(
                                         rs => rs.speciesId == cc.metaboliteId && cReactions.Contains(rs.reactionId)))
                             {
-                                if (model.GetValue(vars[rs.reactionId]) > ZeroOutFlux)
+                                if (rs.stoichiometry * model.GetValue(vars[rs.reactionId]) > ZeroOutFlux)
                                 {
-                                    first += rs.stoichiometry*model.GetValue(vars[rs.reactionId]);
+                                    first += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
                                 }
                             }
                             first +=
@@ -677,9 +786,9 @@ namespace Ecoli.Util
                                         )
                                     {
                                         // only pick producers
-                                        if (model.GetValue(vars[rs.reactionId]) > ZeroOutFlux)
+                                        if (rs.stoichiometry * model.GetValue(vars[rs.reactionId]) > ZeroOutFlux)
                                         {
-                                            second += rs.stoichiometry*model.GetValue(vars[rs.reactionId]);
+                                            second += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
                                         }
                                     }
                                     second +=
@@ -747,7 +856,7 @@ namespace Ecoli.Util
                                     Db.Context.ReactionSpecies.Where(
                                         rs => rs.speciesId == cc.metaboliteId && cReactions.Contains(rs.reactionId)))
                             {
-                                if (model.GetValue(vars[rs.reactionId]) < -ZeroOutFlux)
+                                if (rs.stoichiometry * model.GetValue(vars[rs.reactionId]) < -ZeroOutFlux)
                                 {
                                     first += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
                                 }
@@ -775,7 +884,7 @@ namespace Ecoli.Util
                                         )
                                     {
                                         // only pick consumers
-                                        if (model.GetValue(vars[rs.reactionId]) < -ZeroOutFlux)
+                                        if (rs.stoichiometry * model.GetValue(vars[rs.reactionId]) < -ZeroOutFlux)
                                         {
                                             second += rs.stoichiometry * model.GetValue(vars[rs.reactionId]);
                                         }
@@ -825,7 +934,7 @@ namespace Ecoli.Util
                     values.ForEach(v => Console.Write(v + ", "));
                     Console.WriteLine();
 
-                    if (values.Count > 1 &&
+                    if (values.Count > 2 &&
                         values.All(v => Math.Abs(Math.Abs(v) - Math.Abs(values[0])) < double.Epsilon))
                     {
                         Console.WriteLine("111111111111111111111111111   " + Db.Context.Species.Find(f.Key).sbmlId +
