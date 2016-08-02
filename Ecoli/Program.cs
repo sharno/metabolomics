@@ -11,9 +11,10 @@ namespace Ecoli
     {
         static void Main(string[] args)
         {
-            //LogicalOperators.TestLogicalOperators();
-            //return;
+            LogicalOperators.ExportDetailsOfCycle(Guid.Parse("889f9316-4417-4fe3-8bbf-a551bd0de2d1"));
+            return;
 
+            Console.BufferHeight = Int16.MaxValue - 1;
             var p = new TheAlgorithm();
             p.Start();
             do
@@ -22,10 +23,11 @@ namespace Ecoli
                 Console.SetCursorPosition(0, 0);
 
                 Console.WriteLine("\n************** ITERATION {0} *************** ", p.Sm.Step);
-                p.Step();
-                if (!p.IsFeasable)
+                var iterationModel = p.Step();
+                if (iterationModel.Fba == 0)
                 {
                     Console.ReadKey();
+                    return;
                 }
             }
             while (true);

@@ -488,7 +488,7 @@ namespace Metabol.DbModels
                 switch (type)
                 {
                     case EdgeType.New:
-                        hedgeclass = Math.Abs(this.Flux) < double.Epsilon ? " ui.class:newhedge0 " : " ui.class:newhedge ";
+                        hedgeclass = Math.Abs(this.Flux) < double.Epsilon ? " ui.class:newhedge0 " : /*" ui.class:newhedge "*/ "ui.style:\"fill-color: #00ffff; \"";
                         break;
 
                     case EdgeType.None:

@@ -8,11 +8,80 @@ using Metabol.DbModels;
 using Microsoft.SolverFoundation.Common;
 using Microsoft.SolverFoundation.Services;
 using Microsoft.SolverFoundation.Solvers;
+using System.IO;
 
 namespace Ecoli
 {
     class LogicalOperators
     {
+        public static void ExportDetailsOfCycle(Guid cycleId)
+        {
+            var text = new List<string>();
+            GetDetailsOfCycle(cycleId, 0, text);
+            
+            File.WriteAllLines($"{Core.Dir}{cycleId.ToString()}.txt", text);
+        }
+
+        private static void GetDetailsOfCycle(Guid cycleId, int indentation, List<string> text)
+        {
+            Console.WriteLine($"cycle {cycleId.ToString()}");
+
+            var cycle = Db.Context.Cycles.Find(cycleId);
+            text.Add(string.Concat(Enumerable.Repeat("|    ", indentation)) + cycleId.ToString());
+
+            text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}----------");
+            text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}REACTIONS:");
+            text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}----------");
+            cycle.CycleReactions.Where(cr => cr.isReaction).ToList().ForEach(cr => text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}{Db.Context.Reactions.Find(cr.otherId).sbmlId} \t [{string.Join(" + ", Db.Context.Reactions.Find(cr.otherId).ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId).Select(rs => rs.Species.sbmlId))} --> {string.Join(" + ", Db.Context.Reactions.Find(cr.otherId).ReactionSpecies.Where(rs => rs.roleId == Db.ProductId).Select(rs => rs.Species.sbmlId))}]"));
+
+            text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}---------------");
+            text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}INTERFACE METS:");
+            text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}---------------");
+            cycle.CycleConnections.ToList().ForEach(cc => text.Add(string.Concat(Enumerable.Repeat("|    ", indentation)) + Db.Context.Species.Find(cc.metaboliteId).sbmlId));
+
+            text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}------");
+            text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}RATIOS");
+            text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}------");
+            cycle.cycleInterfaceMetabolitesRatios.ToList().ForEach(ra => text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}{Db.Context.Species.Find(ra.metabolite1).sbmlId} / {Db.Context.Species.Find(ra.metabolite2).sbmlId} = {ra.ratio}"));
+
+            text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}--------------");
+            text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}NESTED CYCLES:");
+            text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}--------------");
+            cycle.CycleReactions.Where(cr => !cr.isReaction).ToList().ForEach(cr => text.Add(string.Concat(Enumerable.Repeat("|    ", indentation)) + cr.otherId));
+
+            text.Add($"{string.Concat(Enumerable.Repeat("|    ", indentation))}============================================");
+
+            Console.WriteLine($"sub cycles: {cycle.CycleReactions.Count(cr => !cr.isReaction)}");
+            cycle.CycleReactions.Where(cr => !cr.isReaction).Select(cr => cr.otherId).ToList().ForEach(c => GetDetailsOfCycle(c, indentation+1, text));
+        }
+
+        public static void RunModel(string file)
+        {
+            var model = new Cplex();
+            model.ImportModel(file);
+            dynamic link = Fba3.ToDynamic(Fba3.ToDynamic(Fba3.ToDynamic(Fba3.ToDynamic(model)._model)._gc)._link);
+            link = Fba3.ToDynamic(link._prev);
+            var cconst = new List<CpxIfThen>();
+            while (link._obj != null)
+            {
+                cconst.Add(link._obj as CpxIfThen);
+                link = Fba3.ToDynamic(link._prev);
+            }
+
+            var m = model.GetLPMatrixEnumerator();
+            m.MoveNext();
+            var mat = (CpxLPMatrix)m.Current;
+
+            var vars = mat.GetNumVars();
+            var ranges = mat.GetRanges();
+            var obj = model.GetObjective();
+
+            model.Solve();
+            
+            var list = vars.ToList().Select(d => $"{d.Name}:{model.GetValue(d)}").ToList();
+            File.WriteAllLines($"{Core.Dir}SINGLERUNresult.txt", list);
+        }
+
         public static void TestGeneReg()
         {
             var model = new Cplex();

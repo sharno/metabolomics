@@ -20,14 +20,15 @@ namespace Ecoli.Util
     {
         private static void Main(string[] args)
         {
-            Console.BufferHeight = 9999;
+            Console.BufferHeight = Int16.MaxValue-1;
             //EraseAndRecordToDb();
             //RecordFormulaeToDb();
             //ValidateReactionsAtomsBalance();
             //ValidateCyclesAtomsBalance();
             //CheckExchangeReactionsInCycles();
             //LimitReactionsFluxes();
-            RecordCyclesInterfaceMetabolitesRations();
+            //RecordCyclesInterfaceMetabolitesRations();
+            RecordCyclesRationsFromStoichiometry();
 
             // cycles with no ratios:
             //419FB6A3-A478-4607-BCF4-32A30C1AFDA7
@@ -35,10 +36,82 @@ namespace Ecoli.Util
             //09814608-806D-4B7F-A8CB-AEAEC590A541
             //AAC30E50-570F-4927-A36D-ED534DD2DABC
             //87F8DBCE-D972-4BD2-AE60-FD05A928707B
-            //CheckCycleRatios(Guid.Parse("8d9fd632-1a54-4d57-a809-4e3336c7967a"));
+
+            // 35: 419fb6a3-a478-4607-bcf4-32a30c1afda7
+            // 36: 09814608-806d-4b7f-a8cb-aeaec590a541
+
+            // 199: 01295cb3-4ada-4054-bafd-4be8696c3516
+            // 133: ab5765ed-d596-4d77-ad5f-0d6a5b3d4692
+            //CheckCycleRatios(Guid.Parse("01295cb3-4ada-4054-bafd-4be8696c3516"));
         }
 
         private const double ZeroOutFlux = 0.01;
+
+        public static void RecordCyclesRationsFromStoichiometry()
+        {
+            // delete database previous records
+            Db.Context.cycleInterfaceMetabolitesRatios.RemoveRange(Db.Context.cycleInterfaceMetabolitesRatios.Where(e => true));
+            Db.Context.SaveChanges();
+
+            Db.Context.Cycles.ToList();
+            Db.Context.CycleConnections.ToList();
+            Db.Context.CycleReactions.ToList();
+            Db.Context.cycleInterfaceMetabolitesRatios.ToList();
+            Db.Context.Species.ToList();
+
+            var cache = new List<cycleInterfaceMetabolitesRatio>();
+            var sortedCycles = TopologicalSortCycles(Db.Context.Cycles.ToList());
+            foreach (var cycle in sortedCycles) {
+                Console.WriteLine($"checking cycle: {cycle.id}");
+                var nestedCycles = cycle.CycleReactions.Where(cr => !cr.isReaction).Select(cr => cr.otherId).ToList();
+                foreach (CycleConnection c in cycle.CycleConnections)
+                {
+                    var first = Db.Context.Species.Find(c.metaboliteId);
+                    var firstNumberOfConnectionsInsideCycle = cycle.CycleReactions.Count(cr => first.ReactionSpecies.Any(rs => rs.reactionId == cr.otherId));
+                    firstNumberOfConnectionsInsideCycle += cycle.CycleReactions.Count(cr => first.CycleConnections.Any(cc => cc.cycleId == cr.otherId));
+                    if (firstNumberOfConnectionsInsideCycle != 1) continue;
+
+                    foreach (CycleConnection c2 in cycle.CycleConnections.Where(e => e.metaboliteId != c.metaboliteId))
+                    {
+                        var second = Db.Context.Species.Find(c2.metaboliteId);
+                        var secondNumberOfConnectionsInsideCycle = cycle.CycleReactions.Count(cr => second.ReactionSpecies.Any(rs => rs.reactionId == cr.otherId));
+                        secondNumberOfConnectionsInsideCycle += cycle.CycleReactions.Count(cr => second.CycleConnections.Any(cc => cc.cycleId == cr.otherId));
+                        if (secondNumberOfConnectionsInsideCycle != 1) continue;
+
+                        var sharedReactions = first.ReactionSpecies.Where(rs => second.ReactionSpecies.Any(rs2 => rs2.reactionId == rs.reactionId) && cycle.CycleReactions.Any(cr => cr.otherId == rs.reactionId)).ToList();
+                        var nestedRatios = cache.Where(ra => nestedCycles.Contains(ra.cycleId) && ra.metabolite1 == first.id && ra.metabolite2 == second.id).ToList();
+
+                        if (sharedReactions.Count == 1 && nestedRatios.Count == 0 && ! cache.Any(ra => ra.metabolite1 == second.id && ra.metabolite2 == first.id))
+                        {
+                            Console.WriteLine($"recording: {first.sbmlId}, {second.sbmlId}");
+                            var record = new cycleInterfaceMetabolitesRatio
+                            {
+                                cycleId = cycle.id,
+                                metabolite1 = first.id,
+                                metabolite2 = second.id,
+                                ratio = Math.Abs(sharedReactions[0].stoichiometry / second.ReactionSpecies.Single(rs => rs.reactionId == sharedReactions[0].reactionId).stoichiometry)
+                            };
+                            cache.Add(record);
+                        }
+                        else if (sharedReactions.Count == 0 && nestedRatios.Count == 1 && !cache.Any(ra => ra.metabolite1 == second.id && ra.metabolite2 == first.id))
+                        {
+                            Console.WriteLine($"recording: {first.sbmlId}, {second.sbmlId}");
+                            var record = new cycleInterfaceMetabolitesRatio
+                            {
+                                cycleId = cycle.id,
+                                metabolite1 = first.id,
+                                metabolite2 = second.id,
+                                ratio = nestedRatios[0].ratio
+                            };
+                            cache.Add(record);
+                        }
+                    }
+                }
+            }
+
+            cache.ForEach(r => Db.Context.cycleInterfaceMetabolitesRatios.Add(r));
+            Db.Context.SaveChanges();
+        }
 
         private static void CheckCycleRatios(Guid cycleId)
         {
@@ -65,6 +138,7 @@ namespace Ecoli.Util
             foreach (var cycleConnection in cycle.CycleConnections)
             {
                 var model = new Cplex { Name = "FBA" };
+                var pseudoMetsVars = new Dictionary<Guid, INumVar>();
                 var vars = new Dictionary<Guid, INumVar>();
                 var cycleMets = new Dictionary<Tuple<Guid, Guid>, Guid>();
                 var mainPseudoReaction = Guid.Empty;
@@ -208,7 +282,8 @@ namespace Ecoli.Util
                     {
                         var pseudo = Guid.NewGuid();
                         vars[pseudo] = model.NumVar(-1000, 1000, NumVarType.Float,
-                            "pseudo" + Db.Context.Species.Find(s).sbmlId);
+                            "pseudo_" + Db.Context.Species.Find(s).sbmlId);
+                        pseudoMetsVars[s] = vars[pseudo];
                         expr.AddTerm(1, vars[pseudo]);
 
                         if (cycleConnection.metaboliteId == s) mainPseudoReaction = pseudo;
@@ -249,7 +324,7 @@ namespace Ecoli.Util
 
 
                 // solving for producers
-                var fluxConstraint = model.AddGe(vars[mainPseudoReaction], new Random().Next(1, 900));
+                var fluxConstraint = model.AddGe(vars[mainPseudoReaction], 500);
 
                 var solved = model.Solve();
                 count++;
@@ -288,6 +363,9 @@ namespace Ecoli.Util
                                     cycleMets.ContainsKey(Tuple.Create(nc, cc.metaboliteId)) &&
                                     model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) > ZeroOutFlux)
                                 .Sum(nc => model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]));
+                        if (model.GetValue(pseudoMetsVars[cc.metaboliteId]) > ZeroOutFlux) {
+                            first += model.GetValue(pseudoMetsVars[cc.metaboliteId]);
+                        }
 
 
                         cycle.CycleConnections.ToList()
@@ -320,6 +398,10 @@ namespace Ecoli.Util
                                             nc =>
                                                 model.GetValue(
                                                     vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]));
+                                if (model.GetValue(pseudoMetsVars[cc2.metaboliteId]) > ZeroOutFlux)
+                                {
+                                    second += model.GetValue(pseudoMetsVars[cc2.metaboliteId]);
+                                }
 
                                 first = Math.Abs(first);
                                 second = Math.Abs(second);
@@ -353,7 +435,7 @@ namespace Ecoli.Util
 
                 // solving for consumers
                 model.Remove(fluxConstraint);
-                fluxConstraint = model.AddLe(vars[mainPseudoReaction], new Random().Next(-900, -1));
+                fluxConstraint = model.AddLe(vars[mainPseudoReaction], -500);
 
                 solved = model.Solve();
                 model.ExportModel($"{Core.Dir}{count}model_n.lp");
@@ -388,6 +470,10 @@ namespace Ecoli.Util
                                     cycleMets.ContainsKey(Tuple.Create(nc, cc.metaboliteId)) &&
                                     model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) < -ZeroOutFlux)
                                 .Sum(nc => model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]));
+                        if (model.GetValue(pseudoMetsVars[cc.metaboliteId]) < -ZeroOutFlux)
+                        {
+                            first += model.GetValue(pseudoMetsVars[cc.metaboliteId]);
+                        }
 
 
                         cycle.CycleConnections.ToList()
@@ -420,6 +506,10 @@ namespace Ecoli.Util
                                             nc =>
                                                 model.GetValue(
                                                     vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]));
+                                if (model.GetValue(pseudoMetsVars[cc2.metaboliteId]) < -ZeroOutFlux)
+                                {
+                                    second += model.GetValue(pseudoMetsVars[cc2.metaboliteId]);
+                                }
 
                                 first = Math.Abs(first);
                                 second = Math.Abs(second);
@@ -457,11 +547,12 @@ namespace Ecoli.Util
                 var lists = s.Value.Values.Where(v => v.Any(e => Math.Abs(e) > 0 && !double.IsInfinity(e))).ToList();
                 Console.WriteLine("List of ratios of " + Db.Context.Species.Find(f.Key).sbmlId + " .. " +
                                   Db.Context.Species.Find(s.Key).sbmlId);
-                values.ForEach(v => Console.Write(v + ", "));
+                s.Value.ToList().ForEach(i => Console.Write(i.Key + ": " + i.Value[0] + (i.Value.Count > 2 ? " n:" + i.Value[2] : "") + " | "));
+                //values.ForEach(v => Console.Write(v + ", "));
                 Console.WriteLine();
 
                 if (lists.Count > 1 &&
-                    values.All(v => Math.Abs(Math.Abs(v) - Math.Abs(values[0])) < double.Epsilon))
+                    values.All(v => Math.Round(Math.Abs(Math.Abs(v) - Math.Abs(values[0])), 2) < double.Epsilon))
                 {
                     Console.WriteLine("111111111111111111111111111   " + Db.Context.Species.Find(f.Key).sbmlId +
                                       " " + Db.Context.Species.Find(s.Key).sbmlId + " " + values[0]);
@@ -508,17 +599,17 @@ namespace Ecoli.Util
                 sortedCycles.AddRange(level);
             }
 
+            Console.WriteLine("Topologically sorted cycles:");
             foreach (var sortedCycle in sortedCycles)
             {
-                Console.WriteLine("contains cycles " + sortedCycle.CycleReactions.Count(reaction => !reaction.isReaction));
+                Console.WriteLine("  cycle: " + sortedCycle.id);
             }
             return sortedCycles;
         }
 
         private static void RecordCyclesInterfaceMetabolitesRations()
         {
-            Db.Context.cycleInterfaceMetabolitesRatios.RemoveRange(
-                Db.Context.cycleInterfaceMetabolitesRatios.Where(e => true));
+            Db.Context.cycleInterfaceMetabolitesRatios.RemoveRange(Db.Context.cycleInterfaceMetabolitesRatios.Where(e => true));
             Db.Context.SaveChanges();
 
             int count = 0;
@@ -547,6 +638,7 @@ namespace Ecoli.Util
                 {
                     var model = new Cplex {Name = "FBA"};
                     var vars = new Dictionary<Guid, INumVar>();
+                    var pseudoMetsVars = new Dictionary<Guid, INumVar>();
                     var cycleMets = new Dictionary<Tuple<Guid, Guid>, Guid>();
                     var mainPseudoReaction = Guid.Empty;
 
@@ -690,6 +782,7 @@ namespace Ecoli.Util
                             var pseudo = Guid.NewGuid();
                             vars[pseudo] = model.NumVar(-1000, 1000, NumVarType.Float,
                                 "pseudo" + Db.Context.Species.Find(s).sbmlId);
+                            pseudoMetsVars[s] = vars[pseudo];
                             expr.AddTerm(1, vars[pseudo]);
 
                             if (cycleConnection.metaboliteId == s) mainPseudoReaction = pseudo;
@@ -730,7 +823,7 @@ namespace Ecoli.Util
 
 
                     // solving for producers
-                    var fluxConstraint = model.AddGe(vars[mainPseudoReaction], new Random().Next(1, 900));
+                    var fluxConstraint = model.AddGe(vars[mainPseudoReaction], 500);
 
                     var solved = model.Solve();
                     count++;
@@ -769,6 +862,10 @@ namespace Ecoli.Util
                                         cycleMets.ContainsKey(Tuple.Create(nc, cc.metaboliteId)) &&
                                         model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) > ZeroOutFlux)
                                     .Sum(nc => model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]));
+                            if (model.GetValue(pseudoMetsVars[cc.metaboliteId]) > ZeroOutFlux)
+                            {
+                                first += model.GetValue(pseudoMetsVars[cc.metaboliteId]);
+                            }
 
 
                             cycle.CycleConnections.ToList()
@@ -801,6 +898,10 @@ namespace Ecoli.Util
                                                 nc =>
                                                     model.GetValue(
                                                         vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]));
+                                    if (model.GetValue(pseudoMetsVars[cc2.metaboliteId]) > ZeroOutFlux)
+                                    {
+                                        second += model.GetValue(pseudoMetsVars[cc2.metaboliteId]);
+                                    }
 
                                     first = Math.Abs(first);
                                     second = Math.Abs(second);
@@ -832,7 +933,7 @@ namespace Ecoli.Util
 
                     // solving for consumers
                     model.Remove(fluxConstraint);
-                    fluxConstraint = model.AddLe(vars[mainPseudoReaction], new Random().Next(-900, -1));
+                    fluxConstraint = model.AddLe(vars[mainPseudoReaction], -500);
 
                     solved = model.Solve();
                     model.ExportModel($"{Core.Dir}{count}model_n.lp");
@@ -867,6 +968,10 @@ namespace Ecoli.Util
                                         cycleMets.ContainsKey(Tuple.Create(nc, cc.metaboliteId)) &&
                                         model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]) < -ZeroOutFlux)
                                     .Sum(nc => model.GetValue(vars[cycleMets[Tuple.Create(nc, cc.metaboliteId)]]));
+                            if (model.GetValue(pseudoMetsVars[cc.metaboliteId]) < -ZeroOutFlux)
+                            {
+                                first += model.GetValue(pseudoMetsVars[cc.metaboliteId]);
+                            }
 
 
                             cycle.CycleConnections.ToList()
@@ -899,6 +1004,11 @@ namespace Ecoli.Util
                                                 nc =>
                                                     model.GetValue(
                                                         vars[cycleMets[Tuple.Create(nc, cc2.metaboliteId)]]));
+                                    if (model.GetValue(pseudoMetsVars[cc2.metaboliteId]) < -ZeroOutFlux)
+                                    {
+                                        second += model.GetValue(pseudoMetsVars[cc2.metaboliteId]);
+                                    }
+
 
                                     first = Math.Abs(first);
                                     second = Math.Abs(second);
@@ -926,6 +1036,7 @@ namespace Ecoli.Util
                     }
                 }
 
+                //File.WriteAllLines()
                 recordedRatios.ToList().ForEach(f => f.Value.ToList().ForEach(s =>
                 {
                     var values = s.Value.Where(v => Math.Abs(v) > 0 && !double.IsInfinity(v)).ToList();
@@ -935,7 +1046,7 @@ namespace Ecoli.Util
                     Console.WriteLine();
 
                     if (values.Count > 2 &&
-                        values.All(v => Math.Abs(Math.Abs(v) - Math.Abs(values[0])) < double.Epsilon))
+                        values.All(v => Math.Round(Math.Abs(Math.Abs(v) - Math.Abs(values[0])), 2) < double.Epsilon))
                     {
                         Console.WriteLine("111111111111111111111111111   " + Db.Context.Species.Find(f.Key).sbmlId +
                                           " " + Db.Context.Species.Find(s.Key).sbmlId + " " + values[0]);
@@ -1094,7 +1205,6 @@ namespace Ecoli.Util
             Console.ReadKey();
 
             const int outlier = 61;
-            var count = 0;
 
             var g = ConstructHyperGraphFromSpecies(Db.Context.Species.Where(s => s.ReactionSpecies.Count < outlier));
 
