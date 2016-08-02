@@ -4,6 +4,33 @@
         <name>Metabol.Api</name>
     </assembly>
     <members>
+        <member name="T:Metabol.Api.WebApiConfig">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:Metabol.Api.WebApiConfig.Register(System.Web.Http.HttpConfiguration)">
+            <summary>
+            
+            </summary>
+            <param name="config"></param>
+        </member>
+        <member name="T:Metabol.Api.WebApiConfig.BrowserJsonFormatter">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:Metabol.Api.WebApiConfig.BrowserJsonFormatter.#ctor">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:Metabol.Api.WebApiConfig.BrowserJsonFormatter.SetDefaultContentHeaders(System.Type,System.Net.Http.Headers.HttpContentHeaders,System.Net.Http.Headers.MediaTypeHeaderValue)">
+            <summary> Sets the default headers for content that will be formatted using this formatter. This method is called from the <see cref="T:System.Net.Http.ObjectContent" /> constructor. This implementation sets the Content-Type header to the value of mediaType if it is not null. If it is null it sets the Content-Type to the default media type of this formatter. If the Content-Type does not specify a charset it will set it using this formatters configured <see cref="T:System.Text.Encoding" />. </summary>
+            <param name="type">The type of the object being serialized. See <see cref="T:System.Net.Http.ObjectContent" />.</param>
+            <param name="headers">The content headers that should be configured.</param>
+            <param name="mediaType">The authoritative media type. Can be null.</param>
+        </member>
         <member name="M:Metabol.Api.Areas.HelpPage.ApiDescriptionExtensions.GetFriendlyId(System.Web.Http.Description.ApiDescription)">
             <summary>
             Generates an URI-friendly ID for the <see cref="T:System.Web.Http.Description.ApiDescription"/>. E.g. "Get-Values-id_name" instead of "GetValues/{id}?name={name}"

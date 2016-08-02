@@ -19,6 +19,9 @@ namespace Metabol.DbModels.Models
         /// </summary>
         public string Affiliation { get; set; }
 
+        public string Name { get; set; }
+
+        public string Surname { get; set; }
         /// <summary>
         /// 
         /// </summary>

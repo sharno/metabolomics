@@ -396,7 +396,14 @@ namespace Metabol.Api.Controllers
                 return BadRequest(ModelState);
             }
 
-            var user = new ApplicationUser() { UserName = model.Email, Email = model.Email };
+            var user = new ApplicationUser
+            {
+                UserName = model.Email,
+                Email = model.Email,
+                Affiliation = model.Affiliation,
+                Name = model.Name,
+                Surname = model.Surname
+            };
 
             IdentityResult result = await UserManager.CreateAsync(user, model.Password);
 
