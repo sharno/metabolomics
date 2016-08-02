@@ -286,13 +286,13 @@ namespace Ecoli
 
             //var fva = new FVA();
             //fva.Solve(model, sm, vars.Values);
-            //File.AppendAllText("A:\\fva.csv", $"{fva.Stat.Item1},{fva.Stat.Item2}\r\n");
+            //File.AppendAllText("A:\\fva.csv", $"{fva.Stat.Item1}\t{fva.Stat.Item2}\r\n");
 
             //GeneNetwork.AddRegulationConstraints(model, sm, vars);
 
-            //var fva = new FVA();
-            //fva.Solve(model, sm, vars.Values);
-            //File.AppendAllText("A:\\rfva.csv", $"{fva.Stat.Item1},{fva.Stat.Item2}\r\n");
+            //var fva2 = new FVA();
+            //fva2.Solve(model, sm, vars.Values);
+            //File.AppendAllText("A:\\rfva.csv", $"{fva2.Stat.Item1}\t{fva2.Stat.Item2}\r\n");
 
             AddObjectiveFunction(sm, model, vars, cycleMetabolitesVars);
 

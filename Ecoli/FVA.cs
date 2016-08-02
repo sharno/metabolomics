@@ -80,50 +80,26 @@ namespace Ecoli
 
         public void Solve(Cplex model2, HyperGraph graph, Dictionary<Guid, INumVar>.ValueCollection vars)
         {
-            //var filename = "A:\\tmp.lp";
-            //model.ExportModel(filename);
-            //var model2 = new Cplex();
-            //model2.ImportModel(filename);
-
-            //var m = model2.GetLPMatrixEnumerator();
-            //m.MoveNext();
-            //var mat = (CpxLPMatrix)m.Current;
-            //model2.Remove(model2.GetObjective());
-            //var vars = mat.GetNumVars();
-            //vars = vars.Where(n => n.Type == NumVarType.Float && !n.Name.StartsWith("x")).ToArray();
-
-            //model2.Remove(model2.GetObjective());
-
             foreach (var v in vars)
             {
-                //var fobj = model2.LinearNumExpr();
-                //fobj.AddTerm(v, 1);
-
                 model2.Remove(model2.GetObjective());
                 model2.AddObjective(ObjectiveSense.Maximize, v, "maxfobj");
-                //model2.ExportModel(filename);
+                model2.Solve();
 
-                var isfeas = model2.Solve();
-                //if (!isfeas) Fba3.Debug(filename, Fba3.ReactionsFluxes(graph));
-                //Debug.Assert(isfeas);
                 var max = model2.GetValue(v);
                 
                 model2.Remove(model2.GetObjective());
                 model2.AddObjective(ObjectiveSense.Minimize, v, "minfobj");
-                //model2.ExportModel(filename);
-                isfeas = model2.Solve();
-                //if (!isfeas) Fba3.Debug(filename, Fba3.ReactionsFluxes(graph));
-                //Debug.Assert(isfeas);
+                model2.Solve();
 
                 var min = model2.GetValue(v);
 
-                min = Math.Abs(min) < 0.00001 ? 0.0 : min;
-                max = Math.Abs(max) < 0.00001 ? 0.0 : max;
+                min = Math.Abs(min) < 0.01 ? 0.0 : min;
+                max = Math.Abs(max) < 0.01 ? 0.0 : max;
                 Results[v.Name] = Tuple.Create(min, max);
-                //Console.Write("\r{0} reactions   ", count++);
             }
-            var inacitve = Results.Values.Count(tuple => Math.Abs(tuple.Item1) < 0.00001 &&
-                                                         Math.Abs(tuple.Item2) < 0.00001);
+            var inacitve = Results.Values.Count(tuple => Math.Abs(tuple.Item1) < 0.01 &&
+                                                         Math.Abs(tuple.Item2) < 0.01);
             Stat = new Tuple<int, int>(Results.Count - inacitve, inacitve);
             Console.WriteLine(Stat);
 
