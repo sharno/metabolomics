@@ -140,6 +140,18 @@ namespace Ecoli.Util.SimpleCycle
 
             HyperGraph.Cycle cycleReaction = new HyperGraph.Cycle();
 
+
+            // get all metabolites that are not interface metabolites and put them in cycle
+            hypergraph.Nodes.Values.ToList().ForEach(n =>
+            {
+                if (n.Next.Union(n.Previous).All(nn => cycle.Any(e => e.Id == nn.Key)))
+                {
+                    cycle.Add(n);
+                }
+            });
+            cycle = cycle.Distinct().ToList();
+
+
             // modify hypergraph
             foreach (var v in cycle)
             {

@@ -80,6 +80,8 @@ namespace Ecoli
                         Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == cycle.Id).ToList();
                     ratios.ForEach(ra =>
                     {
+                        //if (ra.ratio < 1 || ra.ratio > 100) return;
+
                         var expr1 = model.LinearNumExpr();
                         expr1.AddTerm(1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
 
@@ -151,9 +153,9 @@ namespace Ecoli
                         or.Add(zeroLeft);
                         or.Add(zeroRight);
 
-                        model.Add(or);
-                        //model.Add(low1);
-                        //model.Add(high1);
+                        //model.Add(or);
+                        model.Add(low1);
+                        model.Add(high1);
                     });
 
                     // add atom numbers constraints to link metabolites of the cycle reaction
@@ -319,7 +321,6 @@ namespace Ecoli
                 sm.Edges.ToList().ForEach(d => d.Value.Flux = 0);
             }
 
-            sm.Edges.Values.ToList().ForEach(e => e.RecentlyAdded = false);
             var list = sm.Edges.ToList().Select(d => $"{d.Value.Label}:{d.Value.Flux}").ToList();
             list.AddRange(cycleMetabolitesVars.Keys.ToList().SelectMany(c => cycleMetabolitesVars[c].Keys.ToList().Select(
                 m =>
@@ -340,6 +341,11 @@ namespace Ecoli
             model.ExportModel(tmpfile);
             ConstraintList.Clear();
             ConstraintList.AddRange(Core.Constraints(tmpfile));
+
+            Core.SaveAsDgs(sm.Nodes.First().Value, sm, Core.Dir);
+
+            sm.Nodes.Values.ToList().ForEach(n => n.RecentlyAdded = false);
+            sm.Edges.Values.ToList().ForEach(e => e.RecentlyAdded = false);
 
             return isfeas;
         }
@@ -370,7 +376,8 @@ namespace Ecoli
             if (hyperGraph.Step == 0)
             {
                 //model.Add(model.Not(model.Eq(vars[hyperGraph.Edges.Keys.ToList()[0]], 0)));
-                model.AddGe(vars[hyperGraph.Edges.Keys.ToList()[0]], 10);
+                var t = hyperGraph.Edges.Values.Single(e => e.Label == "_exr_succ_e_cons");
+                model.AddGe(vars[t.Id], 10);
             }
 
             foreach (var p in metabolite.Producers.Except(metabolite.Consumers))

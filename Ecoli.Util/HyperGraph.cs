@@ -215,26 +215,6 @@ namespace Ecoli.Util
 
         public void RemoveNode(Guid nid)
         {
-            //foreach (var consumer in Nodes[nid].Consumers)
-            //{
-            //    consumer.Reactants.Remove(nid);
-            //    if (consumer.Reactants.Count == 0 && consumer.Products.Count == 0)
-            //    {
-            //        Edge ingoredEdge;
-            //        Edges.TryRemove(consumer.Id, out ingoredEdge);
-            //    }
-            //}
-
-            //foreach (var producer in Nodes[nid].Producers)
-            //{
-            //    producer.Products.Remove(nid);
-            //    if (producer.Reactants.Count == 0 && producer.Products.Count == 0)
-            //    {
-            //        Edge ingoredEdge;
-            //        Edges.TryRemove(producer.Id, out ingoredEdge);
-            //    }
-            //}
-
             foreach (var reaction in Nodes[nid].Producers.Union(Nodes[nid].Consumers))
             {
                 reaction.Products.Remove(nid);
@@ -248,8 +228,6 @@ namespace Ecoli.Util
 
             Node ignored;
             Nodes.TryRemove(nid, out ignored);
-
-            // TODO check pseudo and stoichiometry
         }
         #endregion
 
@@ -411,11 +389,6 @@ namespace Ecoli.Util
                 Products[node.Id] = node;
                 node.Producers.Add(this);
                 return this;
-            }
-
-            public IEnumerable<Node> AllNodes()
-            {
-                return new HashSet<Node>(this.Reactants.Values.Concat(this.Products.Values));
             }
 
             public string ToDgs(EdgeType type)
@@ -684,23 +657,6 @@ namespace Ecoli.Util
                 }
 
                 return String.Format("an \"{0}\"  label:\" {1} \"  {2}", Id, Label, uiclass);
-            }
-
-            public IEnumerable<Edge> AllReactions()
-            {
-                var r = new SortedSet<Edge>();
-                r.UnionWith(this.Consumers);
-                r.UnionWith(this.Producers);
-                return r;
-            }
-
-            public SortedSet<Node> AllNeighborNodes()
-            {
-                var r = new SortedSet<Node>();
-                r.UnionWith(this.Consumers.SelectMany(e => e.AllNodes()));
-                r.UnionWith(this.Producers.SelectMany(e => e.AllNodes()));
-                r.Remove(this);
-                return r;
             }
 
             public class ReactionCountClass

@@ -20,13 +20,15 @@ namespace Ecoli
         // q8c
         //  5218A267-A0C3-410D-82AD-21B1C488E0E4
 
+        // pyr_e
+        // aa303049-5ebd-4c29-a24d-fcca13637297
+
         // start from a reaction instaed of metabolite
-        public static readonly Guid StartingMetabolite = Guid.Parse("5218A267-A0C3-410D-82AD-21B1C488E0E4");
+        public static readonly Guid StartingMetabolite = Guid.Parse("aa303049-5ebd-4c29-a24d-fcca13637297");
         //public static Guid NonZeroReaction = Guid.Empty;
 
         public readonly LinkedList<string> Pathway = new LinkedList<string>();
 
-        public bool IsFeasable { get; set; }
         public readonly HyperGraph Sm = new HyperGraph();
 
         public Dictionary<Guid, int> Z = new Dictionary<Guid, int>();
@@ -78,18 +80,17 @@ namespace Ecoli
             // steps  5
             var timer = new Stopwatch();
             timer.Start();
-            ApplyFba(Sm);
+            var isFeasible = Fba3.Solve(Sm);
             timer.Stop();
 
             var it = new IterationModels(IterationId)
             {
-                Fba = IsFeasable ? 1 : 0,
+                Fba = isFeasible ? 1 : 0,
                 Time = timer.ElapsedMilliseconds * 1.0 / 1000.0,
                 Fluxes = Sm.Edges.Values.ToDictionary(r => r.Label, r => r.Flux),
                 Constraints = Fba3.ConstraintList,
                 Nodes = Sm.JsonNodes(Z),
                 Links = Sm.JsonLinks()
-                // MetabolicNetwork = sm
             };
 
             //4. Let a metabolite mb be labeled as a border metabolite 
@@ -100,7 +101,7 @@ namespace Ecoli
             {
                 #region algo
 
-                Core.SaveAsDgs(Sm.Nodes.First().Value, Sm, Core.Dir);
+                //Core.SaveAsDgs(Sm.Nodes.First().Value, Sm, Core.Dir);
                 Console.WriteLine("NO BORDER METABILTES");
 
                 Console.WriteLine("Expanding the cycles next");
@@ -216,13 +217,13 @@ namespace Ecoli
 
 
                     
-                    if (!ApplyFba(Sm))
+                    if (!Fba3.Solve(Sm))
                     {
-                        Core.SaveAsDgs(Sm.Nodes.First().Value, Sm, Core.Dir);
+                        //Core.SaveAsDgs(Sm.Nodes.First().Value, Sm, Core.Dir);
                         Console.ReadKey();
                         Environment.Exit(0);
                     }
-                    Core.SaveAsDgs(Sm.Nodes.First().Value, Sm, Core.Dir);
+                    //Core.SaveAsDgs(Sm.Nodes.First().Value, Sm, Core.Dir);
 
                     cycle = Sm.Cycles.FirstOrDefault();
                 }
@@ -235,7 +236,7 @@ namespace Ecoli
 
             //8. Let m’ be a border metabolite in S(m) involved in the smallest total number of reactions.
             var m2 = borderm.Select(m => m.Id).OrderBy(Db.TotalReactions).First();
-            Core.SaveAsDgs(Sm.Nodes[m2], Sm, Core.Dir);
+            //Core.SaveAsDgs(Sm.Nodes[m2], Sm, Core.Dir);
             Sm.NextStep();
 
             //Extend S(m) with m’ and its reactions from M.
@@ -299,16 +300,6 @@ namespace Ecoli
             }
 
             if (reactions.Any()) sm.ExchangeConstraints.Add(Tuple.Create(reactions, coefficients, flux));
-        }
-
-        public bool ApplyFba(HyperGraph sm)
-        {
-            //5. Apply Flux Balance Analysis on S(m) with the objective function F defined as follows. 
-            //For  each non-border metabolite  m  that  is  included  in  both S(m)and  Z,  perform  the following checks:
-            IsFeasable = Fba3.Solve(sm);
-
-            //Stats[sm.Step] = Fba3.Stat;
-            return IsFeasable;
         }
 
         private static void DefineExReaction(HyperGraph.Node node, HyperGraph sm)

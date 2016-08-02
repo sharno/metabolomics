@@ -97,20 +97,20 @@ namespace Metabol.DbModels
         {
             try
             {
-                var file = $"{dir}{graph.LastLevel}graph.dgs";
+                var file = $"{dir}{graph.Step}graph.dgs";
                 var maxLevel = graph.LastLevel;
 
                 var lines = new List<string> { "DGS004", "\"Metabolic Network\" 0 0", "#Nodes", mi.ToDgs(NodeType.Selected) };
                 lines.AddRange(graph.Nodes.Values
                     .Where(n => n.Id != mi.Id)
-                    .Select(node => new { node, type = node.IsBorder ? NodeType.Border : NodeType.None })
+                    .Select(node => new { node, type = node.IsBorder ? NodeType.Border : node.RecentlyAdded? NodeType.New : NodeType.None })
                     .Select(@t => @t.node.ToDgs(@t.type)));
 
                 lines.Add("#Hyperedges");
                 foreach (var edge in graph.Edges.Values)
                 {
                     var type = EdgeType.None;
-                    if (edge.Level == maxLevel)
+                    if (edge.RecentlyAdded == true)
                         type = EdgeType.New;
 
                     lines.Add(edge.ToDgs(type));
