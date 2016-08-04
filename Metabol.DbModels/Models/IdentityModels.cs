@@ -22,6 +22,9 @@ namespace Metabol.DbModels.Models
         public string Name { get; set; }
 
         public string Surname { get; set; }
+
+
+
         /// <summary>
         /// 
         /// </summary>
@@ -56,6 +59,7 @@ namespace Metabol.DbModels.Models
             : base("DefaultConnection", throwIfV1Schema: false)
         {
             //this.Configuration.LazyLoadingEnabled = false;
+            Database.SetInitializer<ApplicationDbContext>(null);
         }
 
         public static ApplicationDbContext Create()

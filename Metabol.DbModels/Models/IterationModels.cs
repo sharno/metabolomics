@@ -11,6 +11,7 @@ namespace Metabol.DbModels.Models
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        [JsonIgnore]
         public Guid IterationId { get; set; }
 
         private static IterationModels _empty;
@@ -26,9 +27,8 @@ namespace Metabol.DbModels.Models
         [NotMapped]
         public IEnumerable<string> Constraints { get; set; }
         [NotMapped]
-        public IEnumerable<dynamic> Nodes { get; set ; }
+        public IEnumerable<dynamic> Nodes { get; set; }
         [NotMapped]
-      
         public IEnumerable<dynamic> Links { get; set; }
 
         [JsonIgnore]
@@ -70,7 +70,7 @@ namespace Metabol.DbModels.Models
 
         public IterationModels()
         {
-            
+
         }
 
         public IterationModels(int iteration)
