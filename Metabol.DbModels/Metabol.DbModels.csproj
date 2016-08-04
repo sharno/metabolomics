@@ -282,43 +282,20 @@
     <Compile Include="HtmlToText.cs" />
     <Compile Include="HyperGraph.cs" />
     <Compile Include="HyperGraphOld.cs" />
-    <Compile Include="Migrations\201606172024015_Frankenstein.cs" />
-    <Compile Include="Migrations\201606172024015_Frankenstein.Designer.cs">
-      <DependentUpon>201606172024015_Frankenstein.cs</DependentUpon>
+    <Compile Include="Migrations\ApplicationDbContext\201608031548152_Remigration.cs" />
+    <Compile Include="Migrations\ApplicationDbContext\201608031548152_Remigration.Designer.cs">
+      <DependentUpon>201608031548152_Remigration.cs</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\201606211043523_RevertBack.cs" />
-    <Compile Include="Migrations\201606211043523_RevertBack.Designer.cs">
-      <DependentUpon>201606211043523_RevertBack.cs</DependentUpon>
+    <Compile Include="Migrations\ApplicationDbContext\201608031631348_FixMigration.cs" />
+    <Compile Include="Migrations\ApplicationDbContext\201608031631348_FixMigration.Designer.cs">
+      <DependentUpon>201608031631348_FixMigration.cs</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\201606211917010_DateTimeAdded.cs" />
-    <Compile Include="Migrations\201606211917010_DateTimeAdded.Designer.cs">
-      <DependentUpon>201606211917010_DateTimeAdded.cs</DependentUpon>
+    <Compile Include="Migrations\ApplicationDbContext\Configuration.cs" />
+    <Compile Include="Migrations\MetabolicNetworkContext\201608031548488_Remigrate.cs" />
+    <Compile Include="Migrations\MetabolicNetworkContext\201608031548488_Remigrate.Designer.cs">
+      <DependentUpon>201608031548488_Remigrate.cs</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\201606212148120_ConcentrationChangeAdded.cs" />
-    <Compile Include="Migrations\201606212148120_ConcentrationChangeAdded.Designer.cs">
-      <DependentUpon>201606212148120_ConcentrationChangeAdded.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201606212258188_SessionKeyBecameMan.cs" />
-    <Compile Include="Migrations\201606212258188_SessionKeyBecameMan.Designer.cs">
-      <DependentUpon>201606212258188_SessionKeyBecameMan.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201606220029292_UnknownChange.cs" />
-    <Compile Include="Migrations\201606220029292_UnknownChange.Designer.cs">
-      <DependentUpon>201606220029292_UnknownChange.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201606220036293_BringBackIterationModel.cs" />
-    <Compile Include="Migrations\201606220036293_BringBackIterationModel.Designer.cs">
-      <DependentUpon>201606220036293_BringBackIterationModel.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201606242103038_IterationFluxesFixed.cs" />
-    <Compile Include="Migrations\201606242103038_IterationFluxesFixed.Designer.cs">
-      <DependentUpon>201606242103038_IterationFluxesFixed.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201606242119411_Bilmiyoruzk.cs" />
-    <Compile Include="Migrations\201606242119411_Bilmiyoruzk.Designer.cs">
-      <DependentUpon>201606242119411_Bilmiyoruzk.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\Configuration.cs" />
+    <Compile Include="Migrations\MetabolicNetworkContext\Configuration.cs" />
     <Compile Include="Models\ConcentrationChange.cs" />
     <Compile Include="Models\IterationModels.cs" />
     <Compile Include="Models\AnalysisModels.cs" />
@@ -346,33 +323,16 @@
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
-    <EmbeddedResource Include="Migrations\201606172024015_Frankenstein.resx">
-      <DependentUpon>201606172024015_Frankenstein.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\ApplicationDbContext\201608031548152_Remigration.resx">
+      <DependentUpon>201608031548152_Remigration.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606211043523_RevertBack.resx">
-      <DependentUpon>201606211043523_RevertBack.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\ApplicationDbContext\201608031631348_FixMigration.resx">
+      <DependentUpon>201608031631348_FixMigration.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606211917010_DateTimeAdded.resx">
-      <DependentUpon>201606211917010_DateTimeAdded.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606212148120_ConcentrationChangeAdded.resx">
-      <DependentUpon>201606212148120_ConcentrationChangeAdded.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606212258188_SessionKeyBecameMan.resx">
-      <DependentUpon>201606212258188_SessionKeyBecameMan.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606220029292_UnknownChange.resx">
-      <DependentUpon>201606220029292_UnknownChange.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606220036293_BringBackIterationModel.resx">
-      <DependentUpon>201606220036293_BringBackIterationModel.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606242103038_IterationFluxesFixed.resx">
-      <DependentUpon>201606242103038_IterationFluxesFixed.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606242119411_Bilmiyoruzk.resx">
-      <DependentUpon>201606242119411_Bilmiyoruzk.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\MetabolicNetworkContext\201608031548488_Remigrate.resx">
+      <DependentUpon>201608031548488_Remigrate.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
