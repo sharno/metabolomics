@@ -52,10 +52,10 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="ILOG.Concert">
-      <HintPath>..\Reference Assemblies\ILOG.Concert.dll</HintPath>
+      <HintPath>..\Reference Assemblies\Cplex\x64\ILOG.Concert.dll</HintPath>
     </Reference>
     <Reference Include="ILOG.CPLEX">
-      <HintPath>..\Reference Assemblies\ILOG.CPLEX.dll</HintPath>
+      <HintPath>..\Reference Assemblies\Cplex\x64\ILOG.CPLEX.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.AspNet.Identity.Core">
       <HintPath>..\packages\Microsoft.AspNet.Identity.Core.2.2.1\lib\net45\Microsoft.AspNet.Identity.Core.dll</HintPath>
