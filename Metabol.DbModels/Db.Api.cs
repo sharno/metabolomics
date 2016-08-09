@@ -29,7 +29,7 @@ namespace Metabol.DbModels
 
     partial class Db
     {
-        public static UserManager<ApplicationUser> UserManager = new UserManager<ApplicationUser>(new UserStore<ApplicationUser>(new ApplicationDbContext()));
+        public static UserManager<ApplicationUser> UserManager = new UserManager<ApplicationUser>(new UserStore<ApplicationUser>(new MetabolApiDbContext()));
 
         public static IQueryable<dynamic> GetReactions(string term)
         {
@@ -77,14 +77,14 @@ namespace Metabol.DbModels
                 {
                     id = m.sbmlId,
                     m.name,
-                    compartment = m.Compartment.name,
+                    compartment = m.Compartment?.name,
                     m.initialAmount,
                     m.charge,
-                    model = m.Compartment.Model.sbmlId,
-                    species_type = m.SpeciesType.name,
-                    m.Sbase.annotation,
-                    m.Sbase.sboTerm,
-                    m.Sbase.notes,
+                    model = m.Compartment?.Model?.sbmlId,
+                    species_type = m.SpeciesType?.name,
+                    m.Sbase?.annotation,
+                    m.Sbase?.sboTerm,
+                    m.Sbase?.notes,
                 };
 
                 return rval;

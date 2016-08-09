@@ -298,7 +298,7 @@ namespace Ecoli
 
 
 
-            model.ExportModel($"{Core.Dir}{sm.Step}model.lp");
+            //model.ExportModel($"{Core.Dir}{sm.Step}model.lp");
             //model = new Cplex();
             //model.ImportModel($"{Core.Dir}{sm.Step}model.lp");
 
@@ -317,7 +317,7 @@ namespace Ecoli
             else
             {
                 var reactionsFluxes = ReactionsFluxes(sm);
-                Debug($"{Core.Dir}{sm.Step}model.lp", reactionsFluxes);
+                //Debug($"{Core.Dir}{sm.Step}model.lp", reactionsFluxes);
                 sm.Edges.ToList().ForEach(d => d.Value.Flux = 0);
             }
 
@@ -329,7 +329,7 @@ namespace Ecoli
                     else return $"{sm.Cycles[c].Label}_{sm.Nodes[m].Label}:0";
                 })));
             list.Sort((decision, decision1) => string.Compare(decision, decision1, StringComparison.Ordinal));
-            File.WriteAllLines($"{Core.Dir}{sm.Step}result.txt", list);
+            //File.WriteAllLines($"{Core.Dir}{sm.Step}result.txt", list);
 
             var status = model.GetCplexStatus();
             

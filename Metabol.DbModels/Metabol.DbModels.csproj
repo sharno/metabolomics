@@ -43,10 +43,6 @@
       <HintPath>..\packages\EntityFramework.Cache.1.0.0\lib\net45\EFCache.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
       <Private>True</Private>
@@ -282,15 +278,15 @@
     <Compile Include="HtmlToText.cs" />
     <Compile Include="HyperGraph.cs" />
     <Compile Include="HyperGraphOld.cs" />
-    <Compile Include="Migrations\ApplicationDbContext\201608031548152_Remigration.cs" />
-    <Compile Include="Migrations\ApplicationDbContext\201608031548152_Remigration.Designer.cs">
-      <DependentUpon>201608031548152_Remigration.cs</DependentUpon>
+    <Compile Include="Migrations\MetabolApiDbContext\201608090021573_Init.cs" />
+    <Compile Include="Migrations\MetabolApiDbContext\201608090021573_Init.Designer.cs">
+      <DependentUpon>201608090021573_Init.cs</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\ApplicationDbContext\201608031631348_FixMigration.cs" />
-    <Compile Include="Migrations\ApplicationDbContext\201608031631348_FixMigration.Designer.cs">
-      <DependentUpon>201608031631348_FixMigration.cs</DependentUpon>
+    <Compile Include="Migrations\MetabolApiDbContext\201608091719367_IterationNumber.cs" />
+    <Compile Include="Migrations\MetabolApiDbContext\201608091719367_IterationNumber.Designer.cs">
+      <DependentUpon>201608091719367_IterationNumber.cs</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\ApplicationDbContext\Configuration.cs" />
+    <Compile Include="Migrations\MetabolApiDbContext\Configuration.cs" />
     <Compile Include="Migrations\MetabolicNetworkContext\201608031548488_Remigrate.cs" />
     <Compile Include="Migrations\MetabolicNetworkContext\201608031548488_Remigrate.Designer.cs">
       <DependentUpon>201608031548488_Remigrate.cs</DependentUpon>
@@ -325,11 +321,11 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
-    <EmbeddedResource Include="Migrations\ApplicationDbContext\201608031548152_Remigration.resx">
-      <DependentUpon>201608031548152_Remigration.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\MetabolApiDbContext\201608090021573_Init.resx">
+      <DependentUpon>201608090021573_Init.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\ApplicationDbContext\201608031631348_FixMigration.resx">
-      <DependentUpon>201608031631348_FixMigration.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\MetabolApiDbContext\201608091719367_IterationNumber.resx">
+      <DependentUpon>201608091719367_IterationNumber.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\MetabolicNetworkContext\201608031548488_Remigrate.resx">
       <DependentUpon>201608031548488_Remigrate.cs</DependentUpon>

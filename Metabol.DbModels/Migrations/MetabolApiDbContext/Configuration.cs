@@ -1,4 +1,4 @@
-namespace Metabol.DbModels.Migrations.ApplicationDbContext
+namespace Metabol.DbModels.Migrations.MetabolApiDbContext
 {
     using System;
     using System.Data.Entity;
@@ -10,7 +10,7 @@ namespace Metabol.DbModels.Migrations.ApplicationDbContext
         public Configuration()
         {
             AutomaticMigrationsEnabled = false;
-            MigrationsDirectory = @"Migrations\ApplicationDbContext";
+            MigrationsDirectory = @"Migrations\MetabolApiDbContext";
         }
 
         protected override void Seed(Metabol.DbModels.Models.MetabolApiDbContext context)

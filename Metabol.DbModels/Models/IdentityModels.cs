@@ -48,23 +48,23 @@ namespace Metabol.DbModels.Models
     /// <summary>
     /// 
     /// </summary>
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    public class MetabolApiDbContext : IdentityDbContext<ApplicationUser>
     {
         public DbSet<AnalysisModels> Analyses { get; set; }
 
         /// <summary>
         /// 
         /// </summary>
-        public ApplicationDbContext()
+        public MetabolApiDbContext()
             : base("DefaultConnection", throwIfV1Schema: false)
         {
             //this.Configuration.LazyLoadingEnabled = false;
-            Database.SetInitializer<ApplicationDbContext>(null);
+            Database.SetInitializer<MetabolApiDbContext>(null);
         }
 
-        public static ApplicationDbContext Create()
+        public static MetabolApiDbContext Create()
         {
-            return new ApplicationDbContext();
+            return new MetabolApiDbContext();
         }
     }
 }

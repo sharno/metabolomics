@@ -10,15 +10,14 @@ namespace Metabol.DbModels.Models
     public class IterationModels
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         [JsonIgnore]
-        public Guid IterationId { get; set; }
+        public int Id { get; set; }
 
         private static IterationModels _empty;
         [NotMapped]
         public static IterationModels Empty => _empty ?? (_empty = new IterationModels(-1));
 
-        public int Id { get; set; }
+        public int IterantionNumber { get; set; }
         public int Fba { get; set; }
         public double Time { get; set; }
 
@@ -75,7 +74,7 @@ namespace Metabol.DbModels.Models
 
         public IterationModels(int iteration)
         {
-            Id = iteration;
+            IterantionNumber = iteration;
             Constraints = new List<string>();
         }
     }
