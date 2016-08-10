@@ -231,16 +231,24 @@ namespace Metabol.DbModels
 
         public static AnalysisModels GetSingleAnalysis(string userId, string sessionId)
         {
-            var single = ApiDbContext.Analyses.Where(models => models.User.Id == userId)
-                .Single(a => a.SessionKey == sessionId);
-            return new AnalysisModels
+            try
             {
-                ConcentrationChanges = single.ConcentrationChanges,
-                DateTime = single.DateTime,
-                Iterations = single.Iterations,
-                Name = single.Name,
-                SessionKey = single.SessionKey
-            };
+                var single = ApiDbContext.Analyses.Where(models => models.User.Id == userId)
+                    .First(a => a.SessionKey == sessionId);
+
+                return new AnalysisModels
+                {
+                    ConcentrationChanges = single.ConcentrationChanges,
+                    DateTime = single.DateTime,
+                    Iterations = single.Iterations,
+                    Name = single.Name,
+                    SessionKey = single.SessionKey
+                };
+            }
+            catch (InvalidOperationException)
+            {
+                throw new KeyNotFoundException();
+            }
 
         }
     }
