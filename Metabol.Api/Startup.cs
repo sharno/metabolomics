@@ -15,7 +15,7 @@ namespace Metabol.Api
 
             ConfigureAuth(app);
 
-            app.UseWebApi(GlobalConfiguration.Configuration);
+            //app.UseWebApi(GlobalConfiguration.Configuration);
         }
     }
 }

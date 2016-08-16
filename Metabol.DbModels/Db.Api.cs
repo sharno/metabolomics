@@ -35,36 +35,28 @@ namespace Metabol.DbModels
         {
             return from r in Context.Reactions
                    where r.name.Contains(term)
-                   select new
-                   {
-                       r.name,
-                       id = r.sbmlId
-                   };
+                   select new { r.name, id = r.sbmlId };
         }
 
         public static IEnumerable<dynamic> GetMetabolites(string term)
         {
             return from r in Db.Context.Species
                    where r.name.Contains(term)
-                   select new
-                   {
-                       r.name,
-                       id = r.sbmlId
-                   };
+                   select new { r.name, id = r.sbmlId };
         }
 
-        public static IQueryable<string> GetReactionNames(string prefix)
+        public static IQueryable<dynamic> GetReactionNames(string prefix)
         {
             return (from r in Context.Reactions
                     where r.name.StartsWith(prefix)
-                    select r.name).Take(20);
+                    select new { r.name, id = r.sbmlId }).Take(20);
         }
 
-        public static IQueryable<string> GetMetaboliteNames(string prefix)
+        public static IQueryable<dynamic> GetMetaboliteNames(string prefix)
         {
             return (from r in Db.Context.Species
                     where r.name.StartsWith(prefix)
-                    select r.name).Take(20);
+                    select new { r.name, id = r.sbmlId }).Take(20);
         }
 
         public static dynamic GetMetaboliteById(string id)
@@ -78,13 +70,13 @@ namespace Metabol.DbModels
                     id = m.sbmlId,
                     m.name,
                     compartment = m.Compartment?.name,
-                    m.initialAmount,
-                    m.charge,
+                    initialAmount = m.initialAmount,
+                    charge = m.charge,
                     model = m.Compartment?.Model?.sbmlId,
                     species_type = m.SpeciesType?.name,
-                    m.Sbase?.annotation,
-                    m.Sbase?.sboTerm,
-                    m.Sbase?.notes,
+                    annotation = m.Sbase?.annotation,
+                    sboTerm = m.Sbase?.sboTerm,
+                    notes = m.Sbase?.notes,
                 };
 
                 return rval;
@@ -155,9 +147,9 @@ namespace Metabol.DbModels
                     m.name,
                     m.reversible,
                     model = m.Model.sbmlId,
-                    m.Sbase.annotation,
-                    m.Sbase.sboTerm,
-                    m.Sbase.notes,
+                    m.Sbase?.annotation,
+                    m.Sbase?.sboTerm,
+                    m.Sbase?.notes,
                 };
 
                 return rval;
@@ -172,22 +164,24 @@ namespace Metabol.DbModels
         {
             try
             {
-                var m = Db.Context.Reactions.Single(s => s.sbmlId == id);
-                dynamic rval = new
                 {
+                    var m = Context.Reactions.First(s => s.sbmlId == id);
+                    dynamic rval = new
+                    {
 
-                    metabolites = from rid in m.ReactionSpecies
-                                  where rid.roleId != Db.ReversibleId
-                                  select new
-                                  {
-                                      id = rid.Species.sbmlId,
-                                      rid.Species.name,
-                                      stoichiometry = rid.roleId == Db.ReactantId ? -rid.stoichiometry : rid.stoichiometry,
-                                      reactions = GetReactions(id, rid.Species.sbmlId)
-                                  }
-                };
+                        metabolites = from rid in m.ReactionSpecies
+                                      where rid.roleId != Db.ReversibleId
+                                      select new
+                                      {
+                                          id = rid.Species.sbmlId,
+                                          rid.Species.name,
+                                          stoichiometry = rid.roleId == Db.ReactantId ? -rid.stoichiometry : rid.stoichiometry,
+                                          reactions = GetReactions(id, rid.Species.sbmlId)
+                                      }
+                    };
 
-                return rval;
+                    return rval;
+                }
             }
             catch (Exception e)
             {
@@ -197,24 +191,17 @@ namespace Metabol.DbModels
 
         private static IQueryable<dynamic> GetReactions(string id, string sbmlId)
         {
-            return from rss in (from rs in Db.Context.ReactionSpecies
-                                where rs.Species.sbmlId == sbmlId
-                                select rs)
-                   where rss.Reaction.sbmlId != id && rss.roleId != Db.ReversibleId
-                   select new
-                   {
-                       id = rss.Reaction.sbmlId,
-                       stoichiometry = rss.roleId == Db.ReactantId ? -rss.stoichiometry : rss.stoichiometry,
-                       //metabolites = from rss1 in (from rs in Context.ReactionSpecies
-                       //                           where rs.Reaction.sbmlId == rss.Reaction.sbmlId
-                       //                            select rs)
-                       //              where rss1.Species.sbmlId != id && rss1.roleId != ReversibleId
-                       //              select new
-                       //              {
-                       //                  id = rss1.Species.sbmlId,
-                       //                  stoichiometry = rss1.roleId == ReactantId ? -rss1.stoichiometry : rss1.stoichiometry
-                       //              }//GetMetabolites2(id, rss.Reaction.sbmlId)
-                   };
+            {
+                return from rss in (from rs in Context.ReactionSpecies
+                                    where rs.Species.sbmlId == sbmlId
+                                    select rs)
+                       where rss.Reaction.sbmlId != id && rss.roleId != Db.ReversibleId// 
+                       select new
+                       {
+                           id = rss.Reaction.sbmlId,
+                           stoichiometry = rss.roleId == Db.ReactantId ? -rss.stoichiometry : rss.stoichiometry,
+                       };
+            }
         }
 
         public static IEnumerable<AnalysisModels> GetUserAnalysis(string userId)

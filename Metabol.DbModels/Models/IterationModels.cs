@@ -17,7 +17,7 @@ namespace Metabol.DbModels.Models
         [NotMapped]
         public static IterationModels Empty => _empty ?? (_empty = new IterationModels(-1));
 
-        public int IterantionNumber { get; set; }
+        public int IterationNumber { get; set; }
         public int Fba { get; set; }
         public double Time { get; set; }
 
@@ -74,7 +74,7 @@ namespace Metabol.DbModels.Models
 
         public IterationModels(int iteration)
         {
-            IterantionNumber = iteration;
+            IterationNumber = iteration;
             Constraints = new List<string>();
         }
     }

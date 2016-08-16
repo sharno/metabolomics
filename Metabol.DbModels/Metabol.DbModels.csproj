@@ -286,6 +286,10 @@
     <Compile Include="Migrations\MetabolApiDbContext\201608091719367_IterationNumber.Designer.cs">
       <DependentUpon>201608091719367_IterationNumber.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\MetabolApiDbContext\201608160818178_IterationNumberName.cs" />
+    <Compile Include="Migrations\MetabolApiDbContext\201608160818178_IterationNumberName.Designer.cs">
+      <DependentUpon>201608160818178_IterationNumberName.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\MetabolApiDbContext\Configuration.cs" />
     <Compile Include="Migrations\MetabolicNetworkContext\201608031548488_Remigrate.cs" />
     <Compile Include="Migrations\MetabolicNetworkContext\201608031548488_Remigrate.Designer.cs">
@@ -326,6 +330,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\MetabolApiDbContext\201608091719367_IterationNumber.resx">
       <DependentUpon>201608091719367_IterationNumber.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\MetabolApiDbContext\201608160818178_IterationNumberName.resx">
+      <DependentUpon>201608160818178_IterationNumberName.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\MetabolicNetworkContext\201608031548488_Remigrate.resx">
       <DependentUpon>201608031548488_Remigrate.cs</DependentUpon>

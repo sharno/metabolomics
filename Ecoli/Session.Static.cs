@@ -24,7 +24,7 @@ namespace Ecoli
 
         public static IterationModels CacheOrGetResult(string skey, IterationModels it)
         {
-            var key = $"{skey}-{it.IterantionNumber}";
+            var key = $"{skey}-{it.IterationNumber}";
             if (ResultCache.Contains(key))
                 return ResultCache.Get(key) as IterationModels;
 
