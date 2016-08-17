@@ -23,6 +23,16 @@ namespace Ecoli
         //TODO get rid of this
         public static List<string> ConstraintList = new List<string>();
 
+        public static List<Guid> ReactionsOfMetaboliteWithCycle(Guid metaboliteId, Guid cycleId)
+        {
+            var reactions = new List<Guid>();
+            var cycle = Db.Context.Cycles.Find(cycleId);
+            var temp = Db.Context.ReactionSpecies.Where(rs => rs.speciesId == metaboliteId).ToList().Where(rs => cycle.CycleReactions.Any(cr => cr.otherId == rs.reactionId)).Select(rs => rs.reactionId);
+            reactions.AddRange(temp);
+            cycle.CycleReactions.Where(cr => !cr.isReaction).ToList().ForEach(cr => reactions.AddRange(ReactionsOfMetaboliteWithCycle(metaboliteId, cr.otherId)));
+            return reactions.Distinct().ToList();
+        }
+
         public static bool Solve(HyperGraph sm)
         {
             // temp name cycles
@@ -62,7 +72,7 @@ namespace Ecoli
                     cycle.Products.Union(cycle.Reactants).Except(cycle.Products.Intersect(cycle.Reactants)).ToList()
                         .ForEach(
                             m =>
-                                cycleMetabolitesVars[edge.Id][m.Key] =
+                                cycleMetabolitesVars[cycle.Id][m.Key] =
                                     model.NumVar(cycleIrreversibleLowerBound, cycleUpperBound, NumVarType.Float,
                                         edge.Label + /*"_irrev"*/ "_" + m.Value.Label));
 
@@ -70,93 +80,113 @@ namespace Ecoli
                     cycle.Reactants.Intersect(cycle.Products).ToList()
                         .ForEach(
                             m =>
-                                cycleMetabolitesVars[edge.Id][m.Key] =
+                                cycleMetabolitesVars[cycle.Id][m.Key] =
                                     model.NumVar(cycleReversibleLowerBound, cycleUpperBound, NumVarType.Float,
                                         edge.Label + /*"_rev*/ "_" + m.Value.Label));
 
 
 
-                    var ratios =
-                        Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == cycle.Id).ToList();
-                    ratios.ForEach(ra =>
+
+                    // add ratios alternatives
+                    foreach (var cc in Db.Context.CycleConnections.Where(cc => cc.cycleId == cycle.Id))
                     {
-                        //if (ra.ratio < 1 || ra.ratio > 100) return;
+                        var expr = model.LinearNumExpr();
+                        var reactions = ReactionsOfMetaboliteWithCycle(cc.metaboliteId, cycle.Id);
+                        foreach (var rs in Db.Context.ReactionSpecies.Where(rs => rs.speciesId == cc.metaboliteId && reactions.Contains(rs.reactionId)))
+                        {
+                            if (! vars.Keys.Contains(rs.reactionId))
+                            {
+                                var bounds = Db.Context.ReactionBounds.Single(rb => rb.reactionId == rs.reactionId);
+                                vars[rs.reactionId] = model.NumVar(bounds.lowerBound, bounds.upperBound, NumVarType.Float, rs.Reaction.sbmlId);
+                            }
+                            expr.AddTerm(rs.stoichiometry, vars[rs.reactionId]);
+                        }
+                        expr.AddTerm(-1, cycleMetabolitesVars[cycle.Id][cc.metaboliteId]);
 
-                        var expr1 = model.LinearNumExpr();
-                        expr1.AddTerm(1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+                        Constraints.Add(model.AddEq(expr, 0.0, cc.Species.sbmlId));
+                    }
 
-                        //var expr2 = model.LinearNumExpr();
-                        //expr2.AddTerm(Math.Abs(ra.ratio), cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+                    //var ratios =
+                    //    Db.Context.cycleInterfaceMetabolitesRatios.Where(ci => ci.cycleId == cycle.Id).ToList();
+                    //ratios.ForEach(ra =>
+                    //{
+                    //    //if (ra.ratio < 1 || ra.ratio > 100) return;
+
+                    //    var expr1 = model.LinearNumExpr();
+                    //    expr1.AddTerm(1, cycleMetabolitesVars[edge.Id][ra.metabolite1]);
+
+                    //    //var expr2 = model.LinearNumExpr();
+                    //    //expr2.AddTerm(Math.Abs(ra.ratio), cycleMetabolitesVars[edge.Id][ra.metabolite1]);
 
 
-                        var expr2Low = model.LinearNumExpr();
-                        expr2Low.AddTerm(Math.Abs(ra.ratio) * 0.9, cycleMetabolitesVars[edge.Id][ra.metabolite2]);
+                    //    var expr2Low = model.LinearNumExpr();
+                    //    expr2Low.AddTerm(Math.Abs(ra.ratio) * 0.9, cycleMetabolitesVars[edge.Id][ra.metabolite2]);
 
-                        var expr2High = model.LinearNumExpr();
-                        expr2High.AddTerm(Math.Abs(ra.ratio) * 1.1, cycleMetabolitesVars[edge.Id][ra.metabolite2]);
+                    //    var expr2High = model.LinearNumExpr();
+                    //    expr2High.AddTerm(Math.Abs(ra.ratio) * 1.1, cycleMetabolitesVars[edge.Id][ra.metabolite2]);
 
-                        Console.WriteLine("ratio: " + ra.Species.sbmlId + " / " + ra.Species1.sbmlId + " = " + ra.ratio);
+                    //    Console.WriteLine("ratio: " + ra.Species.sbmlId + " / " + ra.Species1.sbmlId + " = " + ra.ratio);
 
 
-                        //var equal = model.Eq(model.Abs(expr1), model.Abs(expr2), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio");
+                    //    //var equal = model.Eq(model.Abs(expr1), model.Abs(expr2), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio");
 
-                        var or = model.Or();
+                    //    var or = model.Or();
 
-                        var low1 = model.Ge(model.Abs(expr1), model.Abs(expr2Low),
-                            $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low");
-                        var high1 = model.Le(model.Abs(expr1), model.Abs(expr2High),
-                            $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high");
-                        var withRatio1 = model.And();
-                        withRatio1.Add(low1);
-                        withRatio1.Add(high1);
-                        or.Add(withRatio1);
+                    //    var low1 = model.Ge(model.Abs(expr1), model.Abs(expr2Low),
+                    //        $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low");
+                    //    var high1 = model.Le(model.Abs(expr1), model.Abs(expr2High),
+                    //        $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high");
+                    //    var withRatio1 = model.And();
+                    //    withRatio1.Add(low1);
+                    //    withRatio1.Add(high1);
+                    //    or.Add(withRatio1);
 
-                        //var low2 = model.Le(model.Abs(expr1), model.Abs(expr2Low), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low");
-                        //var high2 = model.Ge(model.Abs(expr1), model.Abs(expr2High), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high");
-                        //var withRatio2 = model.And();
-                        //withRatio2.Add(low2);
-                        //withRatio2.Add(high2);
-                        //or.Add(withRatio2);
+                    //    //var low2 = model.Le(model.Abs(expr1), model.Abs(expr2Low), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low");
+                    //    //var high2 = model.Ge(model.Abs(expr1), model.Abs(expr2High), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high");
+                    //    //var withRatio2 = model.And();
+                    //    //withRatio2.Add(low2);
+                    //    //withRatio2.Add(high2);
+                    //    //or.Add(withRatio2);
 
-                        //var upperBound = model.BoolVar();
-                        //var lowerBound = model.BoolVar();
-                        //var withinBounds = model.BoolVar();
-                        //var leftZero = model.BoolVar();
-                        //var rightZero = model.BoolVar();
+                    //    //var upperBound = model.BoolVar();
+                    //    //var lowerBound = model.BoolVar();
+                    //    //var withinBounds = model.BoolVar();
+                    //    //var leftZero = model.BoolVar();
+                    //    //var rightZero = model.BoolVar();
 
-                        //// upperBound
-                        //model.Add(model.IfThen(model.Le(model.Abs(expr1), model.Abs(expr2High), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high"), model.Eq(upperBound, 1)));
-                        //model.Add(model.IfThen(model.Not(model.Le(model.Abs(expr1), model.Abs(expr2High), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high")), model.Eq(upperBound, 0)));
+                    //    //// upperBound
+                    //    //model.Add(model.IfThen(model.Le(model.Abs(expr1), model.Abs(expr2High), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high"), model.Eq(upperBound, 1)));
+                    //    //model.Add(model.IfThen(model.Not(model.Le(model.Abs(expr1), model.Abs(expr2High), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_high")), model.Eq(upperBound, 0)));
 
-                        //// lowerBound
-                        //model.Add(model.IfThen(model.Ge(model.Abs(expr1), model.Abs(expr2Low), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low"), model.Eq(lowerBound, 1)));
-                        //model.Add(model.IfThen(model.Not(model.Ge(model.Abs(expr1), model.Abs(expr2Low), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low")), model.Eq(lowerBound, 0)));
+                    //    //// lowerBound
+                    //    //model.Add(model.IfThen(model.Ge(model.Abs(expr1), model.Abs(expr2Low), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low"), model.Eq(lowerBound, 1)));
+                    //    //model.Add(model.IfThen(model.Not(model.Ge(model.Abs(expr1), model.Abs(expr2Low), $"{ra.Species.sbmlId}_{ra.Species1.sbmlId}_ratio_low")), model.Eq(lowerBound, 0)));
 
-                        //// withinBounds (and-ing operation)
-                        //model.Add(model.IfThen(model.Eq(model.Sum(upperBound, lowerBound), 2), model.Eq(withinBounds, 1)));
-                        //model.Add(model.IfThen(model.Not(model.Eq(model.Sum(upperBound, lowerBound), 2)), model.Eq(withinBounds, 1)));
+                    //    //// withinBounds (and-ing operation)
+                    //    //model.Add(model.IfThen(model.Eq(model.Sum(upperBound, lowerBound), 2), model.Eq(withinBounds, 1)));
+                    //    //model.Add(model.IfThen(model.Not(model.Eq(model.Sum(upperBound, lowerBound), 2)), model.Eq(withinBounds, 1)));
 
-                        //// leftZero
-                        //model.Add(model.IfThen(model.Eq(model.Abs(expr1), 0), model.Eq(leftZero, 1)));
-                        //model.Add(model.IfThen(model.Not(model.Eq(model.Abs(expr1), 0)), model.Eq(leftZero, 0)));
+                    //    //// leftZero
+                    //    //model.Add(model.IfThen(model.Eq(model.Abs(expr1), 0), model.Eq(leftZero, 1)));
+                    //    //model.Add(model.IfThen(model.Not(model.Eq(model.Abs(expr1), 0)), model.Eq(leftZero, 0)));
 
-                        //// rightZero
-                        //model.Add(model.IfThen(model.Eq(model.Abs(expr2High), 0), model.Eq(rightZero, 1)));
-                        //model.Add(model.IfThen(model.Not(model.Eq(model.Abs(expr2High), 0)), model.Eq(rightZero, 0)));
+                    //    //// rightZero
+                    //    //model.Add(model.IfThen(model.Eq(model.Abs(expr2High), 0), model.Eq(rightZero, 1)));
+                    //    //model.Add(model.IfThen(model.Not(model.Eq(model.Abs(expr2High), 0)), model.Eq(rightZero, 0)));
 
-                        //// or-ing operation
-                        //model.AddGe(model.Sum(withinBounds, leftZero, rightZero), 1);
+                    //    //// or-ing operation
+                    //    //model.AddGe(model.Sum(withinBounds, leftZero, rightZero), 1);
 
-                        var zeroLeft = model.Le(model.Abs(cycleMetabolitesVars[edge.Id][ra.metabolite1]), ZeroOutFlux);
-                        var zeroRight = model.Le(model.Abs(cycleMetabolitesVars[edge.Id][ra.metabolite2]), ZeroOutFlux);
+                    //    var zeroLeft = model.Le(model.Abs(cycleMetabolitesVars[edge.Id][ra.metabolite1]), ZeroOutFlux);
+                    //    var zeroRight = model.Le(model.Abs(cycleMetabolitesVars[edge.Id][ra.metabolite2]), ZeroOutFlux);
 
-                        or.Add(zeroLeft);
-                        or.Add(zeroRight);
+                    //    or.Add(zeroLeft);
+                    //    or.Add(zeroRight);
 
-                        //model.Add(or);
-                        model.Add(low1);
-                        model.Add(high1);
-                    });
+                    //    //model.Add(or);
+                    //    model.Add(low1);
+                    //    model.Add(high1);
+                    //});
 
                     // add atom numbers constraints to link metabolites of the cycle reaction
                     var carbonExpr = model.LinearNumExpr();
@@ -281,7 +311,7 @@ namespace Ecoli
                 }
             }
 
-            AddReactionsConstraits(sm, model, vars, cycleMetabolitesVars);
+            AddReactionsConstraits(sm, model, vars);
             AddMetabolitesStableStateConstraints(sm, model, vars, cycleMetabolitesVars);
 
             //var fva = new FVA();
@@ -299,8 +329,6 @@ namespace Ecoli
 
 
             model.ExportModel($"{Core.Dir}{sm.Step}model.lp");
-            //model = new Cplex();
-            //model.ImportModel($"{Core.Dir}{sm.Step}model.lp");
 
             var isfeas = model.Solve();
 
@@ -375,7 +403,6 @@ namespace Ecoli
 
             if (hyperGraph.Step == 0)
             {
-                //model.Add(model.Not(model.Eq(vars[hyperGraph.Edges.Keys.ToList()[0]], 0)));
                 var t = hyperGraph.Edges.Values.Single(e => e.Label == "_exr_succ_e_cons");
                 model.AddGe(vars[t.Id], 10);
             }
@@ -391,34 +418,6 @@ namespace Ecoli
                     fobj.AddTerm(1, vars[p.Id]);
                 }
             }
-
-            //foreach (var c in metabolite.Consumers.Except(metabolite.Producers))
-            //{
-            //    if (c is HyperGraph.Cycle)
-            //    {
-            //        fobj.AddTerm(-1, cycleMetabolitesVars[c.Id][metabolite.Id]);
-            //    }
-            //    else
-            //    {
-            //        fobj.AddTerm(-1, vars[c.Id]);
-            //    }
-            //}
-
-            // if the objective reaction is not in the graph and one of its parent cycles is
-            //if (! vars.ContainsKey(TempObjective))
-            //{
-            //    if (vars.ContainsKey(Objective))
-            //        TempObjective = Objective;
-            //    else
-            //    {
-            //        var parentCycleInGraph = Db.ParentCyclesOfReactionOrCycle(Objective).Intersect(vars.Keys).Single();
-            //        TempObjective = parentCycleInGraph;
-            //    }
-            //}
-            //fobj.AddTerm(1, vars[TempObjective]);
-
-            // make the objective non zero
-            //model.AddGe(vars[TempObjective], 1, $"{TempObjective}_nonzeroc");
 
             Console.WriteLine(fobj.ToString());
             model.Remove(model.GetObjective());
@@ -471,18 +470,10 @@ namespace Ecoli
             }
         }
 
-        public static void AddReactionsConstraits(HyperGraph sm, Cplex model, Dictionary<Guid, INumVar> vars, Dictionary<Guid, Dictionary<Guid, INumVar>> cycleMetabolitesVars)
+        public static void AddReactionsConstraits(HyperGraph sm, Cplex model, Dictionary<Guid, INumVar> vars)
         {
             foreach (var reaction in sm.Edges.Where(e => !(e.Value is HyperGraph.Cycle) && !e.Value.RecentlyAdded))
             {
-                // debugging
-                //if (reaction.Value.Flux == 0) continue;
-                //if (reaction.Value.Label == "EX_pi_e") continue;
-                //if (reaction.Value.Label == "_exr_h2o_c_cons") continue;
-                //if (reaction.Value.Label == "_exr_h_e_cons") continue;
-                //if (reaction.Value.Label == "EX_glc__D_e") continue;
-
-
                 if (!ReactionsConstraintsDictionary.ContainsKey(reaction.Key))
                 {
                     if (Math.Abs(reaction.Value.Flux) > double.Epsilon && Math.Abs(reaction.Value.Flux) < ZeroOutFlux)
@@ -490,8 +481,6 @@ namespace Ecoli
                         var ub = ZeroOutFlux;
                         var lb = - ZeroOutFlux;
                         ReactionsConstraintsDictionary[reaction.Key] = Tuple.Create(lb, ub);
-
-                        //reaction.Value.Flux = Math.Abs(reaction.Value.Flux) < ZeroOutFlux ? 0 : reaction.Value.Flux;
                     }
                     else
                     {
@@ -504,27 +493,10 @@ namespace Ecoli
                 Constraints.Add(model.AddGe(vars[reaction.Value.Id], ReactionsConstraintsDictionary[reaction.Key].Item1, $"{reaction.Value.Label}_lb"));
                 Constraints.Add(model.AddLe(vars[reaction.Value.Id], ReactionsConstraintsDictionary[reaction.Key].Item2, $"{reaction.Value.Label}_ub"));
             }
-
-            // adding cycles to metabolites constraints
-            //foreach (var cycle in sm.Cycles)
-            //{
-            //    foreach (var m in cycle.Value.Fluxes)
-            //    {
-            //        var ub = Math.Max(m.Value * (1 - Change), m.Value * (1 + Change));
-            //        var lb = Math.Min(m.Value * (1 - Change), m.Value * (1 + Change));
-            //        Constraints.Add(model.AddGe(cycleMetabolitesVars[cycle.Key][m.Key], lb, $"{cycle.Value.Label}_{sm.Nodes[m.Key].Label}lb"));
-            //        Constraints.Add(model.AddLe(cycleMetabolitesVars[cycle.Key][m.Key], ub, $"{cycle.Value.Label}_{sm.Nodes[m.Key].Label}_ub"));
-            //    }
-            //}
+            
 
             foreach (var constraint in sm.ExchangeConstraints)
             {
-                // debugging
-                //if (sm.Edges[constraint.Item1[0]].Label == "EX_pi_e") continue;
-                //if (sm.Edges[constraint.Item1[0]].Label == "_exr_h2o_c_cons") continue;
-                //if (sm.Edges[constraint.Item1[0]].Label == "_exr_h_e_cons") continue;
-                //if (sm.Edges[constraint.Item1[0]].Label == "EX_glc__D_e") continue;
-
                 var expr = model.LinearNumExpr();
                 expr.AddTerms(constraint.Item1.Select(r => vars[r]).ToArray(), constraint.Item2.ToArray());
 
