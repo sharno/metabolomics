@@ -1,4 +1,5 @@
-﻿using Metabol.Api;
+﻿using System.Web.Http;
+using Metabol.Api;
 using Microsoft.Owin;
 using Owin;
 
@@ -10,7 +11,11 @@ namespace Metabol.Api
     {
         public void Configuration(IAppBuilder app)
         {
+            app.UseCors(Microsoft.Owin.Cors.CorsOptions.AllowAll);
+
             ConfigureAuth(app);
+
+            //app.UseWebApi(GlobalConfiguration.Configuration);
         }
     }
 }

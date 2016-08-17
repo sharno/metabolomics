@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Metabol.DbModels.DB;
-using Newtonsoft.Json;
 
 namespace Metabol.DbModels
 {
@@ -208,7 +207,7 @@ namespace Metabol.DbModels
                     id = idGen,
                     name = node.Value.Label,
                     type = "r",
-                    V = node.Value.Flux
+                    v = node.Value.Flux
                 };
                 idMap[node.Key] = idGen;
                 idGen++;
@@ -229,14 +228,14 @@ namespace Metabol.DbModels
             {
                 foreach (var node in link.Value.Reactants.Values)
                 {
-                    object n = new { source = idMap[node.Id], target = idMap[link.Value.Id], role = "s" };
+                    object n = new { source = idMap[node.Id], target = idMap[link.Value.Id], role = "s", stoichiometry = node.Weights.ContainsKey(link.Key) ? node.Weights[link.Key] : 0 };
                     //yield return n;
                     result.Add(n);
                 }
 
                 foreach (var node in link.Value.Products.Values)
                 {
-                    object n = new { source = idMap[link.Value.Id], target = idMap[node.Id], role = "p" };
+                    object n = new { source = idMap[link.Value.Id], target = idMap[node.Id], role = "p", stoichiometry = node.Weights.ContainsKey(link.Key) ? node.Weights[link.Key] : 0 };
                     //yield return n;
                     result.Add(n);
                 }
@@ -338,10 +337,8 @@ namespace Metabol.DbModels
 
         public abstract class Entity : IComparable<Entity>
         {
-            [JsonProperty("id")]
             public Guid Id;
-
-            [JsonProperty("label")]
+            
             public string Label;
 
             public bool RecentlyAdded = true;
@@ -402,31 +399,22 @@ namespace Metabol.DbModels
         public class Edge : Entity
         {
             #region Properties
-            [JsonProperty("isPseudo")]
             public bool IsPseudo { get; set; }
-
-            [JsonProperty("value")]
+            
             public double Flux { get; set; }
-
-            [JsonProperty("preValue")]
+            
             public double PreFlux { get; set; }
-
-            [JsonProperty("level")]
+            
             public int Level { get; set; }
-
-            [JsonProperty("isReversible")]
+            
             public bool IsReversible { get; set; }
-
-            [JsonProperty("lowerBound")]
+            
             public double LowerBound;
-
-            [JsonProperty("upperBound")]
+            
             public double UpperBound;
-
-            [JsonProperty("inputNodes")]
+            
             public Dictionary<Guid, Node> Reactants = new Dictionary<Guid, Node>();
-
-            [JsonProperty("outputNodes")]
+            
             public Dictionary<Guid, Node> Products = new Dictionary<Guid, Node>();
 
             public override Dictionary<Guid, Entity> Next
@@ -528,14 +516,11 @@ namespace Metabol.DbModels
         {
             #region Properties
             public Guid RealId;
-
-            [JsonProperty("isCommon")]
+            
             public bool IsCommon;
-
-            [JsonProperty("consumerEdge")]
+            
             public HashSet<Edge> Consumers = new HashSet<Edge>();
-
-            [JsonProperty("producerEdge")]
+            
             public HashSet<Edge> Producers = new HashSet<Edge>();
 
             public override Dictionary<Guid, Entity> Next
@@ -547,20 +532,16 @@ namespace Metabol.DbModels
             {
                 get { return Producers.ToDictionary(e => e.Id, e => (Entity)e); }
             }
-
-            [JsonProperty("level")]
+            
             public int Level { get; set; }
-
-            [JsonProperty("reactionCount")]
+            
             public readonly ReactionCountClass ReactionCount = new ReactionCountClass();
 
             public HashSet<Guid> RealConsumers;
             public HashSet<Guid> RealProducers;
-
-            [JsonProperty("isExtended")]
+            
             public bool IsExtended { get; set; }
-
-            [JsonIgnore]
+            
             public Species ToSpecies
             {
                 get
@@ -568,11 +549,9 @@ namespace Metabol.DbModels
                     return Db.Context.Species.Find(Id);
                 }
             }
-
-            [JsonIgnore]
+            
             public bool IsLonely => ReactionCount.Consumers == 0 || ReactionCount.Producers == 0;
-
-            [JsonProperty("isBorder")]
+            
             public bool IsBorder => IsConsumedBorder || IsProducedBorder;
 
             public Dictionary<Guid, HashSet<Guid>> SharedReactionsWithCyclesCache = new Dictionary<Guid, HashSet<Guid>>();
@@ -594,8 +573,7 @@ namespace Metabol.DbModels
                 SharedReactionsWithCyclesCache[cycle.id] = shared;
                 return SharedReactionsWithCyclesCache[cycle.id];
             }
-
-            [JsonProperty("isConsumedBorder")]
+            
             public bool IsConsumedBorder
             {
                 get
@@ -630,8 +608,7 @@ namespace Metabol.DbModels
 
 
 
-
-            [JsonProperty("isProducedBorder")]
+                
             public bool IsProducedBorder
             {
                 get
@@ -662,8 +639,7 @@ namespace Metabol.DbModels
             //    SharedProducersWithCyclesCache[cycle.id] = countOfShared;
             //    return SharedProducersWithCyclesCache[cycle.id];
             //}
-
-            [JsonIgnore]
+            
             public bool IsTempBorder
             {
                 get
@@ -672,8 +648,7 @@ namespace Metabol.DbModels
                         || (this.Consumers.Any(s => s.IsPseudo) && IsConsumedBorder));
                 }
             }
-
-            [JsonIgnore]
+            
             public int TotalReaction
             {
                 get
@@ -681,14 +656,11 @@ namespace Metabol.DbModels
                     return ReactionCount.Consumers + ReactionCount.Producers;
                 }
             }
-
-            [JsonProperty("weights")]
+            
             public Dictionary<Guid, double> Weights = new Dictionary<Guid, double>();
-
-            [JsonProperty("removedConsumerEx")]
+            
             public Edge RemovedConsumerExchange { get; set; }
-
-            [JsonProperty("removedProducerEx")]
+            
             public Edge RemovedProducerExchange { get; set; }
 
             #endregion

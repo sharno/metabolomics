@@ -11,7 +11,7 @@ namespace Metabol.DbModels
     {
         internal static readonly MetabolicNetworkContext Context1 = new MetabolicNetworkContext();
         public static readonly EcoliCoreModel Context = new EcoliCoreModel();
-        public static readonly ApplicationDbContext ApiDbContext = new ApplicationDbContext();
+        public static readonly MetabolApiDbContext ApiDbContext = new MetabolApiDbContext();
 
         public static readonly Dictionary<Guid, HyperGraph.Node.ReactionCountClass> AllReactionCache = new Dictionary<Guid, HyperGraph.Node.ReactionCountClass>();
         private static readonly Dictionary<Guid, dynamic> AllStoichiometryCache2 = new Dictionary<Guid, dynamic>();

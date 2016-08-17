@@ -39,17 +39,28 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="EFCache, Version=1.0.0.0, Culture=neutral, PublicKeyToken=46c4868af4307d2c, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.Cache.1.0.0\lib\net45\EFCache.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="ILOG.Concert">
-      <HintPath>..\Reference Assemblies\ILOG.Concert.dll</HintPath>
+      <HintPath>..\Reference Assemblies\Cplex\x64\ILOG.Concert.dll</HintPath>
     </Reference>
     <Reference Include="ILOG.CPLEX">
-      <HintPath>..\Reference Assemblies\ILOG.CPLEX.dll</HintPath>
+      <HintPath>..\Reference Assemblies\Cplex\x64\ILOG.CPLEX.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.AspNet.Identity.Core">
       <HintPath>..\packages\Microsoft.AspNet.Identity.Core.2.2.1\lib\net45\Microsoft.AspNet.Identity.Core.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.AspNet.Identity.EntityFramework">
       <HintPath>..\packages\Microsoft.AspNet.Identity.EntityFramework.2.2.1\lib\net45\Microsoft.AspNet.Identity.EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
@@ -267,43 +278,24 @@
     <Compile Include="HtmlToText.cs" />
     <Compile Include="HyperGraph.cs" />
     <Compile Include="HyperGraphOld.cs" />
-    <Compile Include="Migrations\201606172024015_Frankenstein.cs" />
-    <Compile Include="Migrations\201606172024015_Frankenstein.Designer.cs">
-      <DependentUpon>201606172024015_Frankenstein.cs</DependentUpon>
+    <Compile Include="Migrations\MetabolApiDbContext\201608090021573_Init.cs" />
+    <Compile Include="Migrations\MetabolApiDbContext\201608090021573_Init.Designer.cs">
+      <DependentUpon>201608090021573_Init.cs</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\201606211043523_RevertBack.cs" />
-    <Compile Include="Migrations\201606211043523_RevertBack.Designer.cs">
-      <DependentUpon>201606211043523_RevertBack.cs</DependentUpon>
+    <Compile Include="Migrations\MetabolApiDbContext\201608091719367_IterationNumber.cs" />
+    <Compile Include="Migrations\MetabolApiDbContext\201608091719367_IterationNumber.Designer.cs">
+      <DependentUpon>201608091719367_IterationNumber.cs</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\201606211917010_DateTimeAdded.cs" />
-    <Compile Include="Migrations\201606211917010_DateTimeAdded.Designer.cs">
-      <DependentUpon>201606211917010_DateTimeAdded.cs</DependentUpon>
+    <Compile Include="Migrations\MetabolApiDbContext\201608160818178_IterationNumberName.cs" />
+    <Compile Include="Migrations\MetabolApiDbContext\201608160818178_IterationNumberName.Designer.cs">
+      <DependentUpon>201608160818178_IterationNumberName.cs</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\201606212148120_ConcentrationChangeAdded.cs" />
-    <Compile Include="Migrations\201606212148120_ConcentrationChangeAdded.Designer.cs">
-      <DependentUpon>201606212148120_ConcentrationChangeAdded.cs</DependentUpon>
+    <Compile Include="Migrations\MetabolApiDbContext\Configuration.cs" />
+    <Compile Include="Migrations\MetabolicNetworkContext\201608031548488_Remigrate.cs" />
+    <Compile Include="Migrations\MetabolicNetworkContext\201608031548488_Remigrate.Designer.cs">
+      <DependentUpon>201608031548488_Remigrate.cs</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\201606212258188_SessionKeyBecameMan.cs" />
-    <Compile Include="Migrations\201606212258188_SessionKeyBecameMan.Designer.cs">
-      <DependentUpon>201606212258188_SessionKeyBecameMan.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201606220029292_UnknownChange.cs" />
-    <Compile Include="Migrations\201606220029292_UnknownChange.Designer.cs">
-      <DependentUpon>201606220029292_UnknownChange.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201606220036293_BringBackIterationModel.cs" />
-    <Compile Include="Migrations\201606220036293_BringBackIterationModel.Designer.cs">
-      <DependentUpon>201606220036293_BringBackIterationModel.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201606242103038_IterationFluxesFixed.cs" />
-    <Compile Include="Migrations\201606242103038_IterationFluxesFixed.Designer.cs">
-      <DependentUpon>201606242103038_IterationFluxesFixed.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201606242119411_Bilmiyoruzk.cs" />
-    <Compile Include="Migrations\201606242119411_Bilmiyoruzk.Designer.cs">
-      <DependentUpon>201606242119411_Bilmiyoruzk.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\Configuration.cs" />
+    <Compile Include="Migrations\MetabolicNetworkContext\Configuration.cs" />
     <Compile Include="Models\ConcentrationChange.cs" />
     <Compile Include="Models\IterationModels.cs" />
     <Compile Include="Models\AnalysisModels.cs" />
@@ -331,33 +323,19 @@
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
-    <EmbeddedResource Include="Migrations\201606172024015_Frankenstein.resx">
-      <DependentUpon>201606172024015_Frankenstein.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\MetabolApiDbContext\201608090021573_Init.resx">
+      <DependentUpon>201608090021573_Init.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606211043523_RevertBack.resx">
-      <DependentUpon>201606211043523_RevertBack.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\MetabolApiDbContext\201608091719367_IterationNumber.resx">
+      <DependentUpon>201608091719367_IterationNumber.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606211917010_DateTimeAdded.resx">
-      <DependentUpon>201606211917010_DateTimeAdded.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\MetabolApiDbContext\201608160818178_IterationNumberName.resx">
+      <DependentUpon>201608160818178_IterationNumberName.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606212148120_ConcentrationChangeAdded.resx">
-      <DependentUpon>201606212148120_ConcentrationChangeAdded.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606212258188_SessionKeyBecameMan.resx">
-      <DependentUpon>201606212258188_SessionKeyBecameMan.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606220029292_UnknownChange.resx">
-      <DependentUpon>201606220029292_UnknownChange.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606220036293_BringBackIterationModel.resx">
-      <DependentUpon>201606220036293_BringBackIterationModel.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606242103038_IterationFluxesFixed.resx">
-      <DependentUpon>201606242103038_IterationFluxesFixed.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201606242119411_Bilmiyoruzk.resx">
-      <DependentUpon>201606242119411_Bilmiyoruzk.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\MetabolicNetworkContext\201608031548488_Remigrate.resx">
+      <DependentUpon>201608031548488_Remigrate.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

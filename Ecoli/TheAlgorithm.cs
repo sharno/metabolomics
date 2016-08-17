@@ -220,15 +220,15 @@ namespace Ecoli
                     if (!Fba3.Solve(Sm))
                     {
                         //Core.SaveAsDgs(Sm.Nodes.First().Value, Sm, Core.Dir);
-                        Console.ReadKey();
-                        Environment.Exit(0);
+                        //Console.ReadKey();
+                        //Environment.Exit(0);
                     }
                     //Core.SaveAsDgs(Sm.Nodes.First().Value, Sm, Core.Dir);
 
                     cycle = Sm.Cycles.FirstOrDefault();
                 }
 
-                Console.ReadKey();
+                //Console.ReadKey();
                 //Environment.Exit(0);
 
                 #endregion

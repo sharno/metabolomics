@@ -136,9 +136,10 @@ namespace Metabol.Api.Controllers
                 return new HttpResponseMessage(HttpStatusCode.BadRequest);
             }
 
-            var userId = User.Identity.GetUserId();
-            var user = Db.UserManager.FindById(userId);
-            var single = user.Analyses.SingleOrDefault(a => a.SessionKey == key);
+            //var userId = User.Identity.GetUserId();
+            //var user = Db.UserManager.FindById(userId);
+            //var single = user.Analyses.SingleOrDefault(a => a.SessionKey == key);
+            var single = Db.ApiDbContext.Analyses.SingleOrDefault(a => a.SessionKey == key);
 
             if (single == null)
             {
@@ -151,19 +152,24 @@ namespace Metabol.Api.Controllers
 
             Task.Run(() =>
             {
-                var it = Session.CacheOrGetWorker(key).Iteration;
-                for (var i = 0; i < it; i++)
+                var context = Db.ApiDbContext;
+                var single2 = context.Analyses.SingleOrDefault(a => a.SessionKey == key);
+
+                if (single2 == null) return;
+                //context.Entry(single).Collection(k => k.Iterations).Load();
+                var it = Session.CacheOrGetWorker(key).Iteration - 1;
+                var s = single2.Iterations.Count == 0 ? 0 : single2.Iterations.Max(models => models.IterationNumber);
+                for (var i = s; i < it; i++)
                 {
                     var iteration = Session.GetResult(key, i + 1);
-                    //var analysisModels = Db.ApiDbContext.Analyses.Single(
-                    //    models => models.SessionKey == key && models.User.Id == userId);
-                    //analysisModels?.Iterations.Add(iteration);
-                    single.Iterations.Add(iteration);
-                }
-                // Db.ApiDbContext.SaveChanges();
-                Db.UserManager.Update(user);
 
-            });
+                    single2.Iterations.Add(iteration);
+                }
+                context.SaveChanges();
+                //Db.UserManager.Update(user);
+
+            }
+            );
 
             return new HttpResponseMessage(HttpStatusCode.OK);
         }

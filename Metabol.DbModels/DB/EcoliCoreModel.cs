@@ -5,7 +5,7 @@ namespace Metabol.DbModels.DB
     public partial class EcoliCoreModel : DbContext
     {
         public EcoliCoreModel()
-            : base("name=EcoliCoreModel2")
+            : base("name=EcoliCoreDBContext")
         {
         }
 
