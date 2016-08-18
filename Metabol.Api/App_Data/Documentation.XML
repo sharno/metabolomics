@@ -606,6 +606,13 @@
             <param name="model"></param>
             <returns></returns>
         </member>
+        <member name="M:Metabol.Api.Controllers.AccountController.Update(Metabol.Api.Models.UpdateBindingModel)">
+            <summary>
+            
+            </summary>
+            <param name="model"></param>
+            <returns></returns>
+        </member>
         <member name="M:Metabol.Api.Controllers.AccountController.RegisterExternal(Metabol.Api.Models.RegisterExternalBindingModel)">
             <summary>
             

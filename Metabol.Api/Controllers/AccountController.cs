@@ -418,6 +418,38 @@ namespace Metabol.Api.Controllers
             return Ok();
         }
 
+        // POST api/Account/Update
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        [Route("Update")]
+        public async Task<IHttpActionResult> Update(UpdateBindingModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            ApplicationUser user = await UserManager.FindByIdAsync(User.Identity.GetUserId());
+
+            user.Name = model.Name;
+            user.Surname = model.Surname;
+            user.Affiliation = model.Affiliation;
+            user.Email = model.Email;
+            user.UserName = model.Email;
+
+            IdentityResult result = await UserManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+            {
+                return GetErrorResult(result);
+            }
+
+            return Ok();
+        }
+
         // POST api/Account/RegisterExternal
         /// <summary>
         /// 

@@ -58,6 +58,24 @@ namespace Metabol.Api.Models
 
     }
 
+    public class UpdateBindingModel
+    {
+        [Required]
+        [Display(Name = "Email")]
+        public string Email { get; set; }
+
+        [Required]
+        public string Affiliation { get; set; }
+
+        [Required]
+        public string Name { get; set; }
+
+        [Required]
+        public string Surname { get; set; }
+
+    }
+
+
     public class RegisterExternalBindingModel
     {
         [Required]
