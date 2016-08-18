@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ecoli.Util", "Ecoli.Util\Ecoli.Util.csproj", "{5E82B984-FE6D-40C2-865C-84205B7AC9B0}"
 EndProject
@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Metabol.Api", "Metabol.Api\
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Metabol.DbModels", "Metabol.DbModels\Metabol.DbModels.csproj", "{AAC07319-DE70-4BA1-B891-469B81C2AF38}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Subsystems", "Subsystems\Subsystems.csproj", "{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -195,6 +197,38 @@ Global
 		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Release|x86.ActiveCfg = Release|Any CPU
 		{AAC07319-DE70-4BA1-B891-469B81C2AF38}.Release|x86.Build.0 = Release|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.ConsoleDebug|.NET.ActiveCfg = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.ConsoleDebug|.NET.Build.0 = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.ConsoleDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.ConsoleDebug|Any CPU.Build.0 = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.ConsoleDebug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.ConsoleDebug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.ConsoleDebug|x86.ActiveCfg = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.ConsoleDebug|x86.Build.0 = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Debug|.NET.ActiveCfg = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Debug|.NET.Build.0 = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Debug|x86.Build.0 = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Quick Debug|.NET.ActiveCfg = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Quick Debug|.NET.Build.0 = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Quick Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Quick Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Quick Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Quick Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Quick Debug|x86.ActiveCfg = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Quick Debug|x86.Build.0 = Debug|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Release|.NET.ActiveCfg = Release|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Release|.NET.Build.0 = Release|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Release|x86.ActiveCfg = Release|Any CPU
+		{8AAD3A30-50CE-49B1-A2BD-F912B0CBADAC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -67,44 +67,122 @@ namespace Ecoli.Util
                 foreach (CycleConnection c in cycle.CycleConnections)
                 {
                     var first = Db.Context.Species.Find(c.metaboliteId);
-                    var firstNumberOfConnectionsInsideCycle = cycle.CycleReactions.Count(cr => first.ReactionSpecies.Any(rs => rs.reactionId == cr.otherId));
-                    firstNumberOfConnectionsInsideCycle += cycle.CycleReactions.Count(cr => first.CycleConnections.Any(cc => cc.cycleId == cr.otherId));
-                    if (firstNumberOfConnectionsInsideCycle != 1) continue;
+                    var firstStoicios = new Dictionary<Guid, double>();
+                    first.ReactionSpecies.Where(rs => cycle.CycleReactions.Any(cr => rs.reactionId == cr.otherId)).ToList().ForEach(rs => firstStoicios[rs.reactionId] = rs.stoichiometry);
+                    first.CycleConnections.Where(cc => cycle.CycleReactions.Any(cr => cc.cycleId == cr.otherId)).ToList().ForEach(cc => firstStoicios[cc.cycleId] = 0.0);
 
                     foreach (CycleConnection c2 in cycle.CycleConnections.Where(e => e.metaboliteId != c.metaboliteId))
                     {
+                        // if this is recorded before
+                        if (cache.Any(ra => ra.cycleId == cycle.id && ra.metabolite1 == c2.metaboliteId && ra.metabolite2 == c.metaboliteId)) continue;
+
                         var second = Db.Context.Species.Find(c2.metaboliteId);
-                        var secondNumberOfConnectionsInsideCycle = cycle.CycleReactions.Count(cr => second.ReactionSpecies.Any(rs => rs.reactionId == cr.otherId));
-                        secondNumberOfConnectionsInsideCycle += cycle.CycleReactions.Count(cr => second.CycleConnections.Any(cc => cc.cycleId == cr.otherId));
-                        if (secondNumberOfConnectionsInsideCycle != 1) continue;
+                        var secondStoicios = new Dictionary<Guid, double>();
+                        second.ReactionSpecies.Where(rs => cycle.CycleReactions.Any(cr => rs.reactionId == cr.otherId)).ToList().ForEach(rs => secondStoicios[rs.reactionId] = rs.stoichiometry);
+                        second.CycleConnections.Where(cc => cycle.CycleReactions.Any(cr => cc.cycleId == cr.otherId)).ToList().ForEach(cc => secondStoicios[cc.cycleId] = 0.0);
 
-                        var sharedReactions = first.ReactionSpecies.Where(rs => second.ReactionSpecies.Any(rs2 => rs2.reactionId == rs.reactionId) && cycle.CycleReactions.Any(cr => cr.otherId == rs.reactionId)).ToList();
-                        var nestedRatios = cache.Where(ra => nestedCycles.Contains(ra.cycleId) && ra.metabolite1 == first.id && ra.metabolite2 == second.id).ToList();
+                        if (firstStoicios.Count == secondStoicios.Count && firstStoicios.Keys.All(secondStoicios.Keys.Contains))
+                        {
+                            var record = true;
 
-                        if (sharedReactions.Count == 1 && nestedRatios.Count == 0 && ! cache.Any(ra => ra.metabolite1 == second.id && ra.metabolite2 == first.id))
-                        {
-                            Console.WriteLine($"recording: {first.sbmlId}, {second.sbmlId}");
-                            var record = new cycleInterfaceMetabolitesRatio
+                            // first ratio
+                            var ratio = 0.0;
+                            if (firstStoicios.First().Value == 0.0)
                             {
-                                cycleId = cycle.id,
-                                metabolite1 = first.id,
-                                metabolite2 = second.id,
-                                ratio = Math.Abs(sharedReactions[0].stoichiometry / second.ReactionSpecies.Single(rs => rs.reactionId == sharedReactions[0].reactionId).stoichiometry)
-                            };
-                            cache.Add(record);
-                        }
-                        else if (sharedReactions.Count == 0 && nestedRatios.Count == 1 && !cache.Any(ra => ra.metabolite1 == second.id && ra.metabolite2 == first.id))
-                        {
-                            Console.WriteLine($"recording: {first.sbmlId}, {second.sbmlId}");
-                            var record = new cycleInterfaceMetabolitesRatio
+                                var innerRatio = cache.SingleOrDefault(ra => ra.cycleId == firstStoicios.First().Key && ra.metabolite1 == first.id && ra.metabolite2 == second.id);
+                                if (innerRatio == null)
+                                {
+                                    record = false;
+                                    continue;
+                                }
+                                else
+                                {
+                                    ratio = innerRatio.ratio;
+                                }
+                            }
+                            else
                             {
-                                cycleId = cycle.id,
-                                metabolite1 = first.id,
-                                metabolite2 = second.id,
-                                ratio = nestedRatios[0].ratio
-                            };
-                            cache.Add(record);
+                                ratio = Math.Abs(firstStoicios.First().Value / secondStoicios[firstStoicios.First().Key]);
+                            }
+
+                            // make sure ratio is consistent
+                            foreach (var r in firstStoicios.Keys)
+                            {
+                                if (firstStoicios[r] == 0)
+                                {
+                                    var innerRatio = cache.SingleOrDefault(ra => ra.cycleId == r && ra.metabolite1 == first.id && ra.metabolite2 == second.id);
+                                    if (innerRatio == null || innerRatio.ratio != ratio)
+                                    {
+                                        record = false;
+                                        continue;
+                                    }
+                                }
+                                else
+                                {
+                                    if (Math.Abs(firstStoicios[r] / secondStoicios[r]) != ratio)
+                                    {
+                                        record = false;
+                                        continue;
+                                    }
+                                }
+                            }
+
+                            // record it if all is consistent
+                            if (record)
+                            {
+                                Console.WriteLine($"recording: {first.sbmlId}, {second.sbmlId}");
+                                var recordedRatio = new cycleInterfaceMetabolitesRatio
+                                {
+                                    cycleId = cycle.id,
+                                    metabolite1 = first.id,
+                                    metabolite2 = second.id,
+                                    ratio = Math.Abs(ratio)
+                                };
+                                cache.Add(recordedRatio);
+                            }
                         }
+
+                        //if (firstStoicios.Count != secondStoicios.Count || firstStoicios.Keys.Any()) continue;
+
+                        //var firstSharedReactions = first.ReactionSpecies.Where(rs => second.ReactionSpecies.Any(rs2 => rs2.reactionId == rs.reactionId) && cycle.CycleReactions.Any(cr => cr.otherId == rs.reactionId)).ToList();
+                        //var nestedRatios = cache.Where(ra => nestedCycles.Contains(ra.cycleId) && ra.metabolite1 == first.id && ra.metabolite2 == second.id).ToList();
+                        
+                        //if (firstNumberOfConnectionsInsideCycle.Count() > 1 && secondNumberOfConnectionsInsideCycle.Count() > 1)
+                        //{
+                        //    var secondSharedReactions = second.ReactionSpecies.Where(rs => firstSharedReactions.Any(frs => frs.reactionId == rs.reactionId)).ToList();
+                        //    var ratio = 0.0;
+                        //    firstSharedReactions.ForEach(fsr => {
+                        //        var ssr = secondSharedReactions.Single(rs => fsr.reactionId == rs.reactionId);
+                        //        var newRatio = fsr.stoichiometry / ssr.stoichiometry;
+                        //        if ()
+                        //    });
+                        //    continue;
+                        //}
+
+                        //if (firstSharedReactions.Count == 1 && nestedRatios.Count == 0 && ! cache.Any(ra => ra.metabolite1 == second.id && ra.metabolite2 == first.id))
+                        //{
+                        //    Console.WriteLine($"recording: {first.sbmlId}, {second.sbmlId}");
+                        //    var record = new cycleInterfaceMetabolitesRatio
+                        //    {
+                        //        cycleId = cycle.id,
+                        //        metabolite1 = first.id,
+                        //        metabolite2 = second.id,
+                        //        ratio = Math.Abs(firstSharedReactions[0].stoichiometry / second.ReactionSpecies.Single(rs => rs.reactionId == firstSharedReactions[0].reactionId).stoichiometry)
+                        //    };
+                        //    cache.Add(record);
+                        //}
+                        //else if (firstSharedReactions.Count == 0 && nestedRatios.Count == 1 && !cache.Any(ra => ra.metabolite1 == second.id && ra.metabolite2 == first.id))
+                        //{
+                        //    Console.WriteLine($"recording: {first.sbmlId}, {second.sbmlId}");
+                        //    var record = new cycleInterfaceMetabolitesRatio
+                        //    {
+                        //        cycleId = cycle.id,
+                        //        metabolite1 = first.id,
+                        //        metabolite2 = second.id,
+                        //        ratio = nestedRatios[0].ratio
+                        //    };
+                        //    cache.Add(record);
+                        //}
                     }
                 }
             }

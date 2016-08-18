@@ -101,7 +101,7 @@ namespace Metabol.DbModels
                                 {
                                     id = rid.Reaction.sbmlId,
                                     rid.Reaction.name,
-                                    stoichiometry = rid.roleId == Db.ReactantId ? -rid.stoichiometry : rid.stoichiometry,
+                                    stoichiometry = rid.stoichiometry,
                                     metabolites = GetMetabolites(id, rid.Reaction.sbmlId)
                                 }
                 };
@@ -123,7 +123,7 @@ namespace Metabol.DbModels
                    select new
                    {
                        id = rss.Species.sbmlId,
-                       stoichiometry = rss.roleId == Db.ReactantId ? -rss.stoichiometry : rss.stoichiometry,
+                       stoichiometry = rss.stoichiometry,
                        reactions = from rss1 in (from rs in Db.Context.ReactionSpecies
                                                  where rs.Species.sbmlId == rss.Species.sbmlId
                                                  select rs)
@@ -131,7 +131,7 @@ namespace Metabol.DbModels
                                    select new
                                    {
                                        id = rss1.Reaction.sbmlId,
-                                       stoichiometry = rss1.roleId == Db.ReactantId ? -rss1.stoichiometry : rss1.stoichiometry
+                                       stoichiometry = rss1.stoichiometry
                                    }//GetReactions2(rid, rss.Species.sbmlId)
                    };
         }
@@ -175,7 +175,7 @@ namespace Metabol.DbModels
                                       {
                                           id = rid.Species.sbmlId,
                                           rid.Species.name,
-                                          stoichiometry = rid.roleId == Db.ReactantId ? -rid.stoichiometry : rid.stoichiometry,
+                                          stoichiometry = rid.stoichiometry,
                                           reactions = GetReactions(id, rid.Species.sbmlId)
                                       }
                     };
@@ -199,7 +199,7 @@ namespace Metabol.DbModels
                        select new
                        {
                            id = rss.Reaction.sbmlId,
-                           stoichiometry = rss.roleId == Db.ReactantId ? -rss.stoichiometry : rss.stoichiometry,
+                           stoichiometry = rss.stoichiometry,
                        };
             }
         }
