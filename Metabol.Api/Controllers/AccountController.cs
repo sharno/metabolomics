@@ -78,13 +78,15 @@ namespace Metabol.Api.Controllers
         public async Task<dynamic> GetUserInfo()
         {
             ExternalLoginData externalLogin = ExternalLoginData.FromIdentity(User.Identity as ClaimsIdentity);
-            IdentityUser user = await UserManager.FindByIdAsync(User.Identity.GetUserId());
+            ApplicationUser user = await UserManager.FindByIdAsync(User.Identity.GetUserId());
             return new 
             {
                 Email = User.Identity.GetUserName(),
                 HasRegistered = externalLogin == null,
                 LoginProvider = externalLogin != null ? externalLogin.LoginProvider : null,
-                User = user
+                user.Name,
+                user.Surname,
+                user.Affiliation
             };
         }
 
@@ -407,6 +409,38 @@ namespace Metabol.Api.Controllers
             };
 
             IdentityResult result = await UserManager.CreateAsync(user, model.Password);
+
+            if (!result.Succeeded)
+            {
+                return GetErrorResult(result);
+            }
+
+            return Ok();
+        }
+
+        // POST api/Account/Update
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        [Route("Update")]
+        public async Task<IHttpActionResult> Update(UpdateBindingModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            ApplicationUser user = await UserManager.FindByIdAsync(User.Identity.GetUserId());
+
+            user.Name = model.Name;
+            user.Surname = model.Surname;
+            user.Affiliation = model.Affiliation;
+            user.Email = model.Email;
+            user.UserName = model.Email;
+
+            IdentityResult result = await UserManager.UpdateAsync(user);
 
             if (!result.Succeeded)
             {
