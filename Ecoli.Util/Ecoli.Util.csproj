@@ -33,6 +33,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="EFCache, Version=1.0.0.0, Culture=neutral, PublicKeyToken=46c4868af4307d2c, processorArchitecture=MSIL">
       <HintPath>..\packages\EntityFramework.Cache.1.0.0\lib\net45\EFCache.dll</HintPath>
@@ -45,14 +48,6 @@
     <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
       <Private>True</Private>
-    </Reference>
-    <Reference Include="ILOG.Concert, Version=12.6.2.0, Culture=neutral, PublicKeyToken=7906592bc7cc7340, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Reference Assemblies\ILOG.Concert.dll</HintPath>
-    </Reference>
-    <Reference Include="ILOG.CPLEX, Version=12.6.2.0, Culture=neutral, PublicKeyToken=7906592bc7cc7340, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Reference Assemblies\ILOG.CPLEX.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -73,122 +68,24 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration.cs" />
-    <Compile Include="Core.cs" />
-    <Compile Include="Db.cs" />
-    <Compile Include="DB\AnnotationQualifier.cs" />
-    <Compile Include="DB\attribute_names.cs" />
-    <Compile Include="DB\attribute_values.cs" />
-    <Compile Include="DB\Author.cs" />
-    <Compile Include="DB\basic_molecules.cs" />
-    <Compile Include="DB\BlockedReaction.cs" />
-    <Compile Include="DB\catalyze.cs" />
-    <Compile Include="DB\chromosome.cs" />
-    <Compile Include="DB\chromosomes_pathcase.cs" />
-    <Compile Include="DB\chromosome_bands.cs" />
-    <Compile Include="DB\common_molecules.cs" />
-    <Compile Include="DB\common_species.cs" />
-    <Compile Include="DB\Compartment.cs" />
-    <Compile Include="DB\CompartmentClass.cs" />
-    <Compile Include="DB\CompartmentType.cs" />
-    <Compile Include="DB\Constraint.cs" />
-    <Compile Include="DB\Cycle.cs" />
-    <Compile Include="DB\CycleConnection.cs" />
-    <Compile Include="DB\cycleInterfaceMetabolitesRatio.cs" />
-    <Compile Include="DB\CycleReaction.cs" />
-    <Compile Include="DB\C__MigrationHistory.cs" />
-    <Compile Include="DB\DataSource.cs" />
-    <Compile Include="DB\DesignedBy.cs" />
-    <Compile Include="DB\EcoliCoreModel.cs" />
-    <Compile Include="DB\ec_go.cs" />
-    <Compile Include="DB\ec_go_orig.cs" />
-    <Compile Include="DB\ec_numbers.cs" />
-    <Compile Include="DB\ec_number_name_lookups.cs" />
-    <Compile Include="DB\entity_graph_nodes.cs" />
-    <Compile Include="DB\entity_name_lookups.cs" />
-    <Compile Include="DB\Event.cs" />
-    <Compile Include="DB\EventAssignment.cs" />
-    <Compile Include="DB\EventDelay.cs" />
-    <Compile Include="DB\EventTrigger.cs" />
-    <Compile Include="DB\external_databases.cs" />
-    <Compile Include="DB\external_database_links.cs" />
-    <Compile Include="DB\external_database_urls.cs" />
-    <Compile Include="DB\Formula.cs" />
-    <Compile Include="DB\FunctionDefinition.cs" />
-    <Compile Include="DB\gene.cs" />
-    <Compile Include="DB\gene_encodings.cs" />
-    <Compile Include="DB\gene_products.cs" />
-    <Compile Include="DB\GONodeCode.cs" />
-    <Compile Include="DB\go_annotation_pathways.cs" />
-    <Compile Include="DB\go_pathway_annotation_counts.cs" />
-    <Compile Include="DB\go_pathway_group_annotation_counts.cs" />
-    <Compile Include="DB\go_terms.cs" />
-    <Compile Include="DB\go_terms_hierarchy.cs" />
-    <Compile Include="DB\InitialAssignment.cs" />
-    <Compile Include="DB\KineticLaw.cs" />
-    <Compile Include="DB\MapModelsPathway.cs" />
-    <Compile Include="DB\MapReactionECNumber.cs" />
-    <Compile Include="DB\MapReactionsProcessEntity.cs" />
-    <Compile Include="DB\MapSbaseGO.cs" />
-    <Compile Include="DB\MapSpeciesMolecularEntity.cs" />
-    <Compile Include="DB\MetaboliteReactionCount.cs" />
-    <Compile Include="DB\MetaboliteReactionStoichiometry.cs" />
-    <Compile Include="DB\Model.cs" />
-    <Compile Include="DB\ModelLayout.cs" />
-    <Compile Include="DB\ModelMetadata.cs" />
-    <Compile Include="DB\ModelOrganism.cs" />
-    <Compile Include="DB\molecular_entities.cs" />
-    <Compile Include="DB\molecular_entity_names.cs" />
-    <Compile Include="DB\molecular_entity_types.cs" />
-    <Compile Include="DB\name_types.cs" />
-    <Compile Include="DB\OLD_external_databases.cs" />
-    <Compile Include="DB\OLD_external_database_links.cs" />
-    <Compile Include="DB\organism.cs" />
-    <Compile Include="DB\organism_groups.cs" />
-    <Compile Include="DB\Parameter.cs" />
-    <Compile Include="DB\pathway.cs" />
-    <Compile Include="DB\pathway_groups.cs" />
-    <Compile Include="DB\pathway_links.cs" />
-    <Compile Include="DB\pathway_processes.cs" />
-    <Compile Include="DB\pathway_types.cs" />
-    <Compile Include="DB\process.cs" />
-    <Compile Include="DB\process_entities.cs" />
-    <Compile Include="DB\process_entity_roles.cs" />
-    <Compile Include="DB\process_graph_nodes.cs" />
-    <Compile Include="DB\protein.cs" />
-    <Compile Include="DB\Reaction.cs" />
-    <Compile Include="DB\ReactionBound.cs" />
-    <Compile Include="DB\ReactionBoundFix.cs" />
-    <Compile Include="DB\ReactionSpeciesRole.cs" />
-    <Compile Include="DB\ReactionSpecy.cs" />
-    <Compile Include="DB\rna.cs" />
-    <Compile Include="DB\rna_types.cs" />
-    <Compile Include="DB\Rule.cs" />
-    <Compile Include="DB\RuleType.cs" />
-    <Compile Include="DB\Sbase.cs" />
-    <Compile Include="DB\Species.cs" />
-    <Compile Include="DB\SpeciesType.cs" />
-    <Compile Include="DB\StoichiometryMath.cs" />
-    <Compile Include="DB\Unit.cs" />
-    <Compile Include="DB\UnitDefinition.cs" />
-    <Compile Include="DB\viewState.cs" />
-    <Compile Include="HyperGraph.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimpleCycle\DFS.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="model\ecoli_core.json" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="cplex1263.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <ProjectReference Include="..\Metabol.DbModels\Metabol.DbModels.csproj">
+      <Project>{aac07319-de70-4ba1-b891-469b81c2af38}</Project>
+      <Name>Metabol.DbModels</Name>
+    </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using Metabol.DbModels.DB;
-using Metabol.DbModels.DB2;
 using Metabol.DbModels.Models;
 
 namespace Metabol.DbModels
 {
     public partial class Db
     {
-        internal static readonly MetabolicNetworkContext Context1 = new MetabolicNetworkContext();
         public static readonly EcoliCoreModel Context = new EcoliCoreModel();
         public static readonly MetabolApiDbContext ApiDbContext = new MetabolApiDbContext();
 

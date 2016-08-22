@@ -2,17 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Xml;
-using Ecoli.Util.DB;
 using Ecoli.Util.SimpleCycle;
 using Newtonsoft.Json;
-
-using ILOG.Concert;
-using ILOG.CPLEX;
+using Metabol.DbModels;
+using Metabol.DbModels.DB;
 
 namespace Ecoli.Util
 {
@@ -22,27 +15,16 @@ namespace Ecoli.Util
         {
             Console.BufferHeight = Int16.MaxValue-1;
             //EraseAndRecordToDb();
-            //RecordFormulaeToDb();
             //ValidateReactionsAtomsBalance();
             //ValidateCyclesAtomsBalance();
             //CheckExchangeReactionsInCycles();
             //LimitReactionsFluxes();
             //RecordCyclesInterfaceMetabolitesRations();
-            RecordCyclesRationsFromStoichiometry();
-
-            // cycles with no ratios:
-            //419FB6A3-A478-4607-BCF4-32A30C1AFDA7
-            //1F958FD4-D2BB-46E1-B418-6DE0C731E50C
-            //09814608-806D-4B7F-A8CB-AEAEC590A541
-            //AAC30E50-570F-4927-A36D-ED534DD2DABC
-            //87F8DBCE-D972-4BD2-AE60-FD05A928707B
-
-            // 35: 419fb6a3-a478-4607-bcf4-32a30c1afda7
-            // 36: 09814608-806d-4b7f-a8cb-aeaec590a541
-
-            // 199: 01295cb3-4ada-4054-bafd-4be8696c3516
-            // 133: ab5765ed-d596-4d77-ad5f-0d6a5b3d4692
+            //RecordCyclesRationsFromStoichiometry();
             //CheckCycleRatios(Guid.Parse("01295cb3-4ada-4054-bafd-4be8696c3516"));
+
+            //RecordJsonToDb("C:\\Users\\sharno\\Dropbox\\Metabolomics\\Data\\e_coli_core.json");
+            //RecordFormulaeToDb();
         }
 
         private const double ZeroOutFlux = 0.01;
@@ -191,6 +173,7 @@ namespace Ecoli.Util
             Db.Context.SaveChanges();
         }
 
+        /*
         private static void CheckCycleRatios(Guid cycleId)
         {
             var count = 0;
@@ -643,6 +626,7 @@ namespace Ecoli.Util
 
             Console.ReadKey();
         }
+        */
 
         private static IEnumerable<Guid> GetAllReactionsOfCycle(Guid cycleId)
         {
@@ -685,6 +669,7 @@ namespace Ecoli.Util
             return sortedCycles;
         }
 
+        /*
         private static void RecordCyclesInterfaceMetabolitesRations()
         {
             Db.Context.cycleInterfaceMetabolitesRatios.RemoveRange(Db.Context.cycleInterfaceMetabolitesRatios.Where(e => true));
@@ -1149,6 +1134,7 @@ namespace Ecoli.Util
             Console.WriteLine("Recorded all");
             Console.ReadKey();
         }
+        */
 
         private static void LimitReactionsFluxes()
         {
@@ -1368,11 +1354,11 @@ namespace Ecoli.Util
             return g;
         }
 
-        private static void RecordJsonToDb()
+        private static void RecordJsonToDb(string path)
         {
             using (
                 StreamReader streamReader =
-                    new StreamReader("C:\\Users\\sharno\\Dropbox\\Metabolomics\\Data\\ecoli_core.json"))
+                    new StreamReader(path))
             {
                 string json = streamReader.ReadToEnd();
                 dynamic items = JsonConvert.DeserializeObject(json);
@@ -1380,6 +1366,7 @@ namespace Ecoli.Util
                 EcoliCoreModel model = Db.Context;
 
                 // remove cycles first
+                model.cycleInterfaceMetabolitesRatios.RemoveRange(model.cycleInterfaceMetabolitesRatios.Where(e => true));
                 model.CycleConnections.RemoveRange(model.CycleConnections.Where(e => true));
                 model.CycleReactions.RemoveRange(model.CycleReactions.Where(e => true));
                 model.Cycles.RemoveRange(model.Cycles.Where(e => true));
@@ -1387,8 +1374,10 @@ namespace Ecoli.Util
                 // remove everything else
                 model.ReactionSpeciesRoles.RemoveRange(model.ReactionSpeciesRoles.Where(e => true));
                 model.ReactionSpecies.RemoveRange(model.ReactionSpecies.Where(e => true));
+                model.ReactionBoundFixes.RemoveRange(model.ReactionBoundFixes.Where(e => true));
                 model.ReactionBounds.RemoveRange(model.ReactionBounds.Where(e => true));
                 model.Reactions.RemoveRange(model.Reactions.Where(e => true));
+                model.Formulae.RemoveRange(model.Formulae.Where(e => true));
                 model.Species.RemoveRange(model.Species.Where(e => true));
                 model.Compartments.RemoveRange(model.Compartments.Where(e => true));
                 model.Models.RemoveRange(model.Models.Where(e => true));
@@ -1399,7 +1388,7 @@ namespace Ecoli.Util
                 Model ecoliModel = new Model();
                 ecoliModel.id = Guid.NewGuid();
                 ecoliModel.sbmlId = items.id;
-                ecoliModel.sbmlFile = "ecoli_core.json";
+                ecoliModel.sbmlFile = "e_coli_core.json";
 
                 ecoliModel.Sbase = new Sbase();
                 ecoliModel.Sbase.id = Guid.NewGuid();
@@ -1460,6 +1449,7 @@ namespace Ecoli.Util
                     reaction.id = Guid.NewGuid();
                     reaction.sbmlId = r.id;
                     reaction.name = r.name;
+                    reaction.subsystem = r.subsystem;
 
                     reaction.modelId = ecoliModel.id;
                     reaction.Sbase = new Sbase();
@@ -1523,7 +1513,7 @@ namespace Ecoli.Util
 
             using (
                 StreamReader streamReader =
-                    new StreamReader("C:\\Users\\sharno\\Dropbox\\Metabolomics\\Data\\ecoli_core.json"))
+                    new StreamReader("C:\\Users\\sharno\\Dropbox\\Metabolomics\\Data\\e_coli_core.json"))
             {
                 string json = streamReader.ReadToEnd();
                 dynamic items = JsonConvert.DeserializeObject(json);
@@ -1592,14 +1582,6 @@ namespace Ecoli.Util
 
                 Console.WriteLine("recorded all atoms and formulae");
                 Console.ReadKey();
-                //atoms.ToList().ForEach(x =>
-                //{
-                //    Console.WriteLine(x.Key);
-                //    x.Value.ToList().ForEach(y =>
-                //    {
-                //        Console.WriteLine("    " + y.Key + ": " + y.Value);
-                //    });
-                //});
             }
         }
     }

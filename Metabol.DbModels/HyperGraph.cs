@@ -20,7 +20,8 @@ namespace Metabol.DbModels
     /**
      * HyperGraph implementation  
      */
-    public class HyperGraph
+    [Serializable]
+    public class HyperGraph 
     {
         public int Step { get; set; }
 
@@ -90,15 +91,13 @@ namespace Metabol.DbModels
             return Nodes.AddOrUpdate(id, new Node(id, label, Step), (guid, node) => node);
         }
 
-        private static int count = 0;
         public void AddSpeciesWithConnections(Species species)
         {
-            count++;
-            Console.WriteLine("adding species" + count);
+            Console.WriteLine($"adding species {species.sbmlId}");
             var metabolite = Nodes.GetOrAdd(species.id, new Node(species.id, species.sbmlId, Step));
 
-            var producers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId && rs.Reaction.sbmlId != "R_biomass_reaction");
-            var consumers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId && rs.Reaction.sbmlId != "R_biomass_reaction");
+            var producers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId);
+            var consumers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId);
 
             foreach (var producer in producers)
             {
@@ -109,6 +108,26 @@ namespace Metabol.DbModels
             {
                 var reaction = Edges.GetOrAdd(consumer.reactionId, new Edge(consumer.reactionId, consumer.Reaction.sbmlId, consumer.Reaction.reversible, false, Step));
                 AddReactant(reaction, metabolite, consumer.stoichiometry);
+            }
+        }
+
+        public void AddReactionWithConnections(Reaction dbReaction)
+        {
+            Console.WriteLine($"adding reaction {dbReaction.sbmlId}");
+            var reaction = Edges.GetOrAdd(dbReaction.id, new Edge(dbReaction.id, dbReaction.sbmlId, dbReaction.reversible, false, Step));
+
+            var products = dbReaction.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId);
+            var reactants = dbReaction.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId);
+
+            foreach (var product in products)
+            {
+                var metabolite = Nodes.GetOrAdd(product.speciesId, new Node(product.Species, Step));
+                AddProduct(reaction, metabolite, product.stoichiometry);
+            }
+            foreach (var reactant in reactants)
+            {
+                var metabolite = Nodes.GetOrAdd(reactant.speciesId, new Node(reactant.Species, Step));
+                AddReactant(reaction, metabolite, reactant.stoichiometry);
             }
         }
 
@@ -335,6 +354,7 @@ namespace Metabol.DbModels
             }
         }
 
+        [Serializable]
         public abstract class Entity : IComparable<Entity>
         {
             public Guid Id;
@@ -367,6 +387,7 @@ namespace Metabol.DbModels
             }
         }
 
+        [Serializable]
         public class Cycle : Edge
         {
             public Dictionary<Guid, Edge> InterfaceReactions = new Dictionary<Guid, Edge>();
@@ -396,6 +417,7 @@ namespace Metabol.DbModels
             }
         }
 
+        [Serializable]
         public class Edge : Entity
         {
             #region Properties
@@ -426,6 +448,8 @@ namespace Metabol.DbModels
             {
                 get { return Reactants.ToDictionary(e => e.Key, e => (Entity)e.Value); }
             }
+
+            public const double DgsThreshold = 0.001;
             #endregion
 
             public Edge()
@@ -469,23 +493,22 @@ namespace Metabol.DbModels
                 return new HashSet<Node>(this.Reactants.Values.Concat(this.Products.Values));
             }
 
-            public string ToDgs(EdgeType type)
+            public string ToDgs(EdgeType type, double maxFlux)
             {
                 var uiclass = "";
                 var hedgeclass = "";
                 switch (type)
                 {
                     case EdgeType.New:
-                        hedgeclass = Math.Abs(this.Flux) < double.Epsilon ? " ui.class:newhedge0 " : /*" ui.class:newhedge "*/ "ui.style:\"fill-color: #00ffff; \"";
+                        hedgeclass = Math.Abs(this.Flux) < DgsThreshold ? " ui.class:newhedge0 " : /*" ui.class:newhedge "*/ "ui.style:\"fill-color: #00ffff; \"";
                         break;
 
                     case EdgeType.None:
-                        hedgeclass = Math.Abs(this.Flux) < double.Epsilon ? " ui.class:hedge0 " : " ui.class:hedge ";
-
+                        hedgeclass = Math.Abs(this.Flux) < DgsThreshold ? " ui.class:hedge0 " : " ui.class:hedge ";
                         break;
                 }
 
-                uiclass = getStyle(this.Flux);
+                uiclass = getStyle(this.Flux, maxFlux);
 
                 var bu = new StringBuilder(
                     $"an \"{Id}\" {hedgeclass} label:\" {Label}({this.Flux:#.#####})({this.PreFlux:#.#####}) \"\r\n");
@@ -501,17 +524,25 @@ namespace Metabol.DbModels
                 return bu.ToString();
             }
 
-            private string getStyle(double flux)
+            private string getStyle(double flux, double maxFlux)
             {
-                if (Math.Abs(flux) < Double.Epsilon)
+                if (Math.Abs(flux) < DgsThreshold)
                     return " ui.class:new0 ";
-                var r = (int)Math.Floor(Math.Abs(221 - flux / 30.0));
-                var g = (int)Math.Floor(Math.Abs(221 - flux / 4.6));
-                return $" ui.style:\"size:3px; fill-color:rgb({r}, {g}, 0); arrow-size:8px, 6px;\" ";
+
+                var r = 0.0;
+                if (flux < 0)
+                    r = (int)Math.Ceiling(Math.Abs(255 * flux / maxFlux));
+
+                var g = 0.0;
+                if (flux > 0)
+                    g = (int)Math.Ceiling(Math.Abs(255 * flux / maxFlux));
+
+                return $" ui.style:\"size:1.5px; fill-color:rgb({r}, {g}, 0); arrow-size:8px, 6px;\" ";
             }
 
         }
 
+        [Serializable]
         public class Node : Entity
         {
             #region Properties
@@ -738,6 +769,7 @@ namespace Metabol.DbModels
                 return r;
             }
 
+            [Serializable]
             public class ReactionCountClass
             {
                 public ReactionCountClass()

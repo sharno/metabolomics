@@ -113,7 +113,7 @@ namespace Metabol.DbModels
                     if (edge.RecentlyAdded == true)
                         type = EdgeType.New;
 
-                    lines.Add(edge.ToDgs(type));
+                    lines.Add(edge.ToDgs(type, graph.Edges.Values.Max(e => Math.Abs(e.Flux))));
                 }
 
                 File.AppendAllLines(file, lines);

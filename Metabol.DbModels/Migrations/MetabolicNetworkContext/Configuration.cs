@@ -5,7 +5,7 @@ namespace Metabol.DbModels.Migrations.MetabolicNetworkContext
     using System.Data.Entity.Migrations;
     using System.Linq;
 
-    internal sealed class Configuration : DbMigrationsConfiguration<Metabol.DbModels.DB2.MetabolicNetworkContext>
+    internal sealed class Configuration : DbMigrationsConfiguration<Metabol.DbModels.DB.EcoliCoreModel>
     {
         public Configuration()
         {
@@ -13,7 +13,7 @@ namespace Metabol.DbModels.Migrations.MetabolicNetworkContext
             MigrationsDirectory = @"Migrations\MetabolicNetworkContext";
         }
 
-        protected override void Seed(Metabol.DbModels.DB2.MetabolicNetworkContext context)
+        protected override void Seed(Metabol.DbModels.DB.EcoliCoreModel context)
         {
             //  This method will be called after migrating to the latest version.
 

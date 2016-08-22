@@ -1,9 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace Metabol.DbModels.DB
 {
+    using System;
+    using System.Collections.Generic;
+    using System.ComponentModel.DataAnnotations;
+    using System.ComponentModel.DataAnnotations.Schema;
+    using System.Data.Entity.Spatial;
+
     [Table("Reaction")]
     public partial class Reaction
     {
@@ -29,6 +31,8 @@ namespace Metabol.DbModels.DB
         public bool fast { get; set; }
 
         public Guid? kineticLawId { get; set; }
+
+        public string subsystem { get; set; }
 
         public virtual KineticLaw KineticLaw { get; set; }
 

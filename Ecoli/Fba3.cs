@@ -291,7 +291,7 @@ namespace Ecoli
                     var fixedbounds = Db.Context.ReactionBoundFixes.SingleOrDefault(rbf => rbf.reactionId == edge.Id);
 
                     // ATPM bounds
-                    if (edge.Id == Guid.Parse("0AB996A3-C97A-4A4F-968E-12E9F2AD9180"))
+                    if (edge.Label == "ATPM")
                     {
                         vars[edge.Id] = model.NumVar(0, reactionBounds.upperBound, NumVarType.Float,
                             edge.Label);

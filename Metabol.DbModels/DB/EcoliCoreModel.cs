@@ -1,11 +1,14 @@
-using System.Data.Entity;
-
 namespace Metabol.DbModels.DB
 {
+    using System;
+    using System.Data.Entity;
+    using System.ComponentModel.DataAnnotations.Schema;
+    using System.Linq;
+
     public partial class EcoliCoreModel : DbContext
     {
         public EcoliCoreModel()
-            : base("name=EcoliCoreDBContext")
+            : base("name=EcoliCoreModel")
         {
         }
 
@@ -652,6 +655,10 @@ namespace Metabol.DbModels.DB
 
             modelBuilder.Entity<Reaction>()
                 .Property(e => e.name)
+                .IsUnicode(false);
+
+            modelBuilder.Entity<Reaction>()
+                .Property(e => e.subsystem)
                 .IsUnicode(false);
 
             modelBuilder.Entity<Reaction>()
