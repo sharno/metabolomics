@@ -24,7 +24,7 @@ namespace Ecoli
         // aa303049-5ebd-4c29-a24d-fcca13637297
 
         // start from a reaction instaed of metabolite
-        public static readonly Guid StartingMetabolite = Db.Context.Species.Single(s => s.sbmlId == "pyr_e").id;
+        public static readonly string StartingMetabolite = "pyr_e";
         //public static Guid NonZeroReaction = Guid.Empty;
 
         public readonly LinkedList<string> Pathway = new LinkedList<string>();
@@ -41,7 +41,7 @@ namespace Ecoli
             //  let m be the metabolite with the least total number of producer and consumer reactions in the respective metabolic network M
             //var m = Util.CachedS(Z.Keys.OrderBy(Util.GetReactionCountSum).First()); //e => Z[e] > 0
             //TODO use Z
-            var m = Db.Context.Species.Find(StartingMetabolite);
+            var m = Db.Context.Species.Single(s => s.sbmlId == StartingMetabolite);
 
             //2. Let S(m) be a subnetwork of the whole metabolic network M. 
             //Initialize S(m) so that iteration contains only m
@@ -56,7 +56,7 @@ namespace Ecoli
             //1. Among a user-provided set of observed metabolite changes Z,
             //  let m be the metabolite with the least total number of producer and consumer reactions in the respective metabolic network M
             //var m = Util.CachedS(Z.Keys.OrderBy(Util.GetReactionCountSum).First()); //e => Z[e] > 0
-            var m = Db.Context.Species.Find(StartingMetabolite);
+            var m = Db.Context.Species.Single(s => s.sbmlId == StartingMetabolite);
 
             //2. Let S(m) be a subnetwork of the whole metabolic network M. 
             //Initialize S(m) so that iteration contains only m
