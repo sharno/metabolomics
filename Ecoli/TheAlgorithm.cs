@@ -24,7 +24,7 @@ namespace Ecoli
         // aa303049-5ebd-4c29-a24d-fcca13637297
 
         // start from a reaction instaed of metabolite
-        public static readonly Guid StartingMetabolite = Guid.Parse("aa303049-5ebd-4c29-a24d-fcca13637297");
+        public static readonly Guid StartingMetabolite = Db.Context.Species.Single(s => s.sbmlId == "pyr_e").id;
         //public static Guid NonZeroReaction = Guid.Empty;
 
         public readonly LinkedList<string> Pathway = new LinkedList<string>();
