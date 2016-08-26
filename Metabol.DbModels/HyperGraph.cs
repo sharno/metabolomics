@@ -434,6 +434,8 @@ namespace Metabol.DbModels
             public double LowerBound;
             
             public double UpperBound;
+
+            public string Subsystem;
             
             public Dictionary<Guid, Node> Reactants = new Dictionary<Guid, Node>();
             
@@ -466,6 +468,7 @@ namespace Metabol.DbModels
                 Level = level;
 
                 if (isPseudo) return;
+                Subsystem = Db.Context.Reactions.Find(id).subsystem;
                 var rbf = Db.Context.ReactionBoundFixes.SingleOrDefault(e => e.reactionId == id);
                 if (rbf != null)
                 {

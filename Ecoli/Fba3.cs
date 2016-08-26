@@ -401,11 +401,11 @@ namespace Ecoli
         public static void AddObjectiveFunction(HyperGraph hyperGraph, Cplex model, Dictionary<Guid, INumVar> vars, Dictionary<Guid, Dictionary<Guid, INumVar>> cycleMetabolitesVars)
         {
             var fobj = model.LinearNumExpr();
-            var metabolite = hyperGraph.Nodes[TheAlgorithm.StartingMetabolite];
+            var metabolite = hyperGraph.Nodes.Values.Single(n => n.Label == TheAlgorithm.StartingMetabolite);
 
             if (hyperGraph.Step == 0)
             {
-                var t = hyperGraph.Edges.Values.Single(e => e.Label == "_exr_succ_e_cons");
+                var t = hyperGraph.Nodes.Values.Single(n => n.Label == TheAlgorithm.StartingMetabolite).Consumers.First();
                 model.AddGe(vars[t.Id], 10);
             }
 
