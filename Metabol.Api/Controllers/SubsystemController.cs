@@ -22,7 +22,7 @@ namespace Metabol.Api.Controllers
         }
 
         // GET: Subsystem detail
-        [Route("subsystems/{id}")]
+        [Route("subsystems/{*id}")]
         [HttpGet]
         public dynamic Get(string id)
         {
@@ -44,11 +44,16 @@ namespace Metabol.Api.Controllers
                             id = z.Species.sbmlId,
                             z.Species.name,
                             stoichiometry = z.stoichiometry
-                        }).ToList()
-                    }).ToList()
+                        }),
+                    }),
+                    connectedSubsystem = g.SelectMany(x => x.ReactionSpecies
+                                                            .Where(y => y.roleId != Db.ReversibleId)
+                                                            .SelectMany(z => z.Species.ReactionSpecies
+                                                                                .Where(t => t.Reaction.subsystem != id)
+                                                                                .Select(t => t.Reaction.subsystem)
+                                                            )).Distinct()
                 }).Single();
         }
-
 
     }
 }
