@@ -7,7 +7,6 @@ using System.Web.Http;
 
 namespace Metabol.Api.Controllers
 {
-    [Authorize]
     public class ValuesController : ApiController
     {
         // GET api/<controller>
