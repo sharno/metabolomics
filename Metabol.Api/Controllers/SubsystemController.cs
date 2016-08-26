@@ -1,6 +1,7 @@
 ﻿using Metabol.DbModels;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -26,33 +27,12 @@ namespace Metabol.Api.Controllers
         [HttpGet]
         public dynamic Get(string id)
         {
-            return DbModels.Db.Context.Reactions.Where(x => x.subsystem == id)
-                .GroupBy(x => x.subsystem)
-                .Select(g => new
-                {
-                    reactions = g.Select(x => new
-                    {
-                        id = x.sbmlId,
-                        x.name,
-                        x.reversible,
-                        model = x.Model.sbmlId,
-                        x.Sbase.annotation,
-                        x.Sbase.sboTerm,
-                        x.Sbase.notes,
-                        metabolites = x.ReactionSpecies.Where(y => y.roleId != Db.ReversibleId).Select(z => new
-                        {
-                            id = z.Species.sbmlId,
-                            z.Species.name,
-                            stoichiometry = z.stoichiometry
-                        }),
-                    }),
-                    connectedSubsystem = g.SelectMany(x => x.ReactionSpecies
-                                                            .Where(y => y.roleId != Db.ReversibleId)
-                                                            .SelectMany(z => z.Species.ReactionSpecies
-                                                                                .Where(t => t.Reaction.subsystem != id)
-                                                                                .Select(t => t.Reaction.subsystem)
-                                                            )).Distinct()
-                }).Single();
+            return new
+            {
+                reactions = DbModels.Db.GetSubsystemReactions(id),
+                connectedSubsystems = DbModels.Db.GetConnectedSubsystems(id)
+            };
+
         }
 
     }
