@@ -174,5 +174,16 @@ namespace Metabol.Api.Controllers
             return new HttpResponseMessage(HttpStatusCode.OK);
         }
 
+        // GET: Subsystem Analyze
+        [Route("subsystems-analyze")]
+        [HttpPost]
+        public dynamic Analyze(AnalysisViewModel z)
+        {
+            if (!ModelState.IsValid)
+                return Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState);
+
+            return DbModels.Db.GetSubsystemAnalyzeResult(z.ConcentrationChanges);
+        }
+
     }
 }

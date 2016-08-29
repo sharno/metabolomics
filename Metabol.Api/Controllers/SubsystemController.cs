@@ -1,4 +1,5 @@
 ﻿using Metabol.DbModels;
+using Metabol.DbModels.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -11,7 +12,7 @@ namespace Metabol.Api.Controllers
 {
     public class SubsystemController : ApiController
     {
-        // GET: Subsystem
+        // GET: Subsystems
         [Route("subsystems")]
         [HttpGet]
         public dynamic Get()
