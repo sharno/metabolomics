@@ -8,45 +8,43 @@ namespace Ecoli
 {
     public partial class Session
     {
-        private static readonly MemoryCache ResultCache = new MemoryCache("results");
-        private static readonly MemoryCache WorkerCache = new MemoryCache("workers");
+        private static readonly MemoryCache resultCache = new MemoryCache("results");
+        private static readonly MemoryCache workerCache = new MemoryCache("workers");
+        private static readonly CacheItemPolicy cachePolity = new CacheItemPolicy { SlidingExpiration = TimeSpan.FromHours(3) };
 
         public static TheAlgorithm CacheOrGetWorker(string key)
         {
-            if (WorkerCache.Contains(key))
-                return WorkerCache.Get(key) as TheAlgorithm;
+            if (workerCache.Contains(key))
+                return workerCache.Get(key) as TheAlgorithm;
 
-            var policy = new CacheItemPolicy { SlidingExpiration = TimeSpan.FromHours(3) };
             var worker = new TheAlgorithm();
-            WorkerCache.Add(key, worker, policy);
+            workerCache.Add(key, worker, cachePolity);
             return worker;
         }
 
         public static IterationModels CacheOrGetResult(string skey, IterationModels it)
         {
             var key = $"{skey}-{it.IterationNumber}";
-            if (ResultCache.Contains(key))
-                return ResultCache.Get(key) as IterationModels;
+            if (resultCache.Contains(key))
+                return resultCache.Get(key) as IterationModels;
 
-            var policy = new CacheItemPolicy { SlidingExpiration = TimeSpan.FromHours(3) };
-
-            ResultCache.Add(key, it, policy);
+            resultCache.Add(key, it, cachePolity);
             return it;
         }
 
         public static IterationModels GetResult(string skey, int it)
         {
             var key = $"{skey}-{it}";
-            if (ResultCache.Contains(key))
-                return ResultCache.Get(key) as IterationModels;
+            if (resultCache.Contains(key))
+                return resultCache.Get(key) as IterationModels;
             return IterationModels.Empty;
         }
 
         public static IEnumerable<IterationModels> Step(string key, int iteration)
         {
-            if (ResultCache.Contains($"{key}-{iteration}"))
+            if (resultCache.Contains($"{key}-{iteration}"))
             {
-                yield return ResultCache.Get($"{key}-{iteration}") as IterationModels;
+                yield return resultCache.Get($"{key}-{iteration}") as IterationModels;
                 yield break;
             }
 
@@ -59,33 +57,20 @@ namespace Ecoli
                 it = CacheOrGetWorker(key).Step();
                 CacheOrGetResult(key, it);
             }
-            //;
-            //foreach (var it in GetUser(userkey).Worker.Step())
             yield return CacheOrGetResult(key, it);
         }
 
         public static string StartNew()
         {
             var id = Guid.NewGuid().ToString();
-
-            //Task.Run(delegate
-            //{
             CacheOrGetWorker(id).Start();
-            //});
-
             return id;
         }
 
         public static string StartNew(ConcentrationChange[] z)
         {
             var id = Guid.NewGuid().ToString();
-
-            //Task.Run(delegate
-            //{
             CacheOrGetWorker(id).Start(z);
-            //user.Worker.Start(z);
-            //});
-
             return id;
         }
     }
