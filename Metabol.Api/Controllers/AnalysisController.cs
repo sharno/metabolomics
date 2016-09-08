@@ -11,6 +11,7 @@ using Metabol.DbModels;
 using Metabol.DbModels.Models;
 using Metabol.DbModels.ViewModels;
 using Microsoft.AspNet.Identity;
+using Metabol.Api.Services;
 
 namespace Metabol.Api.Controllers
 {
@@ -182,7 +183,7 @@ namespace Metabol.Api.Controllers
             if (!ModelState.IsValid)
                 return Request.CreateErrorResponse(HttpStatusCode.BadRequest, ModelState);
 
-            return DbModels.Db.GetSubsystemAnalyzeResult(z.ConcentrationChanges);
+            return SubsystemService.GetSubsystemAnalyzeResult(z.ConcentrationChanges);
         }
 
     }

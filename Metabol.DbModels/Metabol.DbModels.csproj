@@ -24,6 +24,8 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <DocumentationFile>
+    </DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -70,6 +72,7 @@
   <ItemGroup>
     <Compile Include="BooleanParser.cs" />
     <Compile Include="BooleanParser2.cs" />
+    <Compile Include="CacheModel.cs" />
     <Compile Include="Configuration.cs" />
     <Compile Include="Db.cs" />
     <Compile Include="Db.Api.cs" />

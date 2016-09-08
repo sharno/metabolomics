@@ -31,7 +31,7 @@ namespace Ecoli.Util.SimpleCycle
                 cycle = new List<HyperGraph.Entity>();
                 foreach (var v in hypergraph.Nodes.Values)
                 {
-                    if (Search(hypergraph, v, new HyperGraph.Edge(Guid.NewGuid(), string.Empty, false, false, 0), marked, stack, cycle))
+                    if (Search(hypergraph, v, HyperGraph.Edge.NewPseudoEdge(""), marked, stack, cycle))
                     {
                         findingCycles = true;
                         var cycleReaction = CollapseCycle(cycle, hypergraph);
@@ -234,34 +234,6 @@ namespace Ecoli.Util.SimpleCycle
             }
 
             return cycleReaction;
-        }
-
-
-
-
-        public static void SaveAsDgs(HyperGraph.Node mi, HyperGraph graph, string dir)
-        {
-            var file = dir + graph.Step + "graph.dgs";
-            var maxLevel = graph.LastLevel;
-
-            var lines = new List<string> { "DGS004", "\"Metabolic Network\" 0 0", "#Nodes" };
-            lines.Add(mi.ToDgs(NodeType.Selected));
-            lines.AddRange(graph.Nodes.Values
-                .Where(n => n.Id != mi.Id)
-                .Select(node => new { node, type = node.IsBorder ? NodeType.Border : NodeType.None })
-                .Select(@t => @t.node.ToDgs(@t.type)));
-
-            lines.Add("#Hyperedges");
-            foreach (var edge in graph.Edges.Values)
-            {
-                var type = EdgeType.None;
-                if (edge.Level == maxLevel)
-                    type = EdgeType.New;
-
-                lines.Add(edge.ToDgs(type));
-            }
-
-            File.AppendAllLines(file, lines);
         }
     }
 }

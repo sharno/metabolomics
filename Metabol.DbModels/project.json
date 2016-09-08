@@ -12,9 +12,6 @@
         "pdb": "bin/{configuration}/Metabol.Util.pdb"
       },
       "dependencies": {
-        "EntityFramework": "6.1.3",
-        "EntityFramework.Cache": "1.0.0",
-        "Newtonsoft.Json": "8.0.3"
       }
     }
   },

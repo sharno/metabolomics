@@ -121,15 +121,11 @@ namespace Ecoli
                             {
                                 if (reactionSpecy.roleId == Db.ProductId)
                                 {
-                                    Sm.AddProduct(reactionSpecy.reactionId, reactionSpecy.Reaction.sbmlId,
-                                        reactionSpecy.Reaction.reversible, false, reactionSpecy.speciesId,
-                                        reactionSpecy.Species.sbmlId);
+                                    Sm.AddProduct(reactionSpecy);
                                 }
                                 else if (reactionSpecy.roleId == Db.ReactantId)
                                 {
-                                    Sm.AddReactant(reactionSpecy.reactionId, reactionSpecy.Reaction.sbmlId,
-                                        reactionSpecy.Reaction.reversible, false, reactionSpecy.speciesId,
-                                        reactionSpecy.Species.sbmlId);
+                                    Sm.AddReactant(reactionSpecy);
                                 }
                             }
                         }
@@ -142,17 +138,17 @@ namespace Ecoli
                                 {
                                     case Db.ProductId:
                                         Sm.AddProduct(new HyperGraph.Cycle(innerCycle),
-                                            new HyperGraph.Node(cycleConnection.Species, Sm.LastLevel));
+                                            new HyperGraph.Node(cycleConnection.Species));
                                         break;
                                     case Db.ReactantId:
                                         Sm.AddReactant(new HyperGraph.Cycle(innerCycle),
-                                            new HyperGraph.Node(cycleConnection.Species, Sm.LastLevel));
+                                            new HyperGraph.Node(cycleConnection.Species));
                                         break;
                                     case Db.ReversibleId:
                                         Sm.AddProduct(new HyperGraph.Cycle(innerCycle),
-                                            new HyperGraph.Node(cycleConnection.Species, Sm.LastLevel));
+                                            new HyperGraph.Node(cycleConnection.Species));
                                         Sm.AddReactant(new HyperGraph.Cycle(innerCycle),
-                                            new HyperGraph.Node(cycleConnection.Species, Sm.LastLevel));
+                                            new HyperGraph.Node(cycleConnection.Species));
                                         break;
                                 }
                             }
@@ -235,7 +231,7 @@ namespace Ecoli
             }
 
             //8. Let m’ be a border metabolite in S(m) involved in the smallest total number of reactions.
-            var m2 = borderm.Select(m => m.Id).OrderBy(Db.TotalReactions).First();
+            var m2 = borderm.OrderBy(m => m.RealConsumers.Count + m.RealProducers.Count).First().Id;
             //Core.SaveAsDgs(Sm.Nodes[m2], Sm, Core.Dir);
             Sm.NextStep();
 
@@ -306,12 +302,12 @@ namespace Ecoli
         {
             if (node.IsProducedBorder && !node.Producers.Any(s => s.IsPseudo))
             {
-                sm.AddProduct(Guid.NewGuid(), $"_exr_{node.Label}_prod", false, true, node.Id, node.Label);
+                sm.AddProduct(HyperGraph.Edge.NewPseudoEdge($"_exr_{node.Label}_prod"), node, Db.PseudoReactionStoichiometry);
             }
 
             if (node.IsConsumedBorder && !node.Consumers.Any(s => s.IsPseudo))
             {
-                sm.AddReactant(Guid.NewGuid(), $"_exr_{node.Label}_cons", false, true, node.Id, node.Label);
+                sm.AddReactant(HyperGraph.Edge.NewPseudoEdge($"_exr_{node.Label}_cons"), node, Db.PseudoReactionStoichiometry);
             }
         }
 
@@ -339,12 +335,13 @@ namespace Ecoli
         {
             var metabolite = Db.Context.Species.Find(mid);
 
-            foreach (var r in metabolite.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId).Select(rs => rs.Reaction))
+            foreach (var rs in metabolite.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId))
             {
+                var r = rs.Reaction;
                 var cycle = AddCycleFromReaction(sm, r);
                 if (cycle == null)
                 {
-                    sm.AddProduct(r.id, r.sbmlId, r.reversible, false, metabolite.id, metabolite.sbmlId);
+                    sm.AddProduct(rs);
                     AddMetabolites(sm, r);
                 }
                 else
@@ -353,12 +350,13 @@ namespace Ecoli
                 }
             }
 
-            foreach (var r in metabolite.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId).Select(rs => rs.Reaction))
+            foreach (var rs in metabolite.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId))
             {
+                var r = rs.Reaction;
                 var cycle = AddCycleFromReaction(sm, r);
                 if (cycle == null)
                 {
-                    sm.AddReactant(r.id, r.sbmlId, r.reversible, false, metabolite.id, metabolite.sbmlId);
+                    sm.AddReactant(rs);
                     AddMetabolites(sm, r);
                 }
                 else
@@ -437,19 +435,19 @@ namespace Ecoli
 
             foreach (var product in products)
             {
-                var m = new HyperGraph.Node(product.Species, hyperGraph.Step);
+                var m = new HyperGraph.Node(product.Species);
                 hyperGraph.AddProduct(cycleReaction, m);
             }
 
             foreach (var reactant in reactants)
             {
-                var m = new HyperGraph.Node(reactant.Species, hyperGraph.Step);
+                var m = new HyperGraph.Node(reactant.Species);
                 hyperGraph.AddReactant(cycleReaction, m);
             }
 
             foreach (var reversible in reversibles)
             {
-                var m = new HyperGraph.Node(reversible.Species, hyperGraph.Step);
+                var m = new HyperGraph.Node(reversible.Species);
                 hyperGraph.AddProduct(cycleReaction, m);
                 hyperGraph.AddReactant(cycleReaction, m);
             }
@@ -462,20 +460,16 @@ namespace Ecoli
             try
             {
                 var products = Db.Context.ReactionSpecies
-                    .Where(rs => rs.roleId == Db.ProductId && rs.reactionId == reaction.id)
-                    .Select(rs => rs.Species).ToList();
+                    .Where(rs => rs.roleId == Db.ProductId && rs.reactionId == reaction.id);
 
                 var reactants = Db.Context.ReactionSpecies
-                    .Where(rs => rs.roleId == Db.ReactantId && rs.reactionId == reaction.id)
-                    .Select(rs => rs.Species).ToList();
+                    .Where(rs => rs.roleId == Db.ReactantId && rs.reactionId == reaction.id);
 
-                foreach (var meta in reactants
-                    /*.Where(p => Db.GetReactionCountSum(p.id) < CommonMetabolite && p.boundaryCondition == false)*/)
-                    sm.AddReactant(reaction.id, reaction.sbmlId, reaction.reversible, false, meta.id, meta.sbmlId);
+                foreach (var meta in reactants)
+                    sm.AddReactant(meta);
 
-                foreach (var meta in products
-                    /*.Where(p => Db.GetReactionCountSum(p.id) < CommonMetabolite && p.boundaryCondition == false)*/)
-                    sm.AddProduct(reaction.id, reaction.sbmlId, reaction.reversible, false, meta.id, meta.sbmlId);
+                foreach (var meta in products)
+                    sm.AddProduct(meta);
             }
             catch (Exception e)
             {

@@ -12,7 +12,7 @@ namespace Metabol.DbModels.Models
         public Guid Id { get; set; }
 
         public string Name { get; set; }
-        public int Change { get; set; }
+        public double Change { get; set; }
         public double Value { get; set; }
 
         public override string ToString()
