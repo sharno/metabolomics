@@ -1,6 +1,8 @@
 ﻿using Metabol.DbModels;
+using Metabol.DbModels.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -10,7 +12,7 @@ namespace Metabol.Api.Controllers
 {
     public class SubsystemController : ApiController
     {
-        // GET: Subsystem
+        // GET: Subsystems
         [Route("subsystems")]
         [HttpGet]
         public dynamic Get()
@@ -22,33 +24,17 @@ namespace Metabol.Api.Controllers
         }
 
         // GET: Subsystem detail
-        [Route("subsystems/{id}")]
+        [Route("subsystems/{*id}")]
         [HttpGet]
         public dynamic Get(string id)
         {
-            return DbModels.Db.Context.Reactions.Where(x => x.subsystem == id)
-                .GroupBy(x => x.subsystem)
-                .Select(g => new
-                {
-                    reactions = g.Select(x => new
-                    {
-                        id = x.sbmlId,
-                        x.name,
-                        x.reversible,
-                        model = x.Model.sbmlId,
-                        x.Sbase.annotation,
-                        x.Sbase.sboTerm,
-                        x.Sbase.notes,
-                        metabolites = x.ReactionSpecies.Where(y => y.roleId != Db.ReversibleId).Select(z => new
-                        {
-                            id = z.Species.sbmlId,
-                            z.Species.name,
-                            stoichiometry = z.stoichiometry
-                        }).ToList()
-                    }).ToList()
-                }).Single();
-        }
+            return new
+            {
+                reactions = DbModels.Db.GetSubsystemReactions(id),
+                connectedSubsystems = DbModels.Db.GetConnectedSubsystems(id)
+            };
 
+        }
 
     }
 }

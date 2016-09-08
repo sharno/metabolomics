@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Metabol.DbModels.Models;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
+using Metabol.Api.Models;
+using System.Data.SqlClient;
 
 namespace Metabol.DbModels
 {
@@ -71,6 +73,7 @@ namespace Metabol.DbModels
                     m.name,
                     compartment = m.Compartment?.name,
                     initialAmount = m.initialAmount,
+                    subsystems = m.ReactionSpecies.Select(x => x.Reaction.subsystem).Distinct().ToList(),
                     charge = m.charge,
                     model = m.Compartment?.Model?.sbmlId,
                     species_type = m.SpeciesType?.name,
@@ -101,6 +104,7 @@ namespace Metabol.DbModels
                                 {
                                     id = rid.Reaction.sbmlId,
                                     rid.Reaction.name,
+                                    rid.Reaction.subsystem,
                                     stoichiometry = rid.stoichiometry,
                                     metabolites = GetMetabolites(id, rid.Reaction.sbmlId)
                                 }
@@ -131,8 +135,9 @@ namespace Metabol.DbModels
                                    select new
                                    {
                                        id = rss1.Reaction.sbmlId,
-                                       stoichiometry = rss1.stoichiometry
-                                   }//GetReactions2(rid, rss.Species.sbmlId)
+                                       rss1.stoichiometry,
+                                       rss1.Reaction.subsystem
+                                   }
                    };
         }
 
@@ -146,6 +151,7 @@ namespace Metabol.DbModels
                     id = m.sbmlId,
                     m.name,
                     m.reversible,
+                    m.subsystem,
                     model = m.Model.sbmlId,
                     m.Sbase?.annotation,
                     m.Sbase?.sboTerm,
@@ -199,7 +205,8 @@ namespace Metabol.DbModels
                        select new
                        {
                            id = rss.Reaction.sbmlId,
-                           stoichiometry = rss.stoichiometry,
+                           rss.stoichiometry,
+                           rss.Reaction.subsystem
                        };
             }
         }
@@ -237,6 +244,63 @@ namespace Metabol.DbModels
                 throw new KeyNotFoundException();
             }
 
+        }
+
+        public static dynamic GetSubsystemReactions(string name)
+        {
+            return DbModels.Db.Context.Reactions.Where(x => x.subsystem == name)
+                .GroupBy(x => x.subsystem)
+                .Select(g => new
+                {
+                    reactions = g.Select(x => new
+                    {
+                        id = x.sbmlId,
+                        x.name,
+                        x.reversible,
+                        model = x.Model.sbmlId,
+                        x.Sbase.annotation,
+                        x.Sbase.sboTerm,
+                        x.Sbase.notes,
+                        metabolites = x.ReactionSpecies.Where(y => y.roleId != Db.ReversibleId).Select(z => new
+                        {
+                            id = z.Species.sbmlId,
+                            z.Species.name,
+                            stoichiometry = z.stoichiometry
+                        })
+                    })
+                }).Single().reactions;
+        }
+
+        public static List<ConnectedSubsystemViewModel> GetConnectedSubsystems(string name)
+        {
+            var connectedSubsystems = DbModels.Db.Context.Database
+                .SqlQuery<ConnectedSubsystemRawViewModel>(
+                    "dbo.SelectConnectedSubSystems @SubsystemName",
+                    new SqlParameter("@SubsystemName", name)).ToList();
+
+            return connectedSubsystems
+                .GroupBy(x => x.Subsystem)
+                .Select(x => new ConnectedSubsystemViewModel
+                {
+                    Subsystem = x.Key,
+                    Metabolites = x.Select(y => new ConnectedSubsystemItemViewModel
+                    {
+                        Name = y.Name,
+                        Id = y.SbmlId
+                    }).ToList()
+                }).ToList();
+        }
+
+        public static Dictionary<string, string[]> GetSubsystemAnalyzeResult(ConcentrationChange[] ConcentrationChanges)
+        {
+            var result = new Dictionary<string, string[]>();
+
+            result["solution-1"] = new string[]{ "pathway-1", "pathway-2", "pathway-3" };
+            result["solution-2"] = new string[] { "pathway-1", "pathway-2"};
+            result["solution-3"] = new string[] { "pathway-1", "pathway-3" };
+            result["solution-4"] = new string[] { "pathway-2", "pathway-4" };
+
+            return result;
         }
     }
 }

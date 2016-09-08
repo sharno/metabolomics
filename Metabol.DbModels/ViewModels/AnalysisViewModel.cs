@@ -10,9 +10,12 @@ namespace Metabol.DbModels.ViewModels
 {
     public class AnalysisViewModel
     {
-        [Required]
-        public ConcentrationChange[] ConcentrationChanges { get; set; }
+
         [Required]
         public string Name { get; set; }
+
+        [Required]
+        public ConcentrationChange[] ConcentrationChanges { get; set; }
+
     }
 }

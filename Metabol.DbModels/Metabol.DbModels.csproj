@@ -203,6 +203,7 @@
     </Compile>
     <Compile Include="Core.cs" />
     <Compile Include="ViewModels\AnalysisViewModel.cs" />
+    <Compile Include="ViewModels\SubsystemViewModel.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">
