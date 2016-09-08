@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using Subsystems;
 
 namespace Metabol.Api.Services
 {
@@ -18,7 +19,7 @@ namespace Metabol.Api.Services
             //result["solution-4"] = new string[] { "pathway-2", "pathway-4" };
 
             var subsystemData = mapConcentrationChanges(concentrationChanges);
-            var results = Subsystems.Program.Start(subsystemData);
+            var results = Program.Start(subsystemData);
             return results;
         }
 

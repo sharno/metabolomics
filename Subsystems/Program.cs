@@ -23,7 +23,7 @@ namespace Subsystems
             Console.BufferHeight = Int16.MaxValue - 1;
             Console.Clear();
             Console.SetCursorPosition(0, 0);
-            
+
             var measuredMetabolites = new Dictionary<string, double>
             {
                 ["acon_C_c"] = 1,
