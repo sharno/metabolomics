@@ -6,9 +6,10 @@ namespace Metabol.DbModels
 {
     public class Configuration : DbConfiguration
     {
+        public static readonly InMemoryCache Cache = new InMemoryCache();
         public Configuration()
         {
-            var transactionHandler = new CacheTransactionHandler(new InMemoryCache());
+            var transactionHandler = new CacheTransactionHandler(Cache);
 
             AddInterceptor(transactionHandler);
 
@@ -20,6 +21,4 @@ namespace Metabol.DbModels
                   cachingPolicy));
         }
     }
-
-
 }

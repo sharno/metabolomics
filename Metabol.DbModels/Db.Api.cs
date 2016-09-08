@@ -290,17 +290,5 @@ namespace Metabol.DbModels
                     }).ToList()
                 }).ToList();
         }
-
-        public static Dictionary<string, string[]> GetSubsystemAnalyzeResult(ConcentrationChange[] ConcentrationChanges)
-        {
-            var result = new Dictionary<string, string[]>();
-
-            result["solution-1"] = new string[]{ "pathway-1", "pathway-2", "pathway-3" };
-            result["solution-2"] = new string[] { "pathway-1", "pathway-2"};
-            result["solution-3"] = new string[] { "pathway-1", "pathway-3" };
-            result["solution-4"] = new string[] { "pathway-2", "pathway-4" };
-
-            return result;
-        }
     }
 }

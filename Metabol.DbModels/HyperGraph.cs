@@ -101,12 +101,12 @@ namespace Metabol.DbModels
 
             foreach (var producer in producers)
             {
-                var reaction = Edges.GetOrAdd(producer.reactionId, new Edge(producer.reactionId, producer.Reaction.sbmlId, producer.Reaction.reversible, false, Step));
+                var reaction = Edges.GetOrAdd(producer.reactionId, new Edge(producer.Reaction));
                 AddProduct(reaction, metabolite, producer.stoichiometry);
             }
             foreach (var consumer in consumers)
             {
-                var reaction = Edges.GetOrAdd(consumer.reactionId, new Edge(consumer.reactionId, consumer.Reaction.sbmlId, consumer.Reaction.reversible, false, Step));
+                var reaction = Edges.GetOrAdd(consumer.reactionId, new Edge(consumer.Reaction));
                 AddReactant(reaction, metabolite, consumer.stoichiometry);
             }
         }
@@ -114,24 +114,36 @@ namespace Metabol.DbModels
         public void AddReactionWithConnections(Reaction dbReaction)
         {
             Console.WriteLine($"adding reaction {dbReaction.sbmlId}");
-            var reaction = Edges.GetOrAdd(dbReaction.id, new Edge(dbReaction.id, dbReaction.sbmlId, dbReaction.reversible, false, Step));
+            var reaction = Edges.GetOrAdd(dbReaction.id, new Edge(dbReaction));
 
             var products = dbReaction.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId);
             var reactants = dbReaction.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId);
 
             foreach (var product in products)
             {
-                var metabolite = Nodes.GetOrAdd(product.speciesId, new Node(product.Species, Step));
+                var metabolite = Nodes.GetOrAdd(product.speciesId, new Node(product.Species));
                 AddProduct(reaction, metabolite, product.stoichiometry);
             }
             foreach (var reactant in reactants)
             {
-                var metabolite = Nodes.GetOrAdd(reactant.speciesId, new Node(reactant.Species, Step));
+                var metabolite = Nodes.GetOrAdd(reactant.speciesId, new Node(reactant.Species));
                 AddReactant(reaction, metabolite, reactant.stoichiometry);
             }
         }
 
-        public void AddReactant(HyperGraph.Edge reaction, HyperGraph.Node metabolite, double weight)
+
+        public void AddReactant(ReactionSpecy rs)
+        {
+            var metabolite = Nodes.GetOrAdd(rs.speciesId, new Node(rs.Species));
+            var reaction = Edges.GetOrAdd(rs.reactionId, new Edge(rs.Reaction));
+
+            metabolite.Consumers.Add(reaction);
+            reaction.Reactants[metabolite.Id] = metabolite;
+
+            metabolite.Weights[reaction.Id] = rs.stoichiometry;
+        }
+
+        public void AddReactant(Edge reaction, Node metabolite, double weight)
         {
             metabolite = Nodes.GetOrAdd(metabolite.Id, metabolite);
             reaction = Edges.GetOrAdd(reaction.Id, reaction);
@@ -142,7 +154,7 @@ namespace Metabol.DbModels
             metabolite.Weights[reaction.Id] = weight;
         }
 
-        public void AddReactant(HyperGraph.Cycle cycle, HyperGraph.Node metabolite)
+        public void AddReactant(Cycle cycle, Node metabolite)
         {
             metabolite = Nodes.GetOrAdd(metabolite.Id, metabolite);
             cycle = Cycles.GetOrAdd(cycle.Id, cycle);
@@ -152,16 +164,19 @@ namespace Metabol.DbModels
             cycle.Reactants[metabolite.Id] = metabolite;
         }
 
-        public void AddReactant(Guid eid, string elabel, bool isReversible, bool isPseudo, Guid nid, string label)
-        {
-            var node = Nodes.GetOrAdd(nid, new Node(nid, label, Step));
-            var e = Edges.GetOrAdd(eid, new Edge(eid, elabel, isReversible, isPseudo, Step));
-            e.AddReactant(node);
-            if (!isPseudo) node.Weights[eid] = Db.Context.ReactionSpecies.Single(rs => rs.reactionId == eid && rs.speciesId == nid).stoichiometry;
 
+        public void AddProduct(ReactionSpecy rs)
+        {
+            var metabolite = Nodes.GetOrAdd(rs.speciesId, new Node(rs.Species));
+            var reaction = Edges.GetOrAdd(rs.reactionId, new Edge(rs.Reaction));
+
+            metabolite.Producers.Add(reaction);
+            reaction.Products[metabolite.Id] = metabolite;
+
+            metabolite.Weights[reaction.Id] = rs.stoichiometry;
         }
 
-        public void AddProduct(HyperGraph.Edge reaction, HyperGraph.Node metabolite, double weight)
+        public void AddProduct(Edge reaction, Node metabolite, double weight)
         {
             metabolite = Nodes.GetOrAdd(metabolite.Id, metabolite);
             reaction = Edges.GetOrAdd(reaction.Id, reaction);
@@ -172,7 +187,7 @@ namespace Metabol.DbModels
             metabolite.Weights[reaction.Id] = weight;
         }
 
-        public void AddProduct(HyperGraph.Cycle cycle, HyperGraph.Node metabolite)
+        public void AddProduct(Cycle cycle, Node metabolite)
         {
             metabolite = Nodes.GetOrAdd(metabolite.Id, metabolite);
             cycle = Cycles.GetOrAdd(cycle.Id, cycle);
@@ -180,14 +195,6 @@ namespace Metabol.DbModels
 
             metabolite.Producers.Add(cycle);
             cycle.Products[metabolite.Id] = metabolite;
-        }
-
-        public void AddProduct(Guid eid, string elabel, bool isReversible, bool isPseudo, Guid nid, string nlabel)
-        {
-            var node = Nodes.GetOrAdd(nid, new Node(nid, nlabel, Step));
-            var e = Edges.GetOrAdd(eid, new Edge(eid, elabel, isReversible, isPseudo, Step));
-            e.AddProduct(node);
-            if (!isPseudo) node.Weights[eid] = Db.Context.ReactionSpecies.Single(rs => rs.reactionId == eid && rs.speciesId == nid).stoichiometry;
         }
 
         public IEnumerable<object> JsonNodes(Dictionary<Guid, int> z)
@@ -411,7 +418,7 @@ namespace Metabol.DbModels
                     if (cycleReaction.isReaction)
                     {
                         var r = Db.Context.Reactions.Find(cycleReaction.otherId);
-                        InsideReactions.Add(new Edge(r.id, r.sbmlId, r.reversible, false, 0));
+                        InsideReactions.Add(new Edge(r));
                     }
                 }
             }
@@ -453,28 +460,40 @@ namespace Metabol.DbModels
 
             public const double DgsThreshold = 0.001;
             #endregion
-
-            public Edge()
+            protected Edge()
             {
-                Id = new Guid();
+
             }
 
-            public Edge(Guid id, string label, bool isReversible, bool isPseudo, int level)
+            public Edge(Reaction reaction)
             {
-                Id = id;
-                Label = label;
-                IsReversible = isReversible;
-                IsPseudo = isPseudo;
-                Level = level;
-
-                if (isPseudo) return;
-                Subsystem = Db.Context.Reactions.Find(id).subsystem;
-                var rbf = Db.Context.ReactionBoundFixes.SingleOrDefault(e => e.reactionId == id);
-                if (rbf != null)
+                Id = reaction.id;
+                Label = reaction.sbmlId;
+                IsReversible = reaction.reversible;
+                IsPseudo = false;
+                Subsystem = reaction.subsystem;
+                if (reaction.ReactionBoundFix != null)
                 {
-                    LowerBound = rbf.lowerbound;
-                    UpperBound = rbf.upperbound;
+                    LowerBound = reaction.ReactionBoundFix.lowerbound;
+                    UpperBound = reaction.ReactionBoundFix.upperbound;
+                } else
+                {
+                    var rb = reaction.ReactionBounds.First();
+                    LowerBound = rb.lowerBound;
+                    UpperBound = rb.upperBound;
                 }
+            }
+
+            public static Edge NewPseudoEdge(string label)
+            {
+                var edge = new Edge();
+
+                edge.Id = Guid.NewGuid();
+                edge.Label = label;
+                edge.IsReversible = false;
+                edge.IsPseudo = true;
+
+                return edge;
             }
 
             public Edge AddReactant(Node node)
@@ -699,11 +718,10 @@ namespace Metabol.DbModels
 
             #endregion
 
-            public Node(Species species, int level)
+            public Node(Species species)
             {
                 Id = species.id;
                 Label = species.sbmlId;
-                Level = level;
 
                 ReactionCount.Producers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ProductId);
                 ReactionCount.Consumers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ReactantId);
