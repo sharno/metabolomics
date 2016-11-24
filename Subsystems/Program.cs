@@ -24,6 +24,7 @@ namespace Subsystems
         // static List<string> FixedSubsystems = new List<string> { "Transport, Extracellular", "Exchange", "Extracellular exchange" }; // ecoli
         static List<string> FixedSubsystems = new List<string> {
             "",
+            "Miscellaneous",
             "Exchange/demand reaction",
             "Transport, endoplasmic reticular",
             "Transport, extracellular",
