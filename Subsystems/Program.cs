@@ -330,8 +330,9 @@ namespace Subsystems
             foreach (var metabolite in network.Nodes.Values)
             {
                 // cancel metabolites that are not balanced in steady state
-                if (metabolite.AllReactions().Count() == 1) continue;
-                if (!metabolite.AllReactions().Any(r => r.IsReversible) && (!metabolite.Producers.Any() || !metabolite.Consumers.Any()))
+                if ((metabolite.AllReactions().Count() == 1) ||
+                    (!metabolite.AllReactions().Any(r => r.IsReversible) && (!metabolite.Producers.Any() || !metabolite.Consumers.Any()))
+                    )
                 {
                     metabolite.AllReactions().ToList().ForEach(r => model.Add(vars[r.Id]));
                     continue;
