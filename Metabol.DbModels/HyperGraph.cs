@@ -94,7 +94,26 @@ namespace Metabol.DbModels
         public void AddSpeciesWithConnections(Species species)
         {
             Console.WriteLine($"adding species {species.sbmlId}");
-            var metabolite = Nodes.GetOrAdd(species.id, new Node(species.id, species.sbmlId, Step));
+            var metabolite = Nodes.GetOrAdd(species.id, new Node(species));
+
+            var producers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId);
+            var consumers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId);
+
+            foreach (var producer in producers)
+            {
+                var reaction = Edges.GetOrAdd(producer.reactionId, new Edge(producer.Reaction));
+                AddProduct(reaction, metabolite, producer.stoichiometry);
+            }
+            foreach (var consumer in consumers)
+            {
+                var reaction = Edges.GetOrAdd(consumer.reactionId, new Edge(consumer.Reaction));
+                AddReactant(reaction, metabolite, consumer.stoichiometry);
+            }
+        }
+        public void AddSpeciesWithConnections(Cache.Species species)
+        {
+            Console.WriteLine($"adding species {species.sbmlId}");
+            var metabolite = Nodes.GetOrAdd(species.id, new Node(species));
 
             var producers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId);
             var consumers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId);
@@ -483,6 +502,25 @@ namespace Metabol.DbModels
                     UpperBound = rb.upperBound;
                 }
             }
+            public Edge(Cache.Reaction reaction)
+            {
+                Id = reaction.id;
+                Label = reaction.sbmlId;
+                IsReversible = reaction.reversible;
+                IsPseudo = false;
+                Subsystem = reaction.subsystem;
+                if (reaction.ReactionBoundFix != null)
+                {
+                    LowerBound = reaction.ReactionBoundFix.lowerbound;
+                    UpperBound = reaction.ReactionBoundFix.upperbound;
+                }
+                else
+                {
+                    var rb = reaction.ReactionBounds.First();
+                    LowerBound = rb.lowerBound;
+                    UpperBound = rb.upperBound;
+                }
+            }
 
             public static Edge NewPseudoEdge(string label)
             {
@@ -492,6 +530,7 @@ namespace Metabol.DbModels
                 edge.Label = label;
                 edge.IsReversible = false;
                 edge.IsPseudo = true;
+                edge.Subsystem = "pseudo";
 
                 return edge;
             }
@@ -512,7 +551,7 @@ namespace Metabol.DbModels
 
             public IEnumerable<Node> AllNodes()
             {
-                return new HashSet<Node>(this.Reactants.Values.Concat(this.Products.Values));
+                return Reactants.Values.Union(Products.Values).Distinct();
             }
 
             public string ToDgs(EdgeType type, double maxFlux)
@@ -729,6 +768,17 @@ namespace Metabol.DbModels
                 RealConsumers = new HashSet<Guid>(species.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId).Select(c => c.reactionId));
                 RealProducers = new HashSet<Guid>(species.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId).Select(c => c.reactionId));
             }
+            public Node(Cache.Species species)
+            {
+                Id = species.id;
+                Label = species.sbmlId;
+
+                ReactionCount.Producers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ProductId);
+                ReactionCount.Consumers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ReactantId);
+
+                RealConsumers = new HashSet<Guid>(species.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId).Select(c => c.reactionId));
+                RealProducers = new HashSet<Guid>(species.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId).Select(c => c.reactionId));
+            }
 
             public Node(Guid id, string label, int level)
             {
@@ -775,19 +825,14 @@ namespace Metabol.DbModels
 
             public IEnumerable<Edge> AllReactions()
             {
-                var r = new SortedSet<Edge>();
-                r.UnionWith(this.Consumers);
-                r.UnionWith(this.Producers);
-                return r;
+                return Consumers.Union(Producers);
             }
 
-            public SortedSet<Node> AllNeighborNodes()
+            public IEnumerable<Node> AllNeighborNodes()
             {
-                var r = new SortedSet<Node>();
-                r.UnionWith(this.Consumers.SelectMany(e => e.AllNodes()));
-                r.UnionWith(this.Producers.SelectMany(e => e.AllNodes()));
-                r.Remove(this);
-                return r;
+                return Consumers.SelectMany(e => e.AllNodes())
+                    .Union(Producers.SelectMany(e => e.AllNodes()))
+                    .Distinct();
             }
 
             [Serializable]

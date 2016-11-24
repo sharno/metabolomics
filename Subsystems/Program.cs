@@ -9,14 +9,30 @@ using ILOG.CPLEX;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using Metabol.DbModels.Cache;
+using Newtonsoft.Json;
 
 namespace Subsystems
 {
     public class Program
     {
-        const double TActive = 0.5;
+        const double TActive = 10;
         const double TInactive = 0.0001;
         static int counter = 0;
+
+        static StreamWriter log = File.AppendText("C:\\Users\\sharno\\Dropbox\\Metabolomics\\Results\\2016.11.23\\log.txt");
+        // static List<string> FixedSubsystems = new List<string> { "Transport, Extracellular", "Exchange", "Extracellular exchange" }; // ecoli
+        static List<string> FixedSubsystems = new List<string> {
+            "",
+            "Exchange/demand reaction",
+            "Transport, endoplasmic reticular",
+            "Transport, extracellular",
+            "Transport, golgi apparatus",
+            "Transport, lysosomal",
+            "Transport, mitochondrial",
+            "Transport, nuclear",
+            "Transport, peroxisomal",
+        }; // recon 2.2
 
         static void Main(string[] args)
         {
@@ -24,18 +40,33 @@ namespace Subsystems
             Console.Clear();
             Console.SetCursorPosition(0, 0);
 
-            var measuredMetabolites = new Dictionary<string, double>
+            //var measuredMetabolites = new Dictionary<string, double>
+            //{
+            //    ["2425dhvitd2_m"] = 1,
+            //    //["dmantipyrine_e"] = -1,
+            //};
+            Dictionary<int, Dictionary<string, double>> measuredMetabolites;
+            using (StreamReader streamReader = new StreamReader("C:\\Users\\sharno\\Desktop\\breast_cancer.json"))
             {
-                ["acon_C_c"] = 1,
-                //["o2_c"] = -1
-            };
-            Start(measuredMetabolites);
+                string json = streamReader.ReadToEnd();
+                measuredMetabolites = JsonConvert.DeserializeObject< Dictionary<int, Dictionary<string, double>> >(json);
+            }
+            Start(measuredMetabolites[100]);
         }
 
         public static Dictionary<string, string[]> Start(Dictionary<string, double> measuredMetabolites)
         {
+            log.AutoFlush = true;
+            // construct cache
+            // DataUtils.JsonToCache("C:\\Users\\sharno\\Downloads\\MODEL1603150001.json");
             // loading cache
-            Db.Cache = new CacheModel(Db.Context);
+            Db.Cache = DataUtils.ReadFromBinaryFile<CacheModel>("C:\\Users\\sharno\\Downloads\\MODEL1603150001.bin");
+
+
+            // test
+            //var borders = Db.Cache.Species.Where(s => ! s.ReactionSpecies.Any(rs => rs.Reaction.reversible) && (s.ReactionSpecies.All(rs => rs.roleId == Db.ProductId) || s.ReactionSpecies.All(rs => rs.roleId == Db.ReactantId)));
+            //Console.Write(string.Join("\n", borders.Select(s => s.sbmlId)));
+            //Console.ReadKey();
 
 
             var network = new HyperGraph();
@@ -46,7 +77,7 @@ namespace Subsystems
             foreach (var m in measuredMetabolites.Keys)
             {
                 var metabolite = Db.Cache.Species.Single(s => s.sbmlId == m);
-                metabolitesSubsystems[m] = metabolite.ReactionSpecies.Select(rs => rs.Reaction.subsystem).Distinct().ToList();
+                metabolitesSubsystems[m] = metabolite.ReactionSpecies.Select(rs => rs.Reaction.subsystem).Distinct().Except(FixedSubsystems).ToList();
             }
 
             var subsystemsMetabolites = new Dictionary<string, List<string>>();
@@ -67,37 +98,51 @@ namespace Subsystems
                 var mostObservedMetabolitesSubsystem = subsystemsMetabolites.Where(sm => sm.Value.Count == subsystemsMetabolites.Max(sm2 => sm2.Value.Count)).First().Key;
                 AddSubsystemToNetwork(mostObservedMetabolitesSubsystem, network);
                 extendedSubsystems.Add(mostObservedMetabolitesSubsystem);
+
+                var exchangeSubsystems = subsystemsMetabolites.Keys.Intersect(FixedSubsystems).ToList();
+                if (exchangeSubsystems.Any())
+                {
+                    exchangeSubsystems.ForEach(s => AddSubsystemToNetwork(s, network));
+                    extendedSubsystems.AddRange(exchangeSubsystems);
+                }
             }
             else
             {
                 var species = Db.Cache.Species.Single(s => s.sbmlId == crossroadMetabolite.Key);
                 network.Nodes.GetOrAdd(species.id, new HyperGraph.Node(species));
+                network.AddSpeciesWithConnections(species);
             }
 
 
             var results = new Dictionary<string, string[]>();
+            var rootResult = new Result();
             // calling ToList() to create a shallow clone
-            Metabolitics(network, measuredMetabolites, extendedSubsystems.ToList(), new Dictionary<string, Dictionary<string, bool>>(), results);
+            Metabolitics(network, measuredMetabolites, extendedSubsystems.ToList(), new Dictionary<string, Dictionary<string, bool>>(), results, rootResult);
+
+            ResultsUtils.SaveAsTree(rootResult);
+
+            // Decision Tree
+            // ResultsUtils.
 
             return results;
         }
 
-        private static void Metabolitics(HyperGraph network, Dictionary<string, double> measuredMetabolites, List<string> extendedSubsystems, Dictionary<string, Dictionary<string, bool>> subsetsPath, Dictionary<string, string[]> results)
+        private static void Metabolitics(HyperGraph network, Dictionary<string, double> measuredMetabolites, List<string> extendedSubsystems, Dictionary<string, Dictionary<string, bool>> subsetsPath, Dictionary<string, string[]> results, Result parentResult)
         {
             network = CopyHyperGraph(network);
             network.Step++;
             Console.WriteLine($"\n************** Iteration {network.Step} *************** ");
 
             var borderMetabolites = GetBorderMetabolites(network, extendedSubsystems);
-            Console.WriteLine($"Border Mets: {string.Join(" ,", borderMetabolites.Select(b => b.Label))}");
+            // Console.WriteLine($"Border Mets: {string.Join(" ,", borderMetabolites.Select(b => b.Label))}");
 
             // reached a solution
             if (borderMetabolites.Count == 0)
             {
                 results[$"solution-{counter}"] = subsetsPath.Values.SelectMany(s => s.Keys.Where(k => s[k] == true)).ToArray();
-                //var file = $"{Core.Dir}{counter}{string.Join("_", subsetsPath.Values.Select(s => string.Join(",", s.Keys.Where(k => s[k] == true).Select(sys => sys.Substring(0, 3)))))}";
-                //SaveAsDgs(network.Nodes.First().Value, network, extendedSubsystems, $"{file}_graph.dgs");
-                //SaveResults(network, $"{file}_results.txt");
+                var file = $"{Core.Dir}{counter}{string.Join("_", subsetsPath.Values.Select(s => string.Join(",", s.Keys.Where(k => s[k] == true).Select(sys => sys.Substring(0, 3)))))}";
+                SaveAsDgs(network.Nodes.First().Value, network, extendedSubsystems, $"{file}_graph.dgs");
+                SaveResults(network, $"{file}_results.txt");
                 counter++;
                 return;
             }
@@ -107,7 +152,17 @@ namespace Subsystems
             foreach (var m in borderMetabolites.Select(m => m.Label))
             {
                 var metabolite = Db.Cache.Species.Single(s => s.sbmlId == m);
-                metabolitesSubsystems[m] = metabolite.ReactionSpecies.Select(rs => rs.Reaction.subsystem).Distinct().Except(extendedSubsystems).ToList();
+                var subsystems = metabolite.ReactionSpecies.Select(rs => rs.Reaction.subsystem).Distinct().Except(extendedSubsystems);
+                var exchangeSubsystems = subsystems.Intersect(FixedSubsystems).ToList();
+                if (exchangeSubsystems.Any())
+                {
+                    exchangeSubsystems.ForEach(s => AddSubsystemToNetwork(s, network));
+                    extendedSubsystems.AddRange(exchangeSubsystems);
+                }
+
+                var remainingSubsystems = subsystems.Except(extendedSubsystems).ToList();
+                if (remainingSubsystems.Any())
+                    metabolitesSubsystems[m] = remainingSubsystems;
             }
 
             var metaboliteToExtend = metabolitesSubsystems.Where(ms => ms.Value.Count == metabolitesSubsystems.Min(ms2 => ms2.Value.Count)).First();
@@ -118,25 +173,36 @@ namespace Subsystems
             metaboliteToExtend.Value.ForEach(s => AddSubsystemToNetwork(s, network));
             extendedSubsystems.AddRange(metaboliteToExtend.Value);
 
-            var count = 0;
             var subsets = ListSubSetsOf(metaboliteToExtend.Value);
             foreach (var working in subsets)
             {
-                count++;
-                var notworking = metaboliteToExtend.Value.Except(working).ToList();
+                counter++;
+                var result = new Result();
+                result.num = counter;
+                result.ActiveSubsystems = working;
+                result.InactiveSubsystems = metaboliteToExtend.Value.Except(working).ToList();
+                result.MetaboliteExtended = metaboliteToExtend.Key;
+                result.ParentResult = parentResult;
+
+                parentResult.ChildrenResults.Add(result);
+
                 var subset = working.ToDictionary(k => k, v => true);
-                notworking.ForEach(s => subset[s] = false);
+                result.InactiveSubsystems.ForEach(s => subset[s] = false);
 
                 subsetsPath[metaboliteToExtend.Key] = subset;
 
-                var feasible = FBA(network, measuredMetabolites, metaboliteToExtend, subsetsPath);
-                if (!feasible)
+                result.Solved = FBA(network, measuredMetabolites, metaboliteToExtend, subsetsPath);
+                ResultsUtils.SaveSubsystemsHypergraph(network, extendedSubsystems, counter);
+
+                if (!result.Solved)
                 {
-                    Console.WriteLine($"Infeasible problem at subsets: {string.Join(" | ", subset)}");
+                    log.WriteLineAsync($"{string.Concat(Enumerable.Repeat("    |", network.Step))}✘ Infeas : ACT[{string.Join(" | ", result.ActiveSubsystems)}] INACT[{string.Join(" | ", result.InactiveSubsystems)}] {DateTime.Now.ToString("HH:mm:ss")}");
+                    // Console.WriteLine($"Infeasible problem at subsets: {string.Join(" | ", subset)}");
                 }
                 else
                 {
-                    Metabolitics(network, measuredMetabolites, extendedSubsystems.ToList(), subsetsPath.ToDictionary(k => k.Key, v => v.Value), results); // shallow cloning
+                    log.WriteLineAsync($"{string.Concat(Enumerable.Repeat("    |", network.Step))}✓ Feas : ACT[{string.Join(" | ", result.ActiveSubsystems)}] INACT[{string.Join(" | ", result.InactiveSubsystems)}] {DateTime.Now.ToString("HH:mm:ss")}");
+                    Metabolitics(network, measuredMetabolites, extendedSubsystems.ToList(), subsetsPath.ToDictionary(k => k.Key, v => v.Value), results, result); // shallow cloning
                 }
 
                 subsetsPath.Remove(metaboliteToExtend.Key);
@@ -221,7 +287,7 @@ namespace Subsystems
             }
 
 
-            AddMetabolitesStableStateConstraints(network, model, vars);
+            AddMetabolitesSteadyStateConstraints(network, model, vars);
 
 
             // Objective function
@@ -241,10 +307,12 @@ namespace Subsystems
             // subnetworks constraints
             AddSubnetworksConstraints(network, model, vars, subsystemsPath);
 
+            // add measured metabolites rules
+            AddMeasuredMetabolitesRules(network, model, vars, measuredMetabolites);
 
             var feasible = model.Solve();
 
-            // model.ExportModel($"{Core.Dir}{network.Step}-{count}model-{(feasible ? "feasible" : "infeasible")}.lp");
+            model.ExportModel($"{Core.Dir}{counter}model-{network.Step}-{(feasible ? "feasible" : "infeasible")}.lp");
             if (!feasible)
             {
                 return false;
@@ -256,10 +324,18 @@ namespace Subsystems
             }
         }
 
-        private static void AddMetabolitesStableStateConstraints(HyperGraph network, Cplex model, Dictionary<Guid, INumVar> vars)
+        private static void AddMetabolitesSteadyStateConstraints(HyperGraph network, Cplex model, Dictionary<Guid, INumVar> vars)
         {
             foreach (var metabolite in network.Nodes.Values)
             {
+                // cancel metabolites that are not balanced in steady state
+                if (metabolite.AllReactions().Count() == 1) continue;
+                if (!metabolite.AllReactions().Any(r => r.IsReversible) && (!metabolite.Producers.Any() || !metabolite.Consumers.Any()))
+                {
+                    metabolite.AllReactions().ToList().ForEach(r => model.Add(vars[r.Id]));
+                    continue;
+                }
+
                 var expr = model.LinearNumExpr();
 
                 foreach (var reaction in metabolite.Producers)
@@ -307,6 +383,46 @@ namespace Subsystems
                     model.Add(or);
             }
         }
+
+        private static void AddMeasuredMetabolitesRules(HyperGraph network, Cplex model, Dictionary<Guid, INumVar> vars, Dictionary<string, double> measuredMetabolites)
+        {
+            foreach (var m in measuredMetabolites)
+            {
+                /* Rule 1: 
+                 * If a metabolite is observed to increase (in comparison to the reference value), 
+                 * then the total production flux going through this metabolite cannot be less than the inactive threshold that we use.
+                */
+                if (m.Value > 0)
+                {
+                    var metabolite = network.Nodes.Values.SingleOrDefault(n => n.Label == m.Key);
+                    if (metabolite == null || !metabolite.Consumers.Any() || !metabolite.Producers.Any()) continue;
+                    var exp = model.LinearNumExpr();
+                    foreach (var r in metabolite.AllReactions())
+                    {
+                        exp.AddTerm(1, vars[r.Id]);
+                    }
+                    model.AddGe(exp, 2 * TInactive, $"rule1_{m.Key}");
+                }
+
+                /*
+                 * Rule 2:
+                 * If a metabolite's concentration is measured close to 0 (below some threshold that we may arbitrarily set at this initial stage), 
+                 * then the total production flux going through this metabolite cannot be more than the inactive threshold that we use.
+                */
+                if (m.Value == 0)
+                {
+                    var metabolite = network.Nodes.Values.SingleOrDefault(n => n.Label == m.Key);
+                    if (metabolite == null || !metabolite.Consumers.Any() || !metabolite.Producers.Any()) continue;
+                    var exp = model.LinearNumExpr();
+                    foreach (var r in metabolite.AllReactions())
+                    {
+                        exp.AddTerm(1, vars[r.Id]);
+                    }
+                    model.AddLe(exp, TInactive, $"rule2_{m.Key}");
+                }
+            }
+        }
+
 
         private static HyperGraph CopyHyperGraph(HyperGraph hyperGraph)
         {
