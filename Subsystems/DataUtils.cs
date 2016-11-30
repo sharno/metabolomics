@@ -114,6 +114,9 @@ namespace Subsystems
                 }
 
 
+                Solve.FixReactionBoundsByFVA(Db.Cache);
+
+
                 WriteToBinaryFile("C:\\Users\\sharno\\Downloads\\MODEL1603150001.bin", Db.Cache);
                 Console.WriteLine("Finished saving all to DB");
                 Console.ReadLine();

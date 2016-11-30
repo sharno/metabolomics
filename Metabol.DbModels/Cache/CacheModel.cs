@@ -68,12 +68,15 @@ namespace Metabol.DbModels.Cache
                     }
                 };
 
-                //if (r.ReactionBoundFix != null)
-                //    reaction.ReactionBoundFix = new ReactionBoundFix {
-                //        reactionId = r.id,
-                //        lowerbound = r.ReactionBoundFix.lowerbound,
-                //        upperbound = r. ReactionBoundFix.upperbound,
-                //    };
+                if (r.ReactionBoundFix != null)
+                {
+                    reaction.ReactionBoundFix = new ReactionBoundFix
+                    {
+                        reactionId = r.id,
+                        lowerbound = r.ReactionBoundFix.lowerbound,
+                        upperbound = r.ReactionBoundFix.upperbound,
+                    };
+                }
 
                 Reactions.Add(reaction);
             }

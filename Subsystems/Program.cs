@@ -20,7 +20,7 @@ namespace Subsystems
         const double TInactive = 0.0001;
         static int counter = 0;
 
-        static StreamWriter log = File.AppendText("C:\\Users\\sharno\\Dropbox\\Metabolomics\\Results\\2016.11.23\\log.txt");
+        static StreamWriter log = File.AppendText("C:\\Users\\sharno\\Dropbox\\Metabolomics\\Results\\2016.11.30\\log.txt");
         // static List<string> FixedSubsystems = new List<string> { "Transport, Extracellular", "Exchange", "Extracellular exchange" }; // ecoli
         static List<string> FixedSubsystems = new List<string> {
             "",
@@ -59,7 +59,7 @@ namespace Subsystems
         {
             log.AutoFlush = true;
             // construct cache
-            // DataUtils.JsonToCache("C:\\Users\\sharno\\Downloads\\MODEL1603150001.json");
+            //DataUtils.JsonToCache("C:\\Users\\sharno\\Downloads\\MODEL1603150001.json");
             // loading cache
             Db.Cache = DataUtils.ReadFromBinaryFile<CacheModel>("C:\\Users\\sharno\\Downloads\\MODEL1603150001.bin");
 
@@ -325,18 +325,18 @@ namespace Subsystems
             }
         }
 
-        private static void AddMetabolitesSteadyStateConstraints(HyperGraph network, Cplex model, Dictionary<Guid, INumVar> vars)
+        public static void AddMetabolitesSteadyStateConstraints(HyperGraph network, Cplex model, Dictionary<Guid, INumVar> vars)
         {
             foreach (var metabolite in network.Nodes.Values)
             {
                 // cancel metabolites that are not balanced in steady state
-                if ((metabolite.AllReactions().Count() == 1) ||
-                    (!metabolite.AllReactions().Any(r => r.IsReversible) && (!metabolite.Producers.Any() || !metabolite.Consumers.Any()))
-                    )
-                {
-                    metabolite.AllReactions().ToList().ForEach(r => model.Add(vars[r.Id]));
-                    continue;
-                }
+                //if ((metabolite.AllReactions().Count() == 1) ||
+                //    (!metabolite.AllReactions().Any(r => r.IsReversible) && (!metabolite.Producers.Any() || !metabolite.Consumers.Any()))
+                //    )
+                //{
+                //    metabolite.AllReactions().ToList().ForEach(r => model.Add(vars[r.Id]));
+                //    continue;
+                //}
 
                 var expr = model.LinearNumExpr();
 
@@ -397,7 +397,7 @@ namespace Subsystems
                 if (m.Value > 0)
                 {
                     var metabolite = network.Nodes.Values.SingleOrDefault(n => n.Label == m.Key);
-                    if (metabolite == null || !metabolite.Consumers.Any() || !metabolite.Producers.Any()) continue;
+                    if (metabolite == null || !metabolite.Consumers.Any(r => r.UpperBound != 0) || !metabolite.Producers.Any(r => r.UpperBound != 0)) continue;
                     var exp = model.LinearNumExpr();
                     foreach (var r in metabolite.AllReactions())
                     {
