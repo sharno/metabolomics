@@ -29,8 +29,8 @@ namespace Subsystems
             }
 
 
-
-            Program.AddMetabolitesSteadyStateConstraints(hypergraph, model, vars);
+            // TODO: Get border has its functionality changed for this to work properly
+            //Program.AddMetabolitesSteadyStateConstraints(hypergraph, model, vars);
 
             // Objective function
             foreach (var r in hypergraph.Edges.Values)

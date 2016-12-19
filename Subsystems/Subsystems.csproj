@@ -113,6 +113,7 @@
     <Compile Include="Result.cs" />
     <Compile Include="ResultsUtils.cs" />
     <Compile Include="Solve.cs" />
+    <Compile Include="SubsGraph.cs" />
     <Compile Include="TreeClassifier.cs" />
   </ItemGroup>
   <ItemGroup>
