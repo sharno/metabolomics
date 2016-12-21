@@ -620,6 +620,11 @@
             <param name="model"></param>
             <returns></returns>
         </member>
+        <member name="T:Metabol.Api.Controllers.SubsystemAnalysisController">
+            <summary>
+            Subsystem Analysis 
+            </summary>
+        </member>
         <member name="T:Metabol.Api.Controllers.AnalysisController">
             <summary>
             Metabolomics FBA

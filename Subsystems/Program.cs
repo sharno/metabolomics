@@ -26,7 +26,7 @@ namespace Subsystems
 
             var measuredMetabolites = new Dictionary<string, double>
             {
-                ["acon_C_c"] = 1,
+                ["glu__L_c"] = 1,
                 //["o2_c"] = -1
             };
             Start(measuredMetabolites);
@@ -71,7 +71,8 @@ namespace Subsystems
             else
             {
                 var species = Db.Cache.Species.Single(s => s.sbmlId == crossroadMetabolite.Key);
-                network.Nodes.GetOrAdd(species.id, new HyperGraph.Node(species));
+                network.AddSpeciesWithConnections(species);
+                //network.Nodes.GetOrAdd(species.id, new HyperGraph.Node(species));
             }
 
 

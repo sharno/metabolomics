@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using Subsystems;
+using Metabol.Api.Cache;
+using System.Threading.Tasks;
 
 namespace Metabol.Api.Services
 {
@@ -21,6 +23,24 @@ namespace Metabol.Api.Services
             var subsystemData = mapConcentrationChanges(concentrationChanges);
             var results = Program.Start(subsystemData);
             return results;
+        }
+
+        public static Guid GetSubsystemAnalyzeResultCacheKey(ConcentrationChange[] concentrationChanges)
+        {
+            var analyzeResult = SubsystemService.GetSubsystemAnalyzeResult(concentrationChanges);
+            return SubsystemCache.Cache(analyzeResult);
+        }
+
+        public static Guid GetSubsystemAnalyzeResultCacheKeyAsync(ConcentrationChange[] concentrationChanges)
+        {
+            Guid key = Guid.NewGuid();
+
+            Task.Factory.StartNew(() => {
+                var analyzeResult = SubsystemService.GetSubsystemAnalyzeResult(concentrationChanges);
+                SubsystemCache.Cache(analyzeResult, key);
+            });
+   
+            return key;
         }
 
         private static Dictionary<string, double> mapConcentrationChanges(ConcentrationChange[] concentrationChanges)

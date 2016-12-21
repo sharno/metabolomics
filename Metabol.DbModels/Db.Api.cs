@@ -261,11 +261,19 @@ namespace Metabol.DbModels
                         x.Sbase.annotation,
                         x.Sbase.sboTerm,
                         x.Sbase.notes,
+                        x.subsystem,
                         metabolites = x.ReactionSpecies.Where(y => y.roleId != Db.ReversibleId).Select(z => new
                         {
                             id = z.Species.sbmlId,
                             z.Species.name,
-                            stoichiometry = z.stoichiometry
+                            stoichiometry = z.stoichiometry,
+                            reactions = z.Species.ReactionSpecies.Where(y => y.roleId != Db.ReversibleId).Select(k => new
+                            {
+                                id = k.Reaction.sbmlId,
+                                name = k.Reaction.name,
+                                stoichiometry = k.stoichiometry,
+                                subsystem = k.Reaction.subsystem,
+                            })
                         })
                     })
                 }).Single().reactions;
@@ -290,5 +298,6 @@ namespace Metabol.DbModels
                     }).ToList()
                 }).ToList();
         }
+
     }
 }
