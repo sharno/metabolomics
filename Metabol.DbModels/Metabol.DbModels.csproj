@@ -72,7 +72,13 @@
   <ItemGroup>
     <Compile Include="BooleanParser.cs" />
     <Compile Include="BooleanParser2.cs" />
-    <Compile Include="CacheModel.cs" />
+    <Compile Include="Cache\CacheModel.cs" />
+    <Compile Include="Cache\Compartment.cs" />
+    <Compile Include="Cache\Reaction.cs" />
+    <Compile Include="Cache\ReactionBound.cs" />
+    <Compile Include="Cache\ReactionBoundFix.cs" />
+    <Compile Include="Cache\ReactionSpecy.cs" />
+    <Compile Include="Cache\Species.cs" />
     <Compile Include="Configuration.cs" />
     <Compile Include="Db.cs" />
     <Compile Include="Db.Api.cs" />

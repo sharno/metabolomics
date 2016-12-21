@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Metabol.DbModels.DB;
+using System.IO;
 
 namespace Metabol.DbModels
 {
@@ -38,9 +39,6 @@ namespace Metabol.DbModels
 
         public ConcurrentDictionary<Guid, Node> Nodes { get; protected set; }
 
-        public HashSet<Guid> CommonMetabolites { get; protected set; }
-        public ConcurrentDictionary<Guid, HashSet<Guid>> PseudoPath { get; protected set; }
-
         public ConcurrentDictionary<Guid, Edge> Edges { get; protected set; }
 
         public ConcurrentDictionary<Guid, Cycle> Cycles { get; protected set; }
@@ -57,23 +55,11 @@ namespace Metabol.DbModels
             Edges = new ConcurrentDictionary<Guid, Edge>();
             Cycles = new ConcurrentDictionary<Guid, Cycle>();
             Nodes = new ConcurrentDictionary<Guid, Node>();
-            PseudoPath = new ConcurrentDictionary<Guid, HashSet<Guid>>();
-            CommonMetabolites = new HashSet<Guid>();
         }
 
         public void NextStep()
         {
             Step++;
-        }
-
-        public void AddPseudoPath(Guid n1, Guid n2)
-        {
-            PseudoPath.GetOrAdd(n1, new HashSet<Guid>()).Add(n2);
-        }
-
-        public bool ExistPseudoPath(Guid n1, Guid n2)
-        {
-            return PseudoPath.ContainsKey(n1) && PseudoPath[n1].Contains(n2);
         }
 
         public Node GetNode(Guid id)
@@ -94,7 +80,26 @@ namespace Metabol.DbModels
         public void AddSpeciesWithConnections(Species species)
         {
             Console.WriteLine($"adding species {species.sbmlId}");
-            var metabolite = Nodes.GetOrAdd(species.id, new Node(species.id, species.sbmlId, Step));
+            var metabolite = Nodes.GetOrAdd(species.id, new Node(species));
+
+            var producers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId);
+            var consumers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId);
+
+            foreach (var producer in producers)
+            {
+                var reaction = Edges.GetOrAdd(producer.reactionId, new Edge(producer.Reaction));
+                AddProduct(reaction, metabolite, producer.stoichiometry);
+            }
+            foreach (var consumer in consumers)
+            {
+                var reaction = Edges.GetOrAdd(consumer.reactionId, new Edge(consumer.Reaction));
+                AddReactant(reaction, metabolite, consumer.stoichiometry);
+            }
+        }
+        public void AddSpeciesWithConnections(Cache.Species species)
+        {
+            Console.WriteLine($"adding species {species.sbmlId}");
+            var metabolite = Nodes.GetOrAdd(species.id, new Node(species));
 
             var producers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId);
             var consumers = species.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId);
@@ -111,7 +116,7 @@ namespace Metabol.DbModels
             }
         }
 
-        public void AddReactionWithConnections(Reaction dbReaction)
+        public void AddReactionWithConnections(Cache.Reaction dbReaction)
         {
             Console.WriteLine($"adding reaction {dbReaction.sbmlId}");
             var reaction = Edges.GetOrAdd(dbReaction.id, new Edge(dbReaction));
@@ -329,21 +334,19 @@ namespace Metabol.DbModels
             //    }
             //}
 
-            foreach (var reaction in Nodes[nid].Producers.Union(Nodes[nid].Consumers))
+            foreach (var reaction in Nodes[nid].AllReactions())
             {
                 reaction.Products.Remove(nid);
                 reaction.Reactants.Remove(nid);
                 if (reaction.Reactants.Count == 0 && reaction.Products.Count == 0)
                 {
-                    Edge ingoredEdge;
-                    Edges.TryRemove(reaction.Id, out ingoredEdge);
+                    Edge _2;
+                    Edges.TryRemove(reaction.Id, out _2);
                 }
             }
 
-            Node ignored;
-            Nodes.TryRemove(nid, out ignored);
-
-            // TODO check pseudo and stoichiometry
+            Node _;
+            Nodes.TryRemove(nid, out _);
         }
         #endregion
 
@@ -483,6 +486,25 @@ namespace Metabol.DbModels
                     UpperBound = rb.upperBound;
                 }
             }
+            public Edge(Cache.Reaction reaction)
+            {
+                Id = reaction.id;
+                Label = reaction.sbmlId;
+                IsReversible = reaction.reversible;
+                IsPseudo = false;
+                Subsystem = reaction.subsystem;
+                if (reaction.ReactionBoundFix != null)
+                {
+                    LowerBound = reaction.ReactionBoundFix.lowerbound;
+                    UpperBound = reaction.ReactionBoundFix.upperbound;
+                }
+                else
+                {
+                    var rb = reaction.ReactionBounds.First();
+                    LowerBound = rb.lowerBound;
+                    UpperBound = rb.upperBound;
+                }
+            }
 
             public static Edge NewPseudoEdge(string label)
             {
@@ -492,6 +514,7 @@ namespace Metabol.DbModels
                 edge.Label = label;
                 edge.IsReversible = false;
                 edge.IsPseudo = true;
+                edge.Subsystem = "";
 
                 return edge;
             }
@@ -512,7 +535,7 @@ namespace Metabol.DbModels
 
             public IEnumerable<Node> AllNodes()
             {
-                return new HashSet<Node>(this.Reactants.Values.Concat(this.Products.Values));
+                return Reactants.Values.Union(Products.Values).Distinct();
             }
 
             public string ToDgs(EdgeType type, double maxFlux)
@@ -729,6 +752,17 @@ namespace Metabol.DbModels
                 RealConsumers = new HashSet<Guid>(species.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId).Select(c => c.reactionId));
                 RealProducers = new HashSet<Guid>(species.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId).Select(c => c.reactionId));
             }
+            public Node(Cache.Species species)
+            {
+                Id = species.id;
+                Label = species.sbmlId;
+
+                ReactionCount.Producers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ProductId);
+                ReactionCount.Consumers = species.ReactionSpecies.Count(rs => rs.roleId == Db.ReactantId);
+
+                RealConsumers = new HashSet<Guid>(species.ReactionSpecies.Where(rs => rs.roleId == Db.ReactantId).Select(c => c.reactionId));
+                RealProducers = new HashSet<Guid>(species.ReactionSpecies.Where(rs => rs.roleId == Db.ProductId).Select(c => c.reactionId));
+            }
 
             public Node(Guid id, string label, int level)
             {
@@ -775,19 +809,14 @@ namespace Metabol.DbModels
 
             public IEnumerable<Edge> AllReactions()
             {
-                var r = new SortedSet<Edge>();
-                r.UnionWith(this.Consumers);
-                r.UnionWith(this.Producers);
-                return r;
+                return Consumers.Union(Producers);
             }
 
-            public SortedSet<Node> AllNeighborNodes()
+            public IEnumerable<Node> AllNeighborNodes()
             {
-                var r = new SortedSet<Node>();
-                r.UnionWith(this.Consumers.SelectMany(e => e.AllNodes()));
-                r.UnionWith(this.Producers.SelectMany(e => e.AllNodes()));
-                r.Remove(this);
-                return r;
+                return Consumers.SelectMany(e => e.AllNodes())
+                    .Union(Producers.SelectMany(e => e.AllNodes()))
+                    .Distinct();
             }
 
             [Serializable]
@@ -807,6 +836,26 @@ namespace Metabol.DbModels
                 public int Producers = 0;
                 public int Consumers = 0;
             }
+        }
+
+        public void SaveAsDgs(string file)
+        {
+            var lines = new List<string> { "DGS004", "\"Metabolic Network\" 0 0", "#Nodes" };
+            lines.AddRange(this.Nodes.Values
+                .Select(node => new { node, type = NodeType.None })
+                .Select(@t => @t.node.ToDgs(@t.type)));
+
+            lines.Add("#Hyperedges");
+            foreach (var edge in this.Edges.Values)
+            {
+                var type = EdgeType.None;
+                if (edge.RecentlyAdded == true)
+                    type = EdgeType.New;
+
+                lines.Add(edge.ToDgs(type, this.Edges.Values.Max(e => Math.Abs(e.Flux))));
+            }
+
+            File.AppendAllLines(file, lines);
         }
     }
 }

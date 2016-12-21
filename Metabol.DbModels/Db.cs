@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Metabol.DbModels.DB;
 using Metabol.DbModels.Models;
+using Metabol.DbModels.Cache;
 
 namespace Metabol.DbModels
 {
