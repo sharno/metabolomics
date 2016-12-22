@@ -403,6 +403,7 @@ namespace Subsystems
         {
             var model = new Cplex { Name = "FBA"+ counter };
             
+            
             var vars = new Dictionary<Guid, INumVar>();
 
             // make variables for all reactions
@@ -438,14 +439,18 @@ namespace Subsystems
 
             var feasible = model.Solve();
 
-            model.ExportModel($"{Core.Dir}{counter}model-{network.Step}-{(feasible ? "feasible" : "infeasible")}.lp");
+            //model.ExportModel($"{Core.Dir}{counter}model-{network.Step}-{(feasible ? "feasible" : "infeasible")}.lp");
+            
+
             if (!feasible)
             {
+                model.Dispose();
                 return false;
             }
             else
             {
                 network.Edges.ToList().ForEach(d => d.Value.Flux = model.GetValue(vars[d.Value.Id]));
+                model.Dispose();
                 return true;
             }
         }
