@@ -35,7 +35,23 @@ namespace Subsystems
             "Transport, peroxisomal",
         }; // recon 2.2
 
-        
+        static List<string> EnergySubsystems = new List<string>
+        {
+            "Glycolysis/gluconeogenesis",
+            "Citric acid cycle",
+            "Pentose phosphate pathway",
+            "Fructose and mannose metabolism",
+            "Galactose metabolism",
+            "Starch and sucrose metabolism",
+            "Pyruvate metabolism",
+            "Glyoxylate and dicarboxylate metabolism",
+            "Propanoate metabolism",
+            "Butanoate metabolism",
+            "C5-branched dibasic acid metabolism",
+            "Inositol phosphate metabolism",
+        };
+
+
         static void test()
         {
             var currencyMets = new HashSet<string>(Db.Cache.Species.Where(s => s.ReactionSpecies.Select(rs => rs.Reaction.subsystem).Distinct().Except(FixedSubsystems).Count() > 25).Select(s => s.sbmlId));
@@ -49,7 +65,8 @@ namespace Subsystems
 
             Console.WriteLine("CITRIC ACID");
             var cacReactions = Db.Cache.Reactions.Where(r => r.subsystem == "Citric acid cycle");
-            cacReactions.ToList().ForEach(r => {
+            cacReactions.ToList().ForEach(r =>
+            {
                 Console.WriteLine(r.sbmlId);
                 foreach (var s in r.ReactionSpecies.Where(rs => !currencyMets.Contains(rs.Species.sbmlId)))
                 {
@@ -64,9 +81,9 @@ namespace Subsystems
             {
                 var reactions = Db.Cache.Reactions.Where(r => r.subsystem == sub);
                 var total = reactions.Count();
-                var outside = reactions.Count(r => r.ReactionSpecies.Where(rs => ! currencyMets.Contains(rs.Species.sbmlId)).Any(rs => rs.Species.ReactionSpecies.Any(rs2 => rs2.Reaction.subsystem != sub && ! FixedSubsystems.Contains(rs2.Reaction.subsystem))));
+                var outside = reactions.Count(r => r.ReactionSpecies.Where(rs => !currencyMets.Contains(rs.Species.sbmlId)).Any(rs => rs.Species.ReactionSpecies.Any(rs2 => rs2.Reaction.subsystem != sub && !FixedSubsystems.Contains(rs2.Reaction.subsystem))));
                 Console.WriteLine($"{sub}\ttotal: {total}\toutside: {outside}");
-                
+
                 //Db.Cache.Reactions.Where(r => r.subsystem == sub).ToList().ForEach(r =>
                 //{
                 //    network.AddReactionWithConnections(r);
@@ -87,7 +104,27 @@ namespace Subsystems
             // construct cache
             //DataUtils.JsonToCache("C:\\Users\\sharno\\Downloads\\MODEL1603150001.json");
             // loading cache
-            Db.Cache = DataUtils.ReadFromBinaryFile<CacheModel>("C:\\Users\\sharno\\Downloads\\MODEL1603150001.bin");
+            
+            Db.Cache = DataUtils.ReadFromBinaryFile<CacheModel>("MODEL1603150001.bin");
+
+
+            // removing useless subsystems
+            EnergySubsystems = EnergySubsystems.Union(FixedSubsystems).ToList();
+            var rToRemove = new HashSet<Reaction>(Db.Cache.Reactions.Where(r => !EnergySubsystems.Contains(r.subsystem)));
+            var rsToRemove = new HashSet<ReactionSpecy>(Db.Cache.ReactionSpecies.Where(rs => rToRemove.Contains(rs.Reaction)));
+            var sToRemove = new HashSet<Species>(Db.Cache.Species.Where(s => s.ReactionSpecies.All(rs => rsToRemove.Contains(rs))));
+
+            Db.Cache.Reactions.RemoveAll(r => rToRemove.Contains(r));
+            foreach (var r in Db.Cache.Reactions)
+            {
+                r.ReactionSpecies = new HashSet<ReactionSpecy>( r.ReactionSpecies.Except(rsToRemove));
+            }
+            Db.Cache.ReactionSpecies.RemoveAll(rs => rsToRemove.Contains(rs));
+            Db.Cache.Species.RemoveAll(s => sToRemove.Contains(s));
+            foreach (var s in Db.Cache.Species)
+            {
+                s.ReactionSpecies = new HashSet<ReactionSpecy>(s.ReactionSpecies.Except(rsToRemove));
+            }
 
             //test();
             //return;
@@ -101,9 +138,13 @@ namespace Subsystems
             using (StreamReader streamReader = new StreamReader("C:\\Users\\sharno\\Desktop\\breast_cancer.json"))
             {
                 string json = streamReader.ReadToEnd();
-                measuredMetabolites = JsonConvert.DeserializeObject< Dictionary<int, Dictionary<string, double>> >(json);
+                measuredMetabolites = JsonConvert.DeserializeObject<Dictionary<int, Dictionary<string, double>>>(json);
             }
-            Start(measuredMetabolites[100]);
+
+            foreach (var p in measuredMetabolites.Values)
+            {
+                Start(p);
+            }
         }
 
         public static Dictionary<string, string[]> Start(Dictionary<string, double> measuredMetabolites)
@@ -112,11 +153,12 @@ namespace Subsystems
             //var borders = Db.Cache.Species.Where(s => ! s.ReactionSpecies.Any(rs => rs.Reaction.reversible) && (s.ReactionSpecies.All(rs => rs.roleId == Db.ProductId) || s.ReactionSpecies.All(rs => rs.roleId == Db.ReactantId)));
             //Console.Write(string.Join("\n", borders.Select(s => s.sbmlId)));
             //Console.ReadKey();
-
+            measuredMetabolites.Keys.Except(Db.Cache.Species.Select(s => s.sbmlId)).ToList().ForEach(m => measuredMetabolites.Remove(m));
+            Db.Cache.Reactions.Select(r => r.subsystem).Distinct().ToList().ForEach(Console.WriteLine);
 
             var network = new HyperGraph();
             var extendedSubsystems = new List<string>();
-            
+
 
             var metabolitesSubsystems = new Dictionary<string, List<string>>();
             foreach (var m in measuredMetabolites.Keys)
@@ -279,17 +321,26 @@ namespace Subsystems
         {
             if (extendedSubsystems.Contains(subsystem) || network.Edges.Any(e => e.Value.Label == subsystem)) return;
             Console.WriteLine($"Adding subsystem: {subsystem}");
-            var subsystemPseudo = HyperGraph.Edge.NewPseudoEdge(subsystem);
-            network.Edges.GetOrAdd(subsystemPseudo.Id, subsystemPseudo);
-            subsystemPseudo.IsReversible = true;
 
-            var reactions = Db.Cache.Reactions.Where(r => r.subsystem == subsystem).SelectMany(r => r.ReactionSpecies);
+            // normal reactions approach
+            var species = Db.Cache.Reactions.Where(r => r.subsystem == subsystem).SelectMany(r => r.ReactionSpecies).Select(rs => rs.Species);
+            foreach (var s in species)
+            {
+                network.AddSpeciesWithConnections(s);
+            }
 
-            var products = reactions.Where(rs => rs.roleId == Db.ProductId && rs.Species.ReactionSpecies.Any(rs2 => rs2.Reaction.subsystem != subsystem)).Select(rs => rs.Species);
-            var reactants = reactions.Where(rs => rs.roleId == Db.ReactantId && rs.Species.ReactionSpecies.Any(rs2 => rs2.Reaction.subsystem != subsystem)).Select(rs => rs.Species);
+            // subsystems as reactions approach
+            //var subsystemPseudo = HyperGraph.Edge.NewPseudoEdge(subsystem);
+            //network.Edges.GetOrAdd(subsystemPseudo.Id, subsystemPseudo);
+            //subsystemPseudo.IsReversible = true;
 
-            products.ToList().ForEach(m => network.AddProduct(subsystemPseudo, network.Nodes.GetOrAdd(m.id, new HyperGraph.Node(m)), 1));
-            reactants.ToList().ForEach(m => network.AddProduct(subsystemPseudo, network.Nodes.GetOrAdd(m.id, new HyperGraph.Node(m)), -1));
+            //var reactions = Db.Cache.Reactions.Where(r => r.subsystem == subsystem).SelectMany(r => r.ReactionSpecies);
+
+            //var products = reactions.Where(rs => rs.roleId == Db.ProductId && rs.Species.ReactionSpecies.Any(rs2 => rs2.Reaction.subsystem != subsystem)).Select(rs => rs.Species);
+            //var reactants = reactions.Where(rs => rs.roleId == Db.ReactantId && rs.Species.ReactionSpecies.Any(rs2 => rs2.Reaction.subsystem != subsystem)).Select(rs => rs.Species);
+
+            //products.ToList().ForEach(m => network.AddProduct(subsystemPseudo, network.Nodes.GetOrAdd(m.id, new HyperGraph.Node(m)), 1));
+            //reactants.ToList().ForEach(m => network.AddProduct(subsystemPseudo, network.Nodes.GetOrAdd(m.id, new HyperGraph.Node(m)), -1));
         }
 
         public static List<HyperGraph.Node> GetBorderMetabolites(HyperGraph network, List<string> extendedSubsystems)
@@ -350,7 +401,8 @@ namespace Subsystems
 
         public static bool FBA(HyperGraph network, Dictionary<string, double> measuredMetabolites, KeyValuePair<string, List<string>> metaboliteSubsystems, Dictionary<string, Dictionary<string, bool>> subsystemsPath, List<string> extendedSubsystems)
         {
-            var model = new Cplex { Name = "FBA" };
+            var model = new Cplex { Name = "FBA"+ counter };
+            
             var vars = new Dictionary<Guid, INumVar>();
 
             // make variables for all reactions
@@ -401,7 +453,7 @@ namespace Subsystems
         public static void AddMetabolitesSteadyStateConstraints(HyperGraph network, Cplex model, Dictionary<Guid, INumVar> vars, List<string> extendedSubsystems)
         {
             var border = GetBorderMetabolites(network, extendedSubsystems);
-            foreach (var metabolite in network.Nodes.Values.Where(n => ! border.Contains(n)))
+            foreach (var metabolite in network.Nodes.Values.Where(n => !border.Contains(n)))
             {
                 // cancel metabolites that are not balanced in steady state
                 //if ((metabolite.AllReactions().Count() == 1) ||
@@ -444,33 +496,37 @@ namespace Subsystems
 
         private static void AddSubnetworksConstraints(HyperGraph network, Cplex model, Dictionary<Guid, INumVar> vars, Dictionary<string, Dictionary<string, bool>> subsystemsPath)
         {
-            //foreach (var sub in subsystemsPath)
-            //{
-            //    var connections = Db.Cache.ReactionSpecies.Where(rs => rs.Species.sbmlId == sub.Key && sub.Value.Keys.Contains(rs.Reaction.subsystem)).ToList();
-            //    var or = model.Or();
-            //    foreach (var con in connections)
-            //    {
-            //        if (sub.Value[con.Reaction.subsystem])
-            //            or.Add(model.Ge(model.Abs(vars[con.reactionId]), TActive));
-            //        else
-            //            model.Add(model.Le(model.Abs(vars[con.reactionId]), TInactive));
-            //    }
-            //    if (sub.Value.Values.Any(s => s == true))
-            //        model.Add(or);
-            //}
-            var subs = new Dictionary<string, bool>();
+            // constraints for normal reactions approach
             foreach (var sub in subsystemsPath)
             {
-                sub.Value.ToList().ForEach(s => subs[s.Key] = s.Value);
+                var connections = Db.Cache.ReactionSpecies.Where(rs => rs.Species.sbmlId == sub.Key && sub.Value.Keys.Contains(rs.Reaction.subsystem)).ToList();
+                var or = model.Or();
+                foreach (var con in connections)
+                {
+                    if (sub.Value[con.Reaction.subsystem])
+                        or.Add(model.Ge(model.Abs(vars[con.reactionId]), TActive));
+                    else
+                        model.Add(model.Le(model.Abs(vars[con.reactionId]), TInactive));
+                }
+                if (sub.Value.Values.Any(s => s == true))
+                    model.Add(or);
             }
-            foreach (var sub in subs)
-            {
-                var temp = network.Edges.Single(e => e.Value.Label == sub.Key);
-                if (sub.Value)
-                    model.Ge(model.Abs(vars[temp.Value.Id]), TActive);
-                else
-                    model.Le(model.Abs(vars[temp.Value.Id]), TInactive);
-            }
+
+            // constraints for subsystems reactions approach
+
+            //var subs = new Dictionary<string, bool>();
+            //foreach (var sub in subsystemsPath)
+            //{
+            //    sub.Value.ToList().ForEach(s => subs[s.Key] = s.Value);
+            //}
+            //foreach (var sub in subs)
+            //{
+            //    var temp = network.Edges.Single(e => e.Value.Label == sub.Key);
+            //    if (sub.Value)
+            //        model.Ge(model.Abs(vars[temp.Value.Id]), TActive);
+            //    else
+            //        model.Le(model.Abs(vars[temp.Value.Id]), TInactive);
+            //}
         }
 
         private static void AddMeasuredMetabolitesRules(HyperGraph network, Cplex model, Dictionary<Guid, INumVar> vars, Dictionary<string, double> measuredMetabolites)
@@ -549,13 +605,13 @@ namespace Subsystems
             File.WriteAllLines(file, list);
         }
 
-        public static bool IsBorder (HyperGraph.Node n, List<string> extendedSubsystems)
+        public static bool IsBorder(HyperGraph.Node n, List<string> extendedSubsystems)
         {
             var met = Db.Cache.Species.Single(s => s.sbmlId == n.Label);
             return /*!n.AllReactions().Any() || */met.ReactionSpecies.Any(rs => !extendedSubsystems.Contains(rs.Reaction.subsystem));
         }
 
-        public static bool IsBorder (HyperGraph.Edge r, List<string> extendedSubsystems)
+        public static bool IsBorder(HyperGraph.Edge r, List<string> extendedSubsystems)
         {
             return (!extendedSubsystems.Contains(r.Subsystem)) || r.Products.Count + r.Reactants.Count != Db.Cache.ReactionSpecies.Count(rs => rs.reactionId == r.Id);
         }
