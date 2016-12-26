@@ -350,7 +350,7 @@ namespace Subsystems
 
         public static bool FBA(HyperGraph network, Dictionary<string, double> measuredMetabolites, KeyValuePair<string, List<string>> metaboliteSubsystems, Dictionary<string, Dictionary<string, bool>> subsystemsPath, List<string> extendedSubsystems)
         {
-            var model = new Cplex { Name = "FBA" };
+            var model = new Cplex { Name = "FBA"+counter };
             var vars = new Dictionary<Guid, INumVar>();
 
             // make variables for all reactions
@@ -389,11 +389,13 @@ namespace Subsystems
             model.ExportModel($"{Core.Dir}{counter}model-{network.Step}-{(feasible ? "feasible" : "infeasible")}.lp");
             if (!feasible)
             {
+                model.Dispose();
                 return false;
             }
             else
             {
                 network.Edges.ToList().ForEach(d => d.Value.Flux = model.GetValue(vars[d.Value.Id]));
+                model.Dispose();
                 return true;
             }
         }
