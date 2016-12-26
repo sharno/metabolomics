@@ -35,7 +35,7 @@ namespace Subsystems
             "Transport, peroxisomal",
         }; // recon 2.2
 
-        static List<string> EnergySubsystems = new List<string>
+        static List<string> CarbohydrateMetabolism = new List<string>
         {
             "Glycolysis/gluconeogenesis",
             "Citric acid cycle",
@@ -51,6 +51,40 @@ namespace Subsystems
             "Inositol phosphate metabolism",
         };
 
+        static List<string> EnergyMetabolism = new List<string> {
+            "Oxidative phosphorylation"
+        };
+
+        static List<string> LipidMetabolism = new List<string> {
+            "Fatty acid synthesis",
+            "Fatty acid oxidation",
+            "Steroid metabolism",
+            "Bile acid synthesis",
+            "Glycerophospholipid metabolism",
+            "Sphingolipid metabolism",
+            "Arachidonic acid metabolism",
+            "Linoleate metabolism"
+        };
+
+        static List<string> NucleotideMetabolism = new List<string> {
+            "Purine catabolism",
+            "Purine synthesis",
+            "Pyrimidine catabolism",
+            "Pyrimidine synthesis"
+        };
+
+        static List<string> AminoAcidMetabolism = new List<string>
+        {
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+        };
 
         static void test()
         {
@@ -109,8 +143,8 @@ namespace Subsystems
 
 
             // removing useless subsystems
-            EnergySubsystems = EnergySubsystems.Union(FixedSubsystems).ToList();
-            var rToRemove = new HashSet<Reaction>(Db.Cache.Reactions.Where(r => !EnergySubsystems.Contains(r.subsystem)));
+            CarbohydrateMetabolism = CarbohydrateMetabolism.Union(FixedSubsystems).ToList();
+            var rToRemove = new HashSet<Reaction>(Db.Cache.Reactions.Where(r => !CarbohydrateMetabolism.Contains(r.subsystem)));
             var rsToRemove = new HashSet<ReactionSpecy>(Db.Cache.ReactionSpecies.Where(rs => rToRemove.Contains(rs.Reaction)));
             var sToRemove = new HashSet<Species>(Db.Cache.Species.Where(s => s.ReactionSpecies.All(rs => rsToRemove.Contains(rs))));
 
@@ -439,8 +473,8 @@ namespace Subsystems
 
             var feasible = model.Solve();
 
-            //model.ExportModel($"{Core.Dir}{counter}model-{network.Step}-{(feasible ? "feasible" : "infeasible")}.lp");
-            
+            model.ExportModel($"{Core.Dir}{counter}model-{network.Step}-{(feasible ? "feasible" : "infeasible")}.lp");
+
 
             if (!feasible)
             {
