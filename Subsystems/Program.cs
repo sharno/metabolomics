@@ -75,15 +75,45 @@ namespace Subsystems
 
         static List<string> AminoAcidMetabolism = new List<string>
         {
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
+            "Alanine and aspartate metabolism",
+            "Glutamate metabolism",
+            "Glycine, serine, alanine and threonine metabolism",
+            "Cysteine Metabolism",
+            "Methionine and cysteine metabolism",
+            "Valine, leucine, and isoleucine metabolism",
+            "Lysine metabolism",
+            "Arginine and Proline Metabolism",
+            "Histidine metabolism",
+            "Tyrosine metabolism",
+            "Phenylalanine metabolism",
+            "Tryptophan metabolism",
+            "Phenylalanine metabolism",
+            "Tyrosine metabolism",
+            "Tryptophan metabolism",
+            "beta-Alanine metabolism",
+            "Taurine and hypotaurine metabolism",
+            "D-alanine metabolism",
+            "Glutathione metabolism",
+        };
+        static List<string> GlycanBiosynthesisAndMetabolism = new List<string>
+        {
+            "N-glycan degradation",
+            "N-glycan synthesis",
+            "O-glycan synthesis",
+        };
+        static List<string> MetabolismOfCofactorsAndVitamins = new List<string>
+        {
+            "Thiamine metabolism",
+            "Vitamin A metabolism",
+            "Vitamin B12 metabolism",
+            "Vitamin B2 metabolism",
+            "Vitamin B6 metabolism",
+            "Vitamin C metabolism",
+            "Vitamin D metabolism",
+            "Vitamin E metabolism",
+            "Biotin metabolism",
+            "Folate metabolism",
+            "Ubiquinone synthesis",
         };
 
         static void test()
